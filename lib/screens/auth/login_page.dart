@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,48 +12,88 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailIdCtrl = TextEditingController();
+  final _idCtrl = TextEditingController();
   final _pwCtrl = TextEditingController();
 
   bool _obscurePw = true;
+  bool _isLoading = false;
 
-  final List<String> _domains = const [
-    'naver.com',
-    'gmail.com',
-    'hanmail.net',
-    'kakao.com',
-    'daum.net',
-    'net.com',
-  ];
-
-  static const String _customDomainValue = '__CUSTOM__';
-  String? _selectedDomain;
-  final _customDomainCtrl = TextEditingController();
+  static const String _baseUrl = 'http://43.201.122.162';
 
   @override
   void dispose() {
-    _emailIdCtrl.dispose();
+    _idCtrl.dispose();
     _pwCtrl.dispose();
-    _customDomainCtrl.dispose();
     super.dispose();
   }
 
-  bool get _isCustomDomain => _selectedDomain == _customDomainValue;
-
-  String? get _domainValue {
-    if (_selectedDomain == null) return null;
-    if (_isCustomDomain) {
-      final v = _customDomainCtrl.text.trim();
-      return v.isEmpty ? null : v;
-    }
-    return _selectedDomain;
+  bool get _canLogin {
+    final id = _idCtrl.text.trim();
+    final pw = _pwCtrl.text;
+    return !_isLoading && id.isNotEmpty && pw.length >= 8;
   }
 
-  bool get _canLogin {
-    final emailId = _emailIdCtrl.text.trim();
-    final domain = _domainValue;
-    final pw = _pwCtrl.text;
-    return emailId.isNotEmpty && domain != null && pw.length >= 8;
+  /// ===============================
+  /// 로그인 API
+  /// ===============================
+  Future<void> _onTapLogin() async {
+    if (!_canLogin) return;
+
+    final loginId = _idCtrl.text.trim();
+    final password = _pwCtrl.text;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/auth/login'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'login_id': loginId,
+          'password': password,
+        }),
+      );
+
+      final decoded = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && decoded['is_success'] == true) {
+        final result = decoded['result'];
+
+        final accessToken = result['access_token'];
+        final refreshToken = result['refresh_token'];
+
+        debugPrint('✅ 로그인 성공');
+        debugPrint('accessToken: $accessToken');
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('로그인 성공')),
+        );
+
+        // TODO:
+        // 1. accessToken / refreshToken secure storage 저장
+        // 2. 메인 화면 이동
+
+      } else {
+        _showError(decoded['message'] ?? '로그인에 실패했습니다.');
+      }
+    } catch (e) {
+      _showError('서버와 통신할 수 없습니다.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   void _onTapResetPassword() {
@@ -59,20 +102,10 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _onTapLogin() {
-    final email = '${_emailIdCtrl.text.trim()}@${_domainValue!}';
-    final pw = _pwCtrl.text;
-
-    // TODO: 로그인 API 연동
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('로그인 시도: $email (pw length: ${pw.length})')),
-    );
-  }
-
   void _clearPassword() {
     if (_pwCtrl.text.isEmpty) return;
     _pwCtrl.clear();
-    setState(() {}); // ✅ 아이콘/버튼 활성화 상태 갱신
+    setState(() {});
   }
 
   @override
@@ -112,18 +145,30 @@ class _LoginPageState extends State<LoginPage> {
             child: FilledButton(
               onPressed: _canLogin ? _onTapLogin : null,
               style: FilledButton.styleFrom(
-                backgroundColor: _canLogin ? Colors.black : const Color(0xFFE5E7EB),
+                backgroundColor:
+                _canLogin ? Colors.black : const Color(0xFFE5E7EB),
                 disabledBackgroundColor: const Color(0xFFE5E7EB),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: Text(
+              child: _isLoading
+                  ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+                  : Text(
                 '로그인',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: _canLogin ? Colors.white : const Color(0xFF9CA3AF),
+                  color: _canLogin
+                      ? Colors.white
+                      : const Color(0xFF9CA3AF),
                 ),
               ),
             ),
@@ -139,7 +184,7 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               const SizedBox(height: 8),
               const Text(
-                '이메일과 비밀번호를\n입력하세요',
+                '아이디와 비밀번호를\n입력하세요',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
@@ -148,8 +193,9 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 32),
 
+              /// 아이디
               const Text(
-                '이메일',
+                '아이디',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -158,108 +204,25 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 8),
 
-              Row(
-                children: [
-                  Expanded(
-                    flex: 6,
-                    child: TextField(
-                      controller: _emailIdCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        hintText: '이메일 입력',
-                        hintStyle: TextStyle(color: hintColor),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black),
-                        ),
-                      ),
-                    ),
+              TextField(
+                controller: _idCtrl,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  hintText: '아이디 입력',
+                  hintStyle: TextStyle(color: hintColor),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: borderColor),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    '@',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: hintColor,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.black),
                   ),
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    flex: 6,
-                    child: _isCustomDomain
-                        ? TextField(
-                      controller: _customDomainCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: '직접입력',
-                        hintStyle: const TextStyle(color: hintColor),
-                        suffixIcon: IconButton(
-                          tooltip: '도메인 선택으로 변경',
-                          onPressed: () {
-                            setState(() {
-                              _customDomainCtrl.clear();
-                              _selectedDomain = null;
-                            });
-                          },
-                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                        ),
-                        enabledBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black),
-                        ),
-                      ),
-                    )
-                        : DropdownButtonFormField<String>(
-                      value: _selectedDomain,
-                      onChanged: (v) {
-                        setState(() {
-                          _selectedDomain = v;
-                          if (v != _customDomainValue) {
-                            _customDomainCtrl.clear();
-                          }
-                        });
-                      },
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        hintText: '선택',
-                        hintStyle: TextStyle(color: hintColor),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black),
-                        ),
-                      ),
-                      items: [
-                        ..._domains.map(
-                              (d) => DropdownMenuItem(
-                            value: d,
-                            child: Text(d, overflow: TextOverflow.ellipsis),
-                          ),
-                        ),
-                        const DropdownMenuItem(
-                          value: _customDomainValue,
-                          child: Text('직접입력'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
 
               const SizedBox(height: 24),
 
+              /// 비밀번호
               const Text(
                 '비밀번호',
                 style: TextStyle(
@@ -284,13 +247,12 @@ class _LoginPageState extends State<LoginPage> {
                   focusedBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.black),
                   ),
-
-                  /// ✅ 눈 + X(전체삭제)
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        onPressed: () => setState(() => _obscurePw = !_obscurePw),
+                        onPressed: () =>
+                            setState(() => _obscurePw = !_obscurePw),
                         icon: Icon(
                           _obscurePw
                               ? Icons.visibility_off_outlined
@@ -304,7 +266,7 @@ class _LoginPageState extends State<LoginPage> {
                           Icons.cancel_outlined,
                           color: Color(0xFFBDBDBD),
                         ),
-                      )
+                      ),
                     ],
                   ),
                   suffixIconConstraints: const BoxConstraints(

@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:whoreads/screens/auth/EmailVerifyPage.dart';
 
 import '../auth/login_page.dart';
 import '../auth/signup_page.dart';
@@ -24,6 +28,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   void initState() {
     super.initState();
     _pageController = PageController();
+
+    /// 서버 헬스 체크 (UI 로드 이후 실행)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkServerHealth();
+    });
   }
 
   @override
@@ -32,6 +41,57 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     super.dispose();
   }
 
+  /// ===============================
+  /// 서버 Health Check
+  /// ===============================
+  Future<void> _checkServerHealth() async {
+    const String url = 'http://43.201.122.162/api/health';
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ 서버 정상: ${response.body}');
+      } else {
+        debugPrint('⚠️ 서버 오류 응답: ${response.statusCode}');
+        _showServerErrorDialog();
+      }
+    } catch (e) {
+      debugPrint('❌ 서버 연결 실패: $e');
+      _showServerErrorDialog();
+    }
+  }
+
+  void _showServerErrorDialog() {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('서버 연결 오류'),
+        content: const Text(
+          '현재 서버에 연결할 수 없습니다.\n'
+              '네트워크 상태를 확인하거나 잠시 후 다시 시도해 주세요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ===============================
+  /// UI Logic
+  /// ===============================
   void _onSkip() {
     // TODO: 홈/메인 화면으로 이동
   }
@@ -45,12 +105,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       barrierColor: Colors.black.withOpacity(0.35),
       builder: (_) => SignupTermsSheet(
         onAgreed: () {
-          // 1️⃣ 약관 시트 닫기
           Navigator.of(context).pop();
-
-          // 2️⃣ 회원가입 페이지로 이동
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const SignupPage()),
+            MaterialPageRoute(builder: (_) => const EmailVerifyPage()),
           );
         },
       ),
@@ -59,7 +116,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
-    /// 🔧 여기 값만 조절하면 하단 레이아웃이 바뀝니다
     const double indicatorButtonGap = 44;
     const double bottomPadding = 32;
 
@@ -70,7 +126,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              /// 1️⃣ 상단 고정 영역 – 둘러보기
+              /// 상단 – 둘러보기
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Align(
@@ -99,7 +155,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 ),
               ),
 
-              /// 2️⃣ 중단 – 온보딩 PageView
+              /// 중단 – 온보딩 페이지
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
@@ -111,26 +167,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 ),
               ),
 
-              /// 3️⃣ 하단 고정 – 인디케이터 + 버튼
+              /// 하단 – 인디케이터 + 버튼
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  16,
-                  0,
-                  16,
-                  bottomPadding,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    /// 페이지 인디케이터
                     DotIndicator(
                       count: onboardingPages.length,
                       activeIndex: _index,
                     ),
-
                     const SizedBox(height: indicatorButtonGap),
-
-                    /// 로그인 / 회원가입 버튼
                     Row(
                       children: [
                         Expanded(
@@ -154,13 +201,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 10),
-
-                    /// 계정 찾기
                     TextButton(
                       onPressed: () {
-                        // TODO: 계정 찾기 화면으로 이동
+                        // TODO: 계정 찾기
                       },
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
