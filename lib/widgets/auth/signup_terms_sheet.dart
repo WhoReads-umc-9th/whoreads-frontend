@@ -99,8 +99,6 @@ class _SignupTermsSheetState extends State<SignupTermsSheet> {
               ),
 
               const SizedBox(height: 12),
-              const Divider(height: 1, color: Color(0xFFE5E7EB)),
-              const SizedBox(height: 12),
 
               _AgreeRow(
                 value: age14,
@@ -225,6 +223,7 @@ class _AgreeRow extends StatelessWidget {
   final VoidCallback? onTapDetail;
 
   const _AgreeRow({
+    super.key,
     required this.value,
     required this.label,
     required this.onChanged,
@@ -235,32 +234,48 @@ class _AgreeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => onChanged(!value),
+      // 터치 영역(InkWell) 안쪽에 패딩을 줍니다.
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            _CircleCheck(
-              value: value,
-              onTap: () => onChanged(!value),
-              size: 22,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280),
+        padding: const EdgeInsets.symmetric(vertical: 10), // 여백을 4~6 정도로 일정하게 줌
+        child: SizedBox(
+          height: 24, // [핵심 해결책] 모든 줄의 높이를 24px(아이콘 크기)로 고정
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center, // 세로 중앙 정렬
+            children: [
+              _CircleCheck(
+                value: value,
+                onTap: () => onChanged(!value),
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF6B7280),
+                    height: 1.2,
+                  ),
                 ),
               ),
-            ),
-            if (onTapDetail != null)
-              IconButton(
-                onPressed: onTapDetail,
-                icon: const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF)),
-              ),
-          ],
+              // 화살표가 있을 때만 렌더링
+              if (onTapDetail != null)
+                Transform.translate(
+                  offset: const Offset(8, 0), // [핵심] X축으로 8px 만큼 오른쪽으로 이동
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: onTapDetail,
+                    icon: const Icon(
+                        Icons.chevron_right,
+                        color: Color(0xFF9CA3AF),
+                        size: 20
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -268,11 +283,12 @@ class _AgreeRow extends StatelessWidget {
 }
 
 class _CircleCheck extends StatelessWidget {
-  final bool value;
-  final VoidCallback onTap;
-  final double size;
+  final bool value; // 체크 여부
+  final VoidCallback onTap; // 클릭 시 실행할 함수
+  final double size; // 아이콘 크기
 
   const _CircleCheck({
+    super.key,
     required this.value,
     required this.onTap,
     required this.size,
@@ -280,22 +296,31 @@ class _CircleCheck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color border = value ? const Color(0xFF1C1C22) : const Color(0xFFD1D5DB);
-    final Color fill = value ? const Color(0xFF1C1C22) : Colors.white;
-    final Color icon = value ? Colors.white : const Color(0xFFD1D5DB);
+    // 1. 테두리 색상: 체크되면 주황색, 아니면 회색
+    final Color borderColor = value ? const Color(0xFFF84E00) : const Color(0xFFD1D5DB);
+
+    // 2. 배경 색상: 체크되면 주황색, 아니면 흰색
+    final Color fillColor = value ? const Color(0xFFF84E00) : Colors.white;
+
+    // 3. 아이콘(체크표시) 색상: 체크되면 흰색, 아니면 회색
+    final Color iconColor = value ? Colors.white : const Color(0xFFD1D5DB);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(99),
+      borderRadius: BorderRadius.circular(99), // 터치 효과를 원형으로
       child: Container(
         width: size,
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: fill,
-          border: Border.all(color: border, width: 1.4),
+          color: fillColor, // 배경색 적용
+          border: Border.all(color: borderColor, width: 1.4), // 테두리 적용
         ),
-        child: Icon(Icons.check, size: size * 0.65, color: icon),
+        child: Icon(
+          Icons.check,
+          size: size * 0.65, // 아이콘 크기는 원 크기의 65%
+          color: iconColor, // 아이콘 색상 적용
+        ),
       ),
     );
   }

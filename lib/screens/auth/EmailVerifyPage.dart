@@ -23,6 +23,16 @@ class _EmailVerifyPageState extends State<EmailVerifyPage> {
   Timer? _timer;
   int remainSeconds = 170;
 
+  final List<String> _domainList = [
+    'naver.com',
+    'gmail.com',
+    'hanmail.net',
+    'kakao.com',
+    'daum.net',
+    'nate.com',
+    '직접입력',
+  ];
+
   final TextEditingController _emailIdController = TextEditingController();
   final TextEditingController _domainController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
@@ -176,87 +186,156 @@ class _EmailVerifyPageState extends State<EmailVerifyPage> {
             ),
             const SizedBox(height: 36),
 
-            /// 이메일 입력
+            /// [1] 이메일 입력 Row (기존 코드 유지)
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
+                  flex: 3,
                   child: TextField(
                     controller: _emailIdController,
                     decoration: const InputDecoration(
-                      border: UnderlineInputBorder(),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      border: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey)),
+                      enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey)),
+                      focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.black)),
                     ),
                   ),
                 ),
                 const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 6),
-                  child: Text('@'),
+                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  child: Text('@', style: TextStyle(fontSize: 16)),
                 ),
                 Expanded(
+                  flex: 4,
                   child: isCustomDomain
-                      ? TextField(
-                    controller: _domainController,
-                    decoration: const InputDecoration(
-                      hintText: '직접입력',
-                      border: UnderlineInputBorder(),
-                    ),
+                      ? Stack(
+                    alignment: Alignment.centerRight,
+                    children: [
+                      TextField(
+                        controller: _domainController,
+                        style: const TextStyle(
+                            fontSize: 14, color: Colors.black, height: 1.2),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.fromLTRB(
+                              0, 0, 30, 8),
+                          hintText: '직접입력',
+                          hintStyle: const TextStyle(fontSize: 14, color: Colors
+                              .grey),
+                          border: const UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey)),
+                          enabledBorder: const UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey)),
+                          focusedBorder: const UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.black)),
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 4,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              isCustomDomain = false;
+                              selectedDomain = null;
+                              _domainController.clear();
+                            });
+                          },
+                          child: const Icon(Icons.close, size: 18, color: Colors
+                              .grey),
+                        ),
+                      ),
+                    ],
                   )
-                      : DropdownButtonFormField<String>(
-                    value: selectedDomain,
-                    hint: const Text('선택'),
-                    items: const [
-                      'naver.com',
-                      'gmail.com',
-                      'hanmail.net',
-                      'kakao.com',
-                      'daum.net',
-                      'nate.com',
-                      '직접입력',
-                    ].map((d) {
-                      return DropdownMenuItem(
-                        value: d,
-                        child: Text(d),
+                      : LayoutBuilder(
+                    builder: (context, constraints) {
+                      return PopupMenuButton<String>(
+                        constraints: BoxConstraints.tightFor(width: constraints
+                            .maxWidth),
+                        offset: const Offset(0, 40),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius
+                            .circular(8)),
+                        elevation: 4,
+                        color: Colors.white,
+                        onSelected: (String value) {
+                          if (value == '직접입력') {
+                            setState(() {
+                              isCustomDomain = true;
+                              selectedDomain = null;
+                            });
+                          } else {
+                            setState(() {
+                              selectedDomain = value;
+                              isCustomDomain = false;
+                            });
+                          }
+                        },
+                        itemBuilder: (BuildContext context) {
+                          return _domainList.map((String choice) {
+                            return PopupMenuItem<String>(
+                              value: choice,
+                              height: 40,
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: Text(choice,
+                                    style: const TextStyle(fontSize: 14)),
+                              ),
+                            );
+                          }).toList();
+                        },
+                        child: Container(
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                                bottom: BorderSide(color: Colors.grey)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                selectedDomain ?? '선택',
+                                style: TextStyle(
+                                  color: selectedDomain == null
+                                      ? Colors.grey
+                                      : Colors.black,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const Icon(Icons.keyboard_arrow_down, size: 20,
+                                  color: Colors.grey),
+                            ],
+                          ),
+                        ),
                       );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value == '직접입력') {
-                        setState(() {
-                          isCustomDomain = true;
-                          selectedDomain = null;
-                        });
-                      } else {
-                        setState(() => selectedDomain = value);
-                      }
                     },
-                    decoration: const InputDecoration(
-                      border: UnderlineInputBorder(),
-                    ),
                   ),
                 ),
-                const SizedBox(width: 6),
-
-                /// 인증 버튼
+                const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: isLoading ? null : _sendEmailCode,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
+                        horizontal: 10, vertical: 8),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                        borderRadius: BorderRadius.circular(4)),
                   ),
                   child: Text(
                     isRequested ? '재전송' : '인증하기',
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
                   ),
                 ),
               ],
             ),
 
-            /// 인증번호 입력
+            /// [2] 인증번호 입력란 + 확인 버튼 (조건부 렌더링)
             if (isRequested) ...[
               const SizedBox(height: 28),
               const Text(
@@ -286,32 +365,32 @@ class _EmailVerifyPageState extends State<EmailVerifyPage> {
                   ),
                 ],
               ),
-            ],
 
-            const Spacer(),
+              const SizedBox(height: 40), // [위치 조정] 입력란과 확인 버튼 사이 간격
 
-            /// 확인 버튼
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed:
-                _codeController.text.length >= 4 && !isLoading
-                    ? _verifyCode
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              // --- 확인 버튼 (여기로 이동) ---
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _codeController.text.length >= 4 && !isLoading
+                      ? _verifyCode
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    '확인',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
                 ),
-                child: const Text(
-                  '확인',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
               ),
-            ),
-            const SizedBox(height: 12),
+            ],
+
+            // 기존의 Spacer()와 하단 버튼 코드는 삭제됨
           ],
         ),
       ),

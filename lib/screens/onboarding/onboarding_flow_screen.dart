@@ -126,35 +126,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              /// 상단 – 둘러보기
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: _onSkip,
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 12,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text(
-                      '둘러보기',
-                      style: TextStyle(
-                        color: Color(0xFF999999),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        height: 1.4,
-                        fontFamily: 'Pretendard Variable',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
               /// 중단 – 온보딩 페이지
               Expanded(
                 child: PageView.builder(

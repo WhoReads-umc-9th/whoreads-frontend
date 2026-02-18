@@ -76,7 +76,7 @@ class _LoginPageState extends State<LoginPage> {
         debugPrint('✅ 로그인 성공 & 토큰 저장 완료');
 
         if (!mounted) return;
-
+        FocusScope.of(context).unfocus();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -85,10 +85,13 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
       else {
-        _showError(decoded['message'] ?? '로그인에 실패했습니다.');
+        _showErrorDialog(
+          '아이디 또는 비밀번호를\n다시 확인하세요',
+          '가입되지 않은 계정이거나\n비밀번호가 일치하지 않습니다',
+        );
       }
     } catch (e) {
-      _showError('서버와 통신할 수 없습니다.');
+      _showErrorDialog('오류 발생', '서버와 통신할 수 없습니다.\n잠시 후 다시 시도해주세요.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -96,10 +99,73 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _showError(String message) {
+  void _showErrorDialog(String title, String content) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.4), // 배경 어둡게
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16), // 둥근 모서리
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // 내용만큼만 크기 차지
+              children: [
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  content,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF6B7280), // 회색 글씨
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context), // 닫기
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1C1C22), // 진한 검정색
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      '확인',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -257,28 +323,40 @@ class _LoginPageState extends State<LoginPage> {
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(
-                        onPressed: () =>
-                            setState(() => _obscurePw = !_obscurePw),
-                        icon: Icon(
-                          _obscurePw
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: const Color(0xFFBDBDBD),
+                      GestureDetector(
+                        onTap: () => setState(() => _obscurePw = !_obscurePw),
+                        child: Container(
+                          color: Colors.transparent, // 터치 영역 확보용
+                          padding: const EdgeInsets.all(4), // 터치가 너무 어렵지 않게 약간의 내부 여백
+                          child: Icon(
+                            _obscurePw
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: const Color(0xFFBDBDBD),
+                            size: 22,
+                          ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: _clearPassword,
-                        icon: const Icon(
-                          Icons.cancel_outlined,
-                          color: Color(0xFFBDBDBD),
+
+                      const SizedBox(width: 6), // 아이콘 사이 간격 (원하는 만큼 조절하세요)
+
+                      GestureDetector(
+                        onTap: _clearPassword,
+                        child: Container(
+                          color: Colors.transparent,
+                          padding: const EdgeInsets.all(4),
+                          child: const Icon(
+                            Icons.cancel_outlined,
+                            color: Color(0xFFBDBDBD),
+                            size: 22,
+                          ),
                         ),
                       ),
                     ],
                   ),
                   suffixIconConstraints: const BoxConstraints(
                     minHeight: 40,
-                    minWidth: 96,
+                    minWidth: 0,
                   ),
                 ),
               ),
