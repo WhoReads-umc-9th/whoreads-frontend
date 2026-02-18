@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:http/http.dart' as http;
 
 import '../my_library/my_library_page.dart';
@@ -95,12 +96,11 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Whoreads',
-          style: TextStyle(
-            color: Color(0xFFFF6A00),
-            fontWeight: FontWeight.bold,
-          ),
+        title: SvgPicture.asset(
+          'assets/images/logo.svg',
+          height: 18, // 높이를 지정하면 비율에 맞춰 너비가 자동 조절됩니다.
+          // 만약 로고 색상을 강제로 주황색으로 바꿔야 한다면 아래 주석 해제
+          // colorFilter: const ColorFilter.mode(Color(0xFFFF6A00), BlendMode.srcIn),
         ),
         actions: [
           IconButton(

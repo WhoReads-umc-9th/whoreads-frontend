@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/auth/token_storage.dart';
 import '../../../models/library_summary_model.dart';
@@ -85,12 +86,22 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${widget.username}님의 기록',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+            SvgPicture.asset(
+                'assets/images/basic/book.svg', // ✅ 아이콘 경로
+                width: 20, // 아이콘 크기 조절
+                height: 20,
+              ),
+              const SizedBox(width: 6), // 아이콘과 텍스트 사이 간격
+              Text(
+                '${widget.username}님의 기록',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ]
           ),
           const SizedBox(height: 16),
           Row(

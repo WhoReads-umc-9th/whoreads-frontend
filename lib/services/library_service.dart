@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import '../models/library_book_model.dart';
 
@@ -20,6 +21,9 @@ class LibraryService {
         'Authorization': 'Bearer $accessToken',
       },
     );
+
+    // String responseBody = utf8.decode(response.bodyBytes);
+    // debugPrint('응답 Body: $responseBody');
 
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);

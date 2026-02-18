@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:http/http.dart' as http;
 import '../../core/auth/token_storage.dart';
 import '../auth/SignupOverlayDialog.dart';
@@ -139,12 +140,11 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
           automaticallyImplyLeading: false,
           backgroundColor: Colors.white,
           elevation: 0,
-          title: const Text(
-            'Whoreads',
-            style: TextStyle(
-              color: Color(0xFFFF6A00),
-              fontWeight: FontWeight.bold,
-            ),
+          title: SvgPicture.asset(
+            'assets/images/logo.svg',
+            height: 18, // 높이를 지정하면 비율에 맞춰 너비가 자동 조절됩니다.
+            // 만약 로고 색상을 강제로 주황색으로 바꿔야 한다면 아래 주석 해제
+            // colorFilter: const ColorFilter.mode(Color(0xFFFF6A00), BlendMode.srcIn),
           ),
           actions: const [
             Icon(Icons.timer_outlined, color: Colors.black),
@@ -159,8 +159,6 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
         /// ===== Body =====
         body: Column(
           children: [
-            const SizedBox(height: 12),
-
             /// 독서 DNA 카드
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -170,9 +168,6 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
                   debugPrint("DNA Card Clicked!"); // 이제 무조건 뜹니다!
                   _showDnaTestDialog();
                 },
-                // 핵심 해결책: AbsorbPointer 추가
-                // DnaCard 내부가 클릭을 뺏어가지 못하게 막고,
-                // 부모인 현재 GestureDetector가 클릭을 가져가게 합니다.
                 child: const AbsorbPointer(
                   child: DnaCard(),
                 ),
@@ -196,6 +191,7 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
             const TabBar(
               labelColor: Colors.black,
               indicatorColor: Color(0xFFFF6A00),
+              indicatorSize: TabBarIndicatorSize.tab,
               tabs: [
                 Tab(text: '담아둠'),
                 Tab(text: '읽는 중'),
