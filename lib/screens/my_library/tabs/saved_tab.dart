@@ -1,33 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:whoreads/screens/my_library/widgets/book_list_item.dart';
+import '../../../models/library_book_model.dart';
+import '../../../services/library_service.dart';
+import '../../books/BookDetailPage.dart';
 
-class SavedTab extends StatelessWidget {
-  const SavedTab({super.key});
+class SavedTab extends StatefulWidget {
+  final String accessToken;
+
+  const SavedTab({super.key, required this.accessToken});
+
+  @override
+  State<SavedTab> createState() => _SavedTabState();
+}
+
+class _SavedTabState extends State<SavedTab> {
+  List<LibraryBookModel> books = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final result = await LibraryService.fetchBooks(
+      status: "WISH",
+      accessToken: widget.accessToken,
+    );
+
+    setState(() {
+      books = result;
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final List books = []; // TODO: API 연결
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     if (books.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('아직 담아둔 책이 없어요'),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () {},
-              child: const Text('추천 책 보러 가기'),
-            ),
-          ],
-        ),
-      );
+      return const Center(child: Text("담아둔 책이 없습니다."));
     }
 
     return ListView.builder(
       itemCount: books.length,
       itemBuilder: (_, index) {
-        return ListTile(title: Text(books[index].title));
+        final book = books[index];
+
+        return BookListItem(
+          book: book,
+          showProgress: false,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BookDetailPage(
+                  bookId: book.id,   // 🔥 여기 네 모델 필드명 확인
+                ),
+              ),
+            );
+          },
+        );
       },
     );
+
   }
 }

@@ -1,7 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../../../core/auth/token_storage.dart';
 import '../../../models/library_summary_model.dart';
-import '../../../services/library_service.dart';
-
 
 class ReadingSummaryCard extends StatefulWidget {
   final String username;
@@ -28,13 +29,39 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
   }
 
   Future<void> _loadSummary() async {
-    final result =
-    await LibraryService.fetchSummary(widget.accessToken);
+    try {
+      final token = await TokenStorage.getAccessToken();
 
-    setState(() {
-      summary = result;
-      isLoading = false;
-    });
+      final response = await http.get(
+        Uri.parse('http://43.201.122.162/api/me/library/summary'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final decoded = jsonDecode(response.body);
+
+      if (response.statusCode == 200 &&
+          decoded['is_success'] == true) {
+
+        final result = decoded['result'];
+
+        setState(() {
+          summary = LibrarySummaryModel(
+            completedCount: result['completed_count'],
+            readingCount: result['reading_count'],
+            totalReadMinutes: result['total_read_minutes'],
+          );
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      debugPrint('요약 불러오기 실패: $e');
+      setState(() => isLoading = false);
+    }
   }
 
   String _formatMinutes(int minutes) {
@@ -88,6 +115,7 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
     );
   }
 }
+
 
 class _SummaryItem extends StatelessWidget {
   final String title;

@@ -1,78 +1,111 @@
-import 'dart:math' as math;
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:whoreads/screens/my_library/my_library_page.dart';
 
 class SignupPage extends StatefulWidget {
-  const SignupPage({super.key});
+  final String email;
+
+  const SignupPage({super.key, required this.email});
 
   @override
   State<SignupPage> createState() => _SignupPageState();
 }
 
 class _SignupPageState extends State<SignupPage> {
-  final _emailIdCtrl = TextEditingController();
+  final _idCtrl = TextEditingController();
   final _pwCtrl = TextEditingController();
 
   bool _obscurePw = true;
-
-  final List<String> _domains = const [
-    'naver.com',
-    'gmail.com',
-    'hanmail.net',
-    'kakao.com',
-    'daum.net',
-    'net.com',
-  ];
-
-  static const String _customDomainValue = '__CUSTOM__';
-  String? _selectedDomain;
-  final _customDomainCtrl = TextEditingController();
+  bool _isCheckingId = false;
+  bool? _isIdAvailable; // null = 아직 확인 안함
 
   @override
   void dispose() {
-    _emailIdCtrl.dispose();
+    _idCtrl.dispose();
     _pwCtrl.dispose();
-    _customDomainCtrl.dispose();
     super.dispose();
   }
 
-  bool get _isCustomDomain => _selectedDomain == _customDomainValue;
+  bool get _canSignup {
+    return _idCtrl.text.trim().isNotEmpty &&
+        _pwCtrl.text.length >= 8 &&
+        _isIdAvailable == true;
+  }
 
-  String? get _domainValue {
-    if (_selectedDomain == null) return null;
-    if (_isCustomDomain) {
-      final v = _customDomainCtrl.text.trim();
-      return v.isEmpty ? null : v;
+  /// 🔥 아이디 중복확인 API
+  Future<void> _checkIdDuplicate() async {
+    final id = _idCtrl.text.trim();
+    if (id.isEmpty) return;
+
+    setState(() {
+      _isCheckingId = true;
+      _isIdAvailable = null;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://43.201.122.162/api/auth/check-id'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "login_id": id,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        final isSuccess = data["is_success"] ?? false;
+
+        setState(() {
+          _isIdAvailable = isSuccess;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isSuccess ? '사용 가능한 아이디입니다.' : '이미 사용 중인 아이디입니다.',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('아이디 확인 실패')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('서버 오류 발생')),
+      );
+    } finally {
+      setState(() {
+        _isCheckingId = false;
+      });
     }
-    return _selectedDomain;
-  }
-
-  bool get _canLogin {
-    final emailId = _emailIdCtrl.text.trim();
-    final domain = _domainValue;
-    final pw = _pwCtrl.text;
-    return emailId.isNotEmpty && domain != null && pw.length >= 8;
-  }
-
-  void _onTapResetPassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('비밀번호 재설정 클릭')),
-    );
-  }
-
-  void _onTapLogin() {
-    final email = '${_emailIdCtrl.text.trim()}@${_domainValue!}';
-    final pw = _pwCtrl.text;
-
-    // TODO: 로그인 API 연동
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('로그인 시도: $email (pw length: ${pw.length})')),
-    );
   }
 
   void _clearPassword() {
     if (_pwCtrl.text.isEmpty) return;
     _pwCtrl.clear();
-    setState(() {}); // ✅ 아이콘/버튼 활성화 상태 갱신
+    setState(() {});
+  }
+
+  void _onTapSignup() {
+    final id = _idCtrl.text.trim();
+    final pw = _pwCtrl.text;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MyLibraryPage(
+          email: widget.email,
+          loginId: id,
+          password: pw,
+        ),
+      ),
+    );
   }
 
   @override
@@ -81,11 +114,8 @@ class _SignupPageState extends State<SignupPage> {
     const hintColor = Color(0xFFBDBDBD);
     const labelColor = Color(0xFF9E9E9E);
 
-    final viewInsetsBottom = MediaQuery.of(context).viewInsets.bottom;
-
     return Scaffold(
       backgroundColor: Colors.white,
-      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -94,25 +124,16 @@ class _SignupPageState extends State<SignupPage> {
           onPressed: () => Navigator.maybePop(context),
         ),
       ),
-
       bottomNavigationBar: SafeArea(
-        top: false,
-        child: AnimatedPadding(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          padding: EdgeInsets.fromLTRB(
-            24,
-            0,
-            24,
-            math.max(16, viewInsetsBottom + 12),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
           child: SizedBox(
-            width: double.infinity,
             height: 52,
             child: FilledButton(
-              onPressed: _canLogin ? _onTapLogin : null,
+              onPressed: _canSignup ? _onTapSignup : null,
               style: FilledButton.styleFrom(
-                backgroundColor: _canLogin ? Colors.black : const Color(0xFFE5E7EB),
+                backgroundColor:
+                _canSignup ? Colors.black : const Color(0xFFE5E7EB),
                 disabledBackgroundColor: const Color(0xFFE5E7EB),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -123,23 +144,22 @@ class _SignupPageState extends State<SignupPage> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: _canLogin ? Colors.white : const Color(0xFF9CA3AF),
+                  color:
+                  _canSignup ? Colors.white : const Color(0xFF9CA3AF),
                 ),
               ),
             ),
           ),
         ),
       ),
-
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8),
               const Text(
-                '이메일과 비밀번호를\n입력하세요',
+                '아이디와 비밀번호를\n입력하세요',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
@@ -148,8 +168,9 @@ class _SignupPageState extends State<SignupPage> {
               ),
               const SizedBox(height: 32),
 
+              /// ✅ 아이디
               const Text(
-                '이메일',
+                '아이디',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -161,78 +182,15 @@ class _SignupPageState extends State<SignupPage> {
               Row(
                 children: [
                   Expanded(
-                    flex: 6,
                     child: TextField(
-                      controller: _emailIdCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        hintText: '이메일 입력',
-                        hintStyle: TextStyle(color: hintColor),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    '@',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: hintColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    flex: 6,
-                    child: _isCustomDomain
-                        ? TextField(
-                      controller: _customDomainCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: '직접입력',
-                        hintStyle: const TextStyle(color: hintColor),
-                        suffixIcon: IconButton(
-                          tooltip: '도메인 선택으로 변경',
-                          onPressed: () {
-                            setState(() {
-                              _customDomainCtrl.clear();
-                              _selectedDomain = null;
-                            });
-                          },
-                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                        ),
-                        enabledBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black),
-                        ),
-                      ),
-                    )
-                        : DropdownButtonFormField<String>(
-                      value: _selectedDomain,
-                      onChanged: (v) {
+                      controller: _idCtrl,
+                      onChanged: (_) {
                         setState(() {
-                          _selectedDomain = v;
-                          if (v != _customDomainValue) {
-                            _customDomainCtrl.clear();
-                          }
+                          _isIdAvailable = null; // 아이디 바꾸면 다시 확인 필요
                         });
                       },
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       decoration: const InputDecoration(
-                        isDense: true,
-                        hintText: '선택',
+                        hintText: '아이디 입력',
                         hintStyle: TextStyle(color: hintColor),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(color: borderColor),
@@ -241,25 +199,47 @@ class _SignupPageState extends State<SignupPage> {
                           borderSide: BorderSide(color: Colors.black),
                         ),
                       ),
-                      items: [
-                        ..._domains.map(
-                              (d) => DropdownMenuItem(
-                            value: d,
-                            child: Text(d, overflow: TextOverflow.ellipsis),
-                          ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    height: 40,
+                    child: OutlinedButton(
+                      onPressed:
+                      _isCheckingId ? null : _checkIdDuplicate,
+                      child: _isCheckingId
+                          ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
                         ),
-                        const DropdownMenuItem(
-                          value: _customDomainValue,
-                          child: Text('직접입력'),
-                        ),
-                      ],
+                      )
+                          : const Text('중복확인'),
                     ),
                   ),
                 ],
               ),
 
+              if (_isIdAvailable != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    _isIdAvailable == true
+                        ? '사용 가능한 아이디입니다.'
+                        : '이미 사용 중인 아이디입니다.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: _isIdAvailable == true
+                          ? Colors.green
+                          : Colors.red,
+                    ),
+                  ),
+                ),
+
               const SizedBox(height: 24),
 
+              /// ✅ 비밀번호
               const Text(
                 '비밀번호',
                 style: TextStyle(
@@ -275,7 +255,6 @@ class _SignupPageState extends State<SignupPage> {
                 obscureText: _obscurePw,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  isDense: true,
                   hintText: '영문, 숫자 8자리 이상 입력',
                   hintStyle: const TextStyle(color: hintColor),
                   enabledBorder: const UnderlineInputBorder(
@@ -284,13 +263,12 @@ class _SignupPageState extends State<SignupPage> {
                   focusedBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.black),
                   ),
-
-                  /// ✅ 눈 + X(전체삭제)
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        onPressed: () => setState(() => _obscurePw = !_obscurePw),
+                        onPressed: () => setState(
+                                () => _obscurePw = !_obscurePw),
                         icon: Icon(
                           _obscurePw
                               ? Icons.visibility_off_outlined
@@ -304,43 +282,9 @@ class _SignupPageState extends State<SignupPage> {
                           Icons.cancel_outlined,
                           color: Color(0xFFBDBDBD),
                         ),
-                      )
+                      ),
                     ],
                   ),
-                  suffixIconConstraints: const BoxConstraints(
-                    minHeight: 40,
-                    minWidth: 96,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
-              Center(
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    const Text(
-                      '비밀번호를 잊으셨나요? ',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF9E9E9E),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: _onTapResetPassword,
-                      child: const Text(
-                        '비밀번호 재설정',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF4B5563),
-                          fontWeight: FontWeight.w700,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ],

@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../my_library/my_library_page.dart';
+import 'celebrities_book_page.dart'; // [중요] 방금 만든 페이지 import 확인해주세요!
+
 class CelebritiesPage extends StatefulWidget {
   const CelebritiesPage({super.key});
 
@@ -56,7 +59,7 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
 
       debugPrint('REQUEST URI: $uri');
       debugPrint('STATUS CODE: ${response.statusCode}');
-      debugPrint('RESPONSE BODY: ${response.body}');
+      // debugPrint('RESPONSE BODY: ${response.body}'); // 로그 너무 길면 주석 처리
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(utf8.decode(response.bodyBytes));
@@ -89,6 +92,7 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
 
       /// ================= AppBar =================
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
@@ -203,6 +207,16 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
         currentIndex: 0,
         selectedItemColor: Colors.orange,
         unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          if (index == 0) {
+            // 현재 페이지이므로 아무것도 안 함 (또는 새로고침)
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const MyLibraryPage()),
+            );
+          }
+        },
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.people),
@@ -254,50 +268,74 @@ class _CelebrityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final List tags = celeb['job_tags'] ?? [];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AspectRatio(
-          aspectRatio: 1,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              celeb['image_url'],
-              fit: BoxFit.cover,
+    // [수정됨] GestureDetector로 감싸서 클릭 이벤트 처리
+    return GestureDetector(
+      onTap: () {
+        debugPrint('인물 클릭: ${celeb['name']} (ID: ${celeb['id']})');
+
+        // 상세 페이지로 이동하며 ID 전달
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CelebritiesBookPage(
+              celebrityId: celeb['id'], // API에서 받은 id 전달
             ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          celeb['name'],
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 4),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                celeb['image_url'],
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.person, color: Colors.grey),
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            celeb['name'],
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
 
-        /// 태그 레이아웃 (가로 2개 or 세로 2개)
-        LayoutBuilder(
-          builder: (context, constraints) {
-            return Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: tags.take(2).map<Widget>((tag) {
-                return Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    tag,
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                );
-              }).toList(),
-            );
-          },
-        ),
-      ],
+          /// 태그 레이아웃
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: tags.take(2).map<Widget>((tag) {
+                  return Container(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      tag,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

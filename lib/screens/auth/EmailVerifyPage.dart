@@ -133,7 +133,9 @@ class _EmailVerifyPageState extends State<EmailVerifyPage> {
         if (!mounted) return;
 
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const SignupPage()),
+          MaterialPageRoute(
+            builder: (_) => SignupPage(email: email),
+          ),
         );
       } else {
         _showError(decoded['message'] ?? '인증번호가 올바르지 않습니다.');

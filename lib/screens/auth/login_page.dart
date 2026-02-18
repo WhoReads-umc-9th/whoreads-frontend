@@ -3,6 +3,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:whoreads/screens/my_library/my_library_page.dart';
+
+import '../../core/auth/token_storage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -64,20 +67,24 @@ class _LoginPageState extends State<LoginPage> {
         final accessToken = result['access_token'];
         final refreshToken = result['refresh_token'];
 
-        debugPrint('✅ 로그인 성공');
-        debugPrint('accessToken: $accessToken');
+        // ✅ secure storage 저장
+        await TokenStorage.saveTokens(
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+        );
+
+        debugPrint('✅ 로그인 성공 & 토큰 저장 완료');
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('로그인 성공')),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const MyLibraryPage(),
+          ),
         );
-
-        // TODO:
-        // 1. accessToken / refreshToken secure storage 저장
-        // 2. 메인 화면 이동
-
-      } else {
+      }
+      else {
         _showError(decoded['message'] ?? '로그인에 실패했습니다.');
       }
     } catch (e) {

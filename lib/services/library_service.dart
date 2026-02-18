@@ -1,13 +1,20 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/library_summary_model.dart';
+import '../models/library_book_model.dart';
 
 class LibraryService {
   static const String _baseUrl = 'http://43.201.122.162';
 
-  static Future<LibrarySummaryModel?> fetchSummary(String accessToken) async {
+  static Future<List<LibraryBookModel>> fetchBooks({
+    required String status, // WISH / READING / COMPLETE
+    required String accessToken,
+    int size = 10,
+  }) async {
+    final uri = Uri.parse(
+        '$_baseUrl/api/me/library/list?status=$status&size=$size');
+
     final response = await http.get(
-      Uri.parse('$_baseUrl/api/me/library/summary'),
+      uri,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
@@ -18,10 +25,14 @@ class LibraryService {
       final decoded = jsonDecode(response.body);
 
       if (decoded['is_success'] == true) {
-        return LibrarySummaryModel.fromJson(decoded['result']);
+        final List books = decoded['result']['books'];
+
+        return books
+            .map((e) => LibraryBookModel.fromJson(e))
+            .toList();
       }
     }
 
-    return null;
+    return [];
   }
 }
