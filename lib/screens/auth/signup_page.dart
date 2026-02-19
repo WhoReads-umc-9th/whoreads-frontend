@@ -200,6 +200,8 @@ class _SignupPageState extends State<SignupPage> {
                       decoration: const InputDecoration(
                         isDense: true,
                         contentPadding: EdgeInsets.symmetric(vertical: 8),
+                        suffixIconConstraints: const BoxConstraints(minHeight: 24),
+
                         hintText: '아이디 입력',
                         hintStyle: TextStyle(color: hintColor),
                         enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: borderColor)),
@@ -235,6 +237,10 @@ class _SignupPageState extends State<SignupPage> {
                 obscureText: _obscurePw,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  suffixIconConstraints: const BoxConstraints(minHeight: 24),
+
                   hintText: '영문, 숫자 8자리 이상 입력',
                   hintStyle: const TextStyle(color: hintColor),
                   enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: borderColor)),

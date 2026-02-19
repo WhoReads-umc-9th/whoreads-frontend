@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'dna_test_page.dart';
 
 class DnaTestDialog extends StatelessWidget {
@@ -61,12 +62,21 @@ class DnaTestDialog extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // 중앙 PNG 이미지
-            Image.asset(
-              'assets/images/dna_test.png',
-              width: 180,
-              height: 200,
-              fit: BoxFit.contain,
+            // 중앙 SVG 이미지 2개 겹치기
+            Stack(
+              alignment: Alignment.center, // 두 이미지가 정확히 가운데를 기준으로 겹치도록 설정
+              children: [
+                // 1. 밑에 깔리는 이미지 (먼저 작성한 게 아래로 갑니다)
+                SvgPicture.asset(
+                  'assets/images/dna_test1.svg',
+                  height: 180,
+                ),
+                // 2. 그 위에 덮어지는 이미지
+                SvgPicture.asset(
+                  'assets/images/dna_test2.svg',
+                  height: 180,
+                ),
+              ],
             ),
             const SizedBox(height: 30),
 

@@ -89,7 +89,7 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
           Row(
             children: [
             SvgPicture.asset(
-                'assets/images/basic/book.svg', // ✅ 아이콘 경로
+                'assets/images/icon/book.svg', // ✅ 아이콘 경로
                 width: 20, // 아이콘 크기 조절
                 height: 20,
               ),

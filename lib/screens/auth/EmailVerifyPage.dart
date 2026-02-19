@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../../widgets/auth/common_dialog.dart';
 import 'signup_page.dart';
 
 class EmailVerifyPage extends StatefulWidget {
@@ -137,21 +138,47 @@ class _EmailVerifyPageState extends State<EmailVerifyPage> {
         }),
       );
 
+      debugPrint('📩 상태 코드: ${response.statusCode}');
+      debugPrint('📩 응답 바디: ${utf8.decode(response.bodyBytes)}');
+
       final decoded = jsonDecode(response.body);
+      bool isActuallySuccess = false;
 
-      if (response.statusCode == 200 && decoded['is_success'] == true) {
+      if (response.statusCode == 200) {
+        if (decoded['is_success'] == true) {
+          // 통신은 성공했으나, result 값이 false면 "인증 실패"로 간주합니다!
+          if (decoded.containsKey('result') && decoded['result'] == false) {
+            isActuallySuccess = false;
+          } else {
+            isActuallySuccess = true;
+          }
+        }
+      }
+
+      if (isActuallySuccess) {
+        // ✅ 진짜 인증 성공 시에만 다음 페이지로 넘어감
         if (!mounted) return;
-
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => SignupPage(email: email),
           ),
         );
       } else {
-        _showError(decoded['message'] ?? '인증번호가 올바르지 않습니다.');
+        // ❌ 실패 시 팝업 띄우고 현재 페이지에 머무름
+        if (!mounted) return;
+        showCustomDialog(
+          context,
+          title: '인증번호가 올바르지 않습니다',
+          content: '인증번호를 다시 입력해주세요.',
+        );
       }
     } catch (e) {
-      _showError('서버와 통신할 수 없습니다.');
+      if (!mounted) return;
+      showCustomDialog(
+        context,
+        title: '통신 오류',
+        content: '서버와 연결할 수 없습니다.\n잠시 후 다시 시도해주세요.',
+      );
     } finally {
       if (mounted) setState(() => isLoading = false);
     }

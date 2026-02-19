@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/library_book_model.dart';
 import '../../../services/library_service.dart';
+import '../../books/BookDetailPage.dart';
 import '../widgets/book_list_item.dart';
 
 class ReadingTab extends StatefulWidget {
@@ -47,9 +48,22 @@ class _ReadingTabState extends State<ReadingTab> {
     return ListView.builder(
       itemCount: books.length,
       itemBuilder: (_, index) {
+        final book = books[index]; // 현재 책 변수 할당
+
         return BookListItem(
-          book: books[index],
+          book: book,
           showProgress: true,
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BookDetailPage(
+                  bookId: book.id,
+                ),
+              ),
+            );
+            _load();
+          },
         );
       },
     );

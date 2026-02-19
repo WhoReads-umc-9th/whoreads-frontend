@@ -105,15 +105,16 @@ class _SavedTabState extends State<SavedTab> {
         return BookListItem(
           book: book,
           showProgress: false,
-          onTap: () {
-            Navigator.push(
+          onTap: () async {
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => BookDetailPage(
-                  bookId: book.id,   // 🔥 여기 네 모델 필드명 확인
+                  bookId: book.id,
                 ),
               ),
             );
+            _load();
           },
         );
       },

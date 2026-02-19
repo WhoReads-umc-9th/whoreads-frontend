@@ -117,7 +117,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   @override
   Widget build(BuildContext context) {
     const double indicatorButtonGap = 44;
-    const double bottomPadding = 32;
+    const double bottomPadding = 50;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark,
@@ -126,6 +126,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         body: SafeArea(
           child: Column(
             children: [
+              const SizedBox(height: 30),
               /// 중단 – 온보딩 페이지
               Expanded(
                 child: PageView.builder(

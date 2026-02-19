@@ -10,6 +10,7 @@ class CelebrityDetail {
   final String imageUrl;
   final String shortBio;
   final List<String> jobTags;
+  final bool isFollowing; // 🌟 [추가됨] 팔로우 상태 파싱용
 
   CelebrityDetail({
     required this.id,
@@ -17,6 +18,7 @@ class CelebrityDetail {
     required this.imageUrl,
     required this.shortBio,
     required this.jobTags,
+    this.isFollowing = false,
   });
 
   factory CelebrityDetail.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,8 @@ class CelebrityDetail {
       imageUrl: json['image_url'] ?? '',
       shortBio: json['short_bio'] ?? '',
       jobTags: List<String>.from(json['job_tags'] ?? []),
+      // 서버에서 팔로우 여부를 내려준다면 파싱, 없으면 기본값 false
+      isFollowing: json['is_following'] ?? json['is_followed'] ?? false,
     );
   }
 }
@@ -44,11 +48,13 @@ class CelebrityBook {
   });
 
   factory CelebrityBook.fromJson(Map<String, dynamic> json) {
+    final bookNode = json['book'] ?? json;
+
     return CelebrityBook(
-      bookId: json['book_id'] ?? 0,
-      title: json['book_title'] ?? '',
-      coverUrl: json['book_cover'] ?? '',
-      // 저자 정보가 없다면 빈 문자열
+      bookId: bookNode['id'] ?? bookNode['book_id'] ?? json['book_id'] ?? 0,
+      title: bookNode['title'] ?? bookNode['book_title'] ?? json['book_title'] ?? '제목 없음',
+      coverUrl: bookNode['cover_url'] ?? bookNode['book_cover'] ?? json['book_cover'] ?? '',
+      author: bookNode['author_name'] ?? bookNode['author'] ?? json['author'] ?? '저자 미상',
     );
   }
 }
@@ -68,7 +74,13 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
   bool isLoading = true;
   CelebrityDetail? celebrityProfile;
   List<CelebrityBook> bookList = [];
-  final Set<int> _addedBookIds = {};
+
+  // bookId를 키(key)로, userBookId를 값(value)으로 저장하는 Map
+  final Map<int, int> _addedBooksMap = {};
+
+  // 🌟 [추가됨] 팔로우 상태 관리를 위한 변수
+  bool isFollowing = false;
+
   final Color primaryOrange = const Color(0xFFFF6A00);
 
   @override
@@ -80,30 +92,63 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
   Future<void> _fetchAllData() async {
     final token = await TokenStorage.getAccessToken();
     final headers = {
-      'Authorization': 'Bearer $token',
+      if (token != null) 'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
     };
 
     try {
       final profileUrl = Uri.parse('http://43.201.122.162/api/celebrities/${widget.celebrityId}');
       final booksUrl = Uri.parse('http://43.201.122.162/api/quotes/celebrities/${widget.celebrityId}');
+      final libraryUrl = Uri.parse('http://43.201.122.162/api/me/library/list?status=WISH&size=100');
 
       final results = await Future.wait([
         http.get(profileUrl, headers: headers),
         http.get(booksUrl, headers: headers),
+        http.get(libraryUrl, headers: headers),
       ]);
 
       final profileResponse = results[0];
       final booksResponse = results[1];
+      final libraryResponse = results[2];
 
       if (profileResponse.statusCode == 200 && booksResponse.statusCode == 200) {
         final profileData = jsonDecode(utf8.decode(profileResponse.bodyBytes));
         final booksData = jsonDecode(utf8.decode(booksResponse.bodyBytes));
 
+        if (libraryResponse.statusCode == 200) {
+          final libraryData = jsonDecode(utf8.decode(libraryResponse.bodyBytes));
+          final resultData = libraryData['result'];
+          List<dynamic> libraryItems = [];
+
+          if (resultData is List) {
+            libraryItems = resultData;
+          } else if (resultData is Map) {
+            if (resultData.containsKey('content')) libraryItems = resultData['content'];
+            else if (resultData.containsKey('books')) libraryItems = resultData['books'];
+          }
+
+          for (var item in libraryItems) {
+            int? bId = item['book_id'] ?? (item['book'] != null ? item['book']['id'] : null);
+            int? uBId = item['user_book_id'] ?? item['id'];
+
+            if (bId != null && uBId != null) {
+              _addedBooksMap[bId] = uBId;
+            }
+          }
+        }
+
         setState(() {
           celebrityProfile = CelebrityDetail.fromJson(profileData);
+          // 🌟 프로필 데이터에서 현재 팔로우 상태 초기화
+          isFollowing = celebrityProfile!.isFollowing;
+
           if (booksData is List) {
             bookList = booksData.map((e) => CelebrityBook.fromJson(e)).toList();
+          } else if (booksData is Map && booksData.containsKey('result')) {
+            final resultData = booksData['result'];
+            if (resultData is List) {
+              bookList = resultData.map((e) => CelebrityBook.fromJson(e)).toList();
+            }
           }
           isLoading = false;
         });
@@ -113,6 +158,111 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
     } catch (e) {
       debugPrint("Error: $e");
       setState(() => isLoading = false);
+    }
+  }
+
+  // 🌟 [추가됨] 유명인 팔로우 / 언팔로우 API (POST / DELETE)
+  Future<void> _toggleFollow() async {
+    try {
+      final token = await TokenStorage.getAccessToken();
+      final uri = Uri.parse('http://43.201.122.162/api/members/follow/${widget.celebrityId}');
+      final headers = {
+        if (token != null) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      };
+
+      if (isFollowing) {
+        // 이미 팔로우 중이면 취소 (DELETE)
+        final response = await http.delete(uri, headers: headers);
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          setState(() => isFollowing = false);
+        } else {
+          debugPrint('언팔로우 실패: ${response.statusCode}');
+        }
+      } else {
+        // 팔로우 안 했으면 추가 (POST)
+        final response = await http.post(uri, headers: headers);
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          setState(() => isFollowing = true);
+        } else {
+          debugPrint('팔로우 실패: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      debugPrint('팔로우 에러: $e');
+    }
+  }
+
+  // 서재에 책 추가 API 호출 (POST)
+  Future<void> _addBookToLibrary(int bookId) async {
+    if (bookId == 0) return;
+
+    try {
+      final token = await TokenStorage.getAccessToken();
+      final uri = Uri.parse('http://43.201.122.162/api/me/library/book/$bookId');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+        final int? newUserBookId = decoded['result']?['user_book_id'];
+
+        setState(() {
+          if (newUserBookId != null) {
+            _addedBooksMap[bookId] = newUserBookId;
+          }
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('서재에 담아둠으로 추가되었습니다!')),
+          );
+        }
+      } else {
+        debugPrint('책 추가 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('책 추가 에러: $e');
+    }
+  }
+
+  // 서재에서 책 삭제 API 호출 (DELETE)
+  Future<void> _removeBookFromLibrary(int bookId) async {
+    final userBookId = _addedBooksMap[bookId];
+    if (userBookId == null) return;
+
+    try {
+      final token = await TokenStorage.getAccessToken();
+      final uri = Uri.parse('http://43.201.122.162/api/me/library/book/$userBookId');
+
+      final response = await http.delete(
+        uri,
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        setState(() {
+          _addedBooksMap.remove(bookId);
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('서재에서 삭제되었습니다.')),
+          );
+        }
+      } else {
+        debugPrint('책 삭제 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('책 삭제 에러: $e');
     }
   }
 
@@ -126,9 +276,17 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
     }
 
     if (celebrityProfile == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.white,
-        body: Center(child: Text("정보를 불러올 수 없습니다.")),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: const Center(child: Text("정보를 불러올 수 없습니다.")),
       );
     }
 
@@ -144,8 +302,21 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0, top: 12, bottom: 12),
-            child: ElevatedButton.icon(
-              onPressed: () {},
+            // 🌟 [수정됨] 팔로우 상태에 따른 버튼 UI 변경
+            child: isFollowing
+                ? OutlinedButton.icon(
+              onPressed: _toggleFollow,
+              icon: const Icon(Icons.person, size: 14, color: Colors.grey),
+              label: const Text("팔로우", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 13)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.grey, width: 1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                minimumSize: const Size(0, 32),
+              ),
+            )
+                : ElevatedButton.icon(
+              onPressed: _toggleFollow,
               icon: const Icon(Icons.person_add_alt_1, size: 14, color: Colors.white),
               label: const Text("팔로우", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
               style: ElevatedButton.styleFrom(
@@ -153,7 +324,7 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                minimumSize: const Size(0, 32), // 버튼 높이 줄임
+                minimumSize: const Size(0, 32),
               ),
             ),
           )
@@ -233,7 +404,12 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
             const SizedBox(height: 20),
 
             // --- 책 목록 섹션 ---
-            ListView.separated(
+            bookList.isEmpty
+                ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Text('추천된 책이 없습니다.', style: TextStyle(color: Colors.grey)),
+            )
+                : ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -241,10 +417,10 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
               separatorBuilder: (ctx, idx) => const SizedBox(height: 24),
               itemBuilder: (context, index) {
                 final book = bookList[index];
-                final isAdded = _addedBookIds.contains(book.bookId);
+
+                final isAdded = _addedBooksMap.containsKey(book.bookId);
 
                 return SizedBox(
-                  // [수정 포인트 1] 높이를 100으로 고정 (책 표지 높이와 동일)
                   height: 100,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,14 +442,18 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: book.coverUrl.isNotEmpty
-                              ? Image.network(book.coverUrl, fit: BoxFit.cover)
-                              : Container(color: Colors.grey[300], child: const Icon(Icons.book, color: Colors.grey)),
+                              ? Image.network(
+                            book.coverUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(color: Colors.grey[200], child: const Icon(Icons.book, color: Colors.grey)),
+                          )
+                              : Container(color: Colors.grey[200], child: const Icon(Icons.book, color: Colors.grey)),
                         ),
                       ),
 
                       const SizedBox(width: 16),
 
-                      // 책 정보 (Expanded로 남은 공간 차지)
+                      // 책 정보
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,43 +476,34 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
                         ),
                       ),
 
-                      // [수정 포인트 2] Column의 MainAxisAlignment.end를 사용하여 하단 정렬
+                      // 오른쪽 하단 버튼들
                       Column(
-                        mainAxisAlignment: MainAxisAlignment.end, // 아래쪽 끝으로 정렬
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           isAdded
                               ? OutlinedButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _addedBookIds.remove(book.bookId);
-                              });
-                            },
+                            onPressed: () => _removeBookFromLibrary(book.bookId),
                             icon: const Icon(Icons.check, size: 14, color: Colors.grey),
                             label: const Text("추가됨", style: TextStyle(color: Colors.grey, fontSize: 12)),
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: Colors.grey),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                              minimumSize: const Size(0, 30), // 높이 줄임
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 여백 제거
+                              minimumSize: const Size(0, 30),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                           )
                               : ElevatedButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _addedBookIds.add(book.bookId);
-                              });
-                            },
+                            onPressed: () => _addBookToLibrary(book.bookId),
                             icon: const Icon(Icons.add, size: 14, color: Colors.white),
                             label: const Text("추가", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFF8A65),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                               elevation: 0,
-                              // [수정 포인트 3] 버튼 크기 축소
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                              minimumSize: const Size(0, 30), // 높이 30으로 고정
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 터치 영역 여백 제거
+                              minimumSize: const Size(0, 30),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                           ),
                         ],

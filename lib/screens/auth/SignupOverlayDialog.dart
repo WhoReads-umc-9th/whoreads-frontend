@@ -59,7 +59,7 @@ class _SignupOverlayDialogState extends State<SignupOverlayDialog> {
     setState(() => isLoading = false);
 
     if (response.statusCode == 200) {
-      Navigator.pop(context);
+      Navigator.pop(context, _nicknameCtrl.text);
     }
   }
 
@@ -155,14 +155,16 @@ class _SignupOverlayDialogState extends State<SignupOverlayDialog> {
                 ),
                 const SizedBox(height: 12),
 
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                Row(
                   children: [
                     _ageButton('10대', 'TEENAGERS'),
+                    const SizedBox(width: 6),
                     _ageButton('20대', 'TWENTIES'),
+                    const SizedBox(width: 6),
                     _ageButton('30대', 'THIRTIES'),
+                    const SizedBox(width: 6),
                     _ageButton('40대', 'FORTIES'),
+                    const SizedBox(width: 6),
                     _ageButton('50대+', 'FIFTIES_PLUS'),
                   ],
                 ),
@@ -235,6 +237,7 @@ class _SignupOverlayDialogState extends State<SignupOverlayDialog> {
                   : Colors.black87,
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
           ),
         ),
       ),
@@ -248,7 +251,7 @@ class _SignupOverlayDialogState extends State<SignupOverlayDialog> {
       onTap: () => setState(() => selectedAge = value),
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: 18,
+          horizontal: 10,
           vertical: 12,
         ),
         decoration: BoxDecoration(
