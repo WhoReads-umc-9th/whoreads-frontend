@@ -158,7 +158,7 @@ class DnaResultPage extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) => CelebritiesBookPage(
-                              celebrityId: 1, // TODO: 실제 API에서 받은 ID로 교체 필요
+                                celebrityId: result.celebrityId,
                             ),
                           ),
                         );

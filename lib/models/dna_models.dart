@@ -50,6 +50,7 @@ class DnaOption {
 class DnaResult {
   final String headline;
   final List<String> description;
+  final int celebrityId; // [추가] celebrity_id 필드
   final String celebrityName;
   final String imageUrl;
   final List<String> jobTags;
@@ -57,6 +58,7 @@ class DnaResult {
   DnaResult({
     required this.headline,
     required this.description,
+    required this.celebrityId, // [추가]
     required this.celebrityName,
     required this.imageUrl,
     required this.jobTags,
@@ -66,6 +68,7 @@ class DnaResult {
     return DnaResult(
       headline: json['result_hea_line'] ?? '',
       description: List<String>.from(json['description'] ?? []),
+      celebrityId: json['celebrity_id'] ?? 0, // [추가] JSON에서 int형으로 파싱
       celebrityName: json['celebrity_name'] ?? '',
       imageUrl: json['image_url'] ?? '',
       jobTags: List<String>.from(json['job_tags'] ?? []),

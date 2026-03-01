@@ -7,14 +7,15 @@ class DnaTestDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
+    // Center + Container 대신 Dialog 위젯 사용 (Material 테마 적용 및 오류 방지)
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24), // 좌우 여백
+      child: Padding(
         padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -22,14 +23,14 @@ class DnaTestDialog extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SizedBox(width: 24), // 중앙 정렬을 위한 더미
+                // 닫기 아이콘 크기(28)와 동일하게 맞춰서 제목을 정확히 중앙 정렬
+                const SizedBox(width: 28),
                 const Text(
                   '독서 DNA 테스트',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
-                    decoration: TextDecoration.none,
                   ),
                 ),
                 GestureDetector(
@@ -64,9 +65,9 @@ class DnaTestDialog extends StatelessWidget {
 
             // 중앙 SVG 이미지 2개 겹치기
             Stack(
-              alignment: Alignment.center, // 두 이미지가 정확히 가운데를 기준으로 겹치도록 설정
+              alignment: Alignment.center,
               children: [
-                // 1. 밑에 깔리는 이미지 (먼저 작성한 게 아래로 갑니다)
+                // 1. 밑에 깔리는 이미지
                 SvgPicture.asset(
                   'assets/images/dna_test1.svg',
                   height: 180,
@@ -92,16 +93,15 @@ class DnaTestDialog extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
-                  debugPrint("버튼 눌림!"); // 로그가 뜨는지 확인하세요.
+                  debugPrint("버튼 눌림!");
 
-                  // [중요] pop을 하면 context가 사라질 수 있으므로
-                  // Navigator 객체를 미리 변수에 담아둡니다.
+                  // 화면 전환을 위해 Navigator 객체 캐싱
                   final navigator = Navigator.of(context);
 
                   // 1. 다이얼로그 닫기
                   navigator.pop();
 
-                  // 2. 페이지 이동 (미리 담아둔 navigator 사용)
+                  // 2. 페이지 이동
                   navigator.push(
                     MaterialPageRoute(builder: (context) => const DnaTestPage()),
                   );

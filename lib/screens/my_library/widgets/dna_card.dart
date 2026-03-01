@@ -27,7 +27,7 @@ class DnaCard extends StatelessWidget {
           Row(
             children: [
               SvgPicture.asset(
-                'assets/images/dna_book.svg', // SVG 파일 경로
+                'assets/images/basic/dna_book.svg', // SVG 파일 경로
                 width: 24,
                 height: 24,
               ),

@@ -34,9 +34,9 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
   String? accessToken;
   String? nickname;
   bool isLoading = true;
-
-  // 🌟 DNA 테스트 결과를 가지고 있는지 확인하는 변수
   bool hasDnaResult = false;
+
+  int _refreshKey = 0;
 
   @override
   void initState() {
@@ -68,8 +68,11 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
     );
 
     if (resultNickname != null && resultNickname.isNotEmpty) {
+      await _initialize();
+
       setState(() {
         nickname = resultNickname;
+        _refreshKey++; // 값이 변경되면 Key가 바뀌면서 탭들이 새로 그려짐
       });
     }
   }
@@ -260,6 +263,7 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
             /// TabBarView
             Expanded(
               child: TabBarView(
+                key: ValueKey(_refreshKey),
                 children: [
                   SavedTab(accessToken: accessToken!),
                   ReadingTab(accessToken: accessToken!, books: []),

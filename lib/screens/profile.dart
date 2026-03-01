@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../core/auth/token_storage.dart';
+import 'dna_test/dnaTestDialog.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -209,35 +210,58 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
 
             /// 3. 독서 DNA 카드
-            _buildCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.auto_awesome_mosaic_outlined, color: Colors.black54, size: 20),
-                      const SizedBox(width: 8),
-                      const Text('독서 DNA', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                      const Spacer(),
-                      const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  dnaResult.isEmpty
-                      ? const Text('진행한 독서 DNA 테스트가 없습니다.', style: TextStyle(color: Colors.grey, fontSize: 14))
-                      : RichText(
-                    text: TextSpan(
-                      style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
+            GestureDetector(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => const DnaTestDialog(),
+                );
+              },
+              child: _buildCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        TextSpan(text: '$nickname님은 '),
-                        TextSpan(
-                          text: "' ${dnaResult['result_hea_line'] ?? '현실과 사회를 더 잘 이해하기 위해'} '",
-                          style: TextStyle(color: primaryOrange, fontWeight: FontWeight.bold),
-                        ),
+                        const Icon(Icons.auto_awesome_mosaic_outlined,
+                            color: Colors.black54, size: 20),
+                        const SizedBox(width: 8),
+                        const Text('독서 DNA',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87)),
+                        const Spacer(),
+                        const Icon(Icons.chevron_right,
+                            color: Colors.grey, size: 20),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    dnaResult.isEmpty
+                        ? const Text(
+                      '진행한 독서 DNA 테스트가 없습니다.',
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    )
+                        : RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black87,
+                            height: 1.5),
+                        children: [
+                          TextSpan(text: '$nickname님은 '),
+                          TextSpan(
+                            text:
+                            "' ${dnaResult['result_hea_line'] ?? '현실과 사회를 더 잘 이해하기 위해'} '",
+                            style: TextStyle(
+                                color: primaryOrange,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 

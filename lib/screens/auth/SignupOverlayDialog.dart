@@ -3,6 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../../core/auth/token_storage.dart';
+
 class SignupOverlayDialog extends StatefulWidget {
   final String email;
   final String loginId;
@@ -59,6 +61,17 @@ class _SignupOverlayDialogState extends State<SignupOverlayDialog> {
     setState(() => isLoading = false);
 
     if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final newAccessToken = data['access_token'];
+      final newRefreshToken = data['refresh_token'];
+
+      // 🌟 이 부분이 꼭 있어야 새 계정 정보로 덮어씌워집니다!
+      await TokenStorage.saveTokens(
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      );
+
+      // 그 다음 메인 페이지(MyLibraryPage)로 이동
       Navigator.pop(context, _nicknameCtrl.text);
     }
   }

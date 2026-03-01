@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:http/http.dart' as http;
-import '../../../core/auth/token_storage.dart';
 import '../../../models/library_summary_model.dart';
 
 class ReadingSummaryCard extends StatefulWidget {
@@ -29,9 +28,25 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
     _loadSummary();
   }
 
+  // 🌟 [추가] 부모로부터 전달받는 값이 변경될 때(회원가입 완료 등) API를 다시 호출합니다.
+  @override
+  void didUpdateWidget(covariant ReadingSummaryCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 토큰이나 유저네임이 이전과 달라졌다면 새 회원 정보로 간주하고 새로고침!
+    if (oldWidget.accessToken != widget.accessToken || oldWidget.username != widget.username) {
+      _loadSummary();
+    }
+  }
+
   Future<void> _loadSummary() async {
+    // 다시 로딩 상태로 변경 (didUpdateWidget에서 재호출될 수 있으므로)
+    setState(() {
+      isLoading = true;
+    });
+
     try {
-      final token = await TokenStorage.getAccessToken();
+      // 🌟 [수정] TokenStorage 대신 부모가 넘겨준 최신 토큰(widget.accessToken) 사용
+      final token = widget.accessToken;
 
       final response = await http.get(
         Uri.parse('http://43.201.122.162/api/me/library/summary'),
@@ -41,11 +56,12 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
         },
       );
 
+      // 🌟 [중요] API 통신이 끝난 후 이 위젯이 화면에 아직 존재하는지 확인!
+      if (!mounted) return;
+
       final decoded = jsonDecode(response.body);
 
-      if (response.statusCode == 200 &&
-          decoded['is_success'] == true) {
-
+      if (response.statusCode == 200 && decoded['is_success'] == true) {
         final result = decoded['result'];
 
         setState(() {
@@ -61,6 +77,7 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
       }
     } catch (e) {
       debugPrint('요약 불러오기 실패: $e');
+      if (!mounted) return; // 에러 처리 시에도 체크
       setState(() => isLoading = false);
     }
   }
@@ -74,7 +91,7 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFFF6A00)));
     }
 
     return Container(
@@ -87,21 +104,21 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: [
-            SvgPicture.asset(
-                'assets/images/icon/book.svg', // ✅ 아이콘 경로
-                width: 20, // 아이콘 크기 조절
-                height: 20,
-              ),
-              const SizedBox(width: 6), // 아이콘과 텍스트 사이 간격
-              Text(
-                '${widget.username}님의 기록',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              children: [
+                SvgPicture.asset(
+                  'assets/images/basic/book.svg',
+                  width: 20,
+                  height: 20,
                 ),
-              ),
-            ]
+                const SizedBox(width: 6),
+                Text(
+                  '${widget.username}님의 기록',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ]
           ),
           const SizedBox(height: 16),
           Row(
@@ -126,7 +143,6 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
     );
   }
 }
-
 
 class _SummaryItem extends StatelessWidget {
   final String title;

@@ -30,6 +30,17 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  // 로그인 화면 초기화 시 기존 토큰 삭제
+  @override
+  void initState() {
+    super.initState();
+    _clearOldTokens();
+  }
+
+  Future<void> _clearOldTokens() async {
+    await TokenStorage.clear(); // 🌟 이거 한 줄이면 기존 whoreads 토큰이 날아갑니다.
+  }
+  
   bool get _canLogin {
     final id = _idCtrl.text.trim();
     final pw = _pwCtrl.text;
