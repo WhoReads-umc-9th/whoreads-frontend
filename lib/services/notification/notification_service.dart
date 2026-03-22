@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'notification_api_service.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 class NotificationService {
   final NotificationApiService _apiService = NotificationApiService();
@@ -73,11 +72,7 @@ class NotificationService {
       // 2. [추가] 가공 로직: created_at을 timeago 포맷으로 변환
       final processedItems = newItems.map((item) {
         final Map<String, dynamic> mapItem = item as Map<String, dynamic>;
-
-        timeago.setLocaleMessages('ko', timeago.KoMessages());
-
         mapItem['time'] = '';
-
         // 서버의 날짜 문자열을 DateTime 객체로 변환
         if (mapItem['created_at'] != null) {
           mapItem['time'] = formatTimeAgo(mapItem['created_at']);
