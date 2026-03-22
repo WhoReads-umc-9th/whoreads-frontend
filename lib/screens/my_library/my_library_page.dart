@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:http/http.dart' as http;
+import 'package:whoreads/screens/notification_screen.dart';
+import 'package:whoreads/screens/timer/timer_default_screen.dart';
 import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/auth/token_storage.dart';
 import '../auth/SignupOverlayDialog.dart';
@@ -199,10 +201,26 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
             height: 18,
           ),
           actions: [
-            const Icon(Icons.timer_outlined, color: Colors.black),
-            const SizedBox(width: 16),
-            const Icon(Icons.notifications_none, color: Colors.black),
-            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.timer_outlined, color: Colors.black),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TimerPage()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.notifications_none, color: Colors.black),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationPage(),
+                  ),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.person_outline, color: Colors.black),
               onPressed: () {
