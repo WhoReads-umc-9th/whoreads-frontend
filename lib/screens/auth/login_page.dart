@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:whoreads/screens/my_library/my_library_page.dart';
+import 'package:whoreads/services/notification/fcm_service.dart';
 
 import '../../core/auth/token_storage.dart';
 
@@ -83,6 +84,8 @@ class _LoginPageState extends State<LoginPage> {
           accessToken: accessToken,
           refreshToken: refreshToken,
         );
+        // 로그인 시점에 FCM 토큰 서버로 전송
+        await FcmService.sendTokenToServer();
 
         debugPrint('✅ 로그인 성공 & 토큰 저장 완료');
 
