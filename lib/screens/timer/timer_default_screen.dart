@@ -14,24 +14,32 @@ class TimerPage extends StatefulWidget {
 class _TimerPageState extends State<TimerPage> {
   final TimerService _service = TimerService();
 
-  @override
+@override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: _buildAppBar(context),
-      body: ListenableBuilder(
-        listenable: _service,
-        builder: (context, child) {
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              const SizedBox(height: 60),
-              _buildTimerDisplay(),
-              const SizedBox(height: 40),
-              _buildControlButtons(),
-            ],
-          );
-        },
+    return PopScope(
+      canPop: true, // 뒤로가기 허용
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          _service.resetTimer();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: _buildAppBar(context),
+        body: ListenableBuilder(
+          listenable: _service,
+          builder: (context, child) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const SizedBox(height: 60),
+                _buildTimerDisplay(),
+                const SizedBox(height: 40),
+                _buildControlButtons(),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
