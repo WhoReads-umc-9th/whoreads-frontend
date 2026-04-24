@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:http/http.dart' as http;
 import 'package:whoreads/screens/topics/topics_page.dart';
+import '../../core/network/api_client.dart';
 import '../my_library/my_library_page.dart';
 import '../profile.dart';
 import 'celebrities_book_page.dart'; // [중요] 방금 만든 페이지 import 확인해주세요!
@@ -19,8 +19,6 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
 
   String selectedCategory = '전체';
   bool isDropdownOpen = false;
-
-  static const String _baseUrl = 'http://43.201.122.162';
 
   List<dynamic> celebrities = [];
   bool isLoading = false;
@@ -50,23 +48,29 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
 
     final tag = categoryMap[selectedCategory];
 
-    final uri = tag == null
-        ? Uri.parse('$_baseUrl/api/celebrities')
-        : Uri.parse('$_baseUrl/api/celebrities')
-        .replace(queryParameters: {'tag': tag});
-
     try {
-      final response = await http.get(uri);
+      final response = await ApiClient.dio.get(
+        '/celebrities',
+        queryParameters: tag == null ? null : {'tag': tag},
+      );
 
-      debugPrint('REQUEST URI: $uri');
       debugPrint('STATUS CODE: ${response.statusCode}');
-      // debugPrint('RESPONSE BODY: ${response.body}'); // 로그 너무 길면 주석 처리
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+        final decoded = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
+        final List<dynamic> items;
+        if (decoded is List) {
+          items = decoded;
+        } else if (decoded is Map<String, dynamic> && decoded['result'] is List) {
+          items = decoded['result'] as List<dynamic>;
+        } else {
+          items = [];
+        }
 
         setState(() {
-          celebrities = decoded;
+          celebrities = items;
         });
       } else {
         debugPrint('API 실패: ${response.statusCode}');
@@ -179,6 +183,8 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())
+                    : celebrities.isEmpty
+                    ? const Center(child: Text('표시할 인물 정보가 없습니다.'))
                     : GridView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
@@ -375,7 +381,7 @@ class _CelebrityCard extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
-                celeb['image_url'],
+                celeb['image_url']?.toString() ?? '',
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
@@ -390,7 +396,7 @@ class _CelebrityCard extends StatelessWidget {
 
           // 이름
           Text(
-            celeb['name'],
+            celeb['name']?.toString() ?? '이름 없음',
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 15,

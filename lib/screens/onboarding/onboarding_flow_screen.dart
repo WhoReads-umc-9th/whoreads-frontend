@@ -1,12 +1,9 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:whoreads/screens/auth/EmailVerifyPage.dart';
 
+import '../../core/network/api_client.dart';
 import '../auth/login_page.dart';
-import '../auth/signup_page.dart';
 import '../../widgets/onboarding/dot_indicator.dart';
 import '../../widgets/onboarding/onboarding_page.dart';
 import '../../widgets/onboarding/primary_buttons.dart';
@@ -45,18 +42,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   /// 서버 Health Check
   /// ===============================
   Future<void> _checkServerHealth() async {
-    const String url = 'http://43.201.122.162/api/health';
-
     try {
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await ApiClient.dio.get('/health');
 
       if (response.statusCode == 200) {
-        debugPrint('✅ 서버 정상: ${response.body}');
+        debugPrint('✅ 서버 정상: ${response.data}');
       } else {
         debugPrint('⚠️ 서버 오류 응답: ${response.statusCode}');
         _showServerErrorDialog();

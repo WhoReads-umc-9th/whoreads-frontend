@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:http/http.dart' as http;
 // 🌟 [수정됨] 상세 페이지 import 주석 해제
 import '../books/BookDetailPage.dart';
 import 'package:whoreads/screens/topics/top_20_books_page.dart';
 
-import '../../core/auth/token_storage.dart';
+import '../../core/network/api_client.dart';
 import '../celebrities/celebrities_page.dart';
 import '../my_library/my_library_page.dart';
 import '../profile.dart';
@@ -19,8 +18,6 @@ class TopicsPage extends StatefulWidget {
 }
 
 class _TopicsPageState extends State<TopicsPage> {
-  static const String _baseUrl = 'http://43.201.122.162';
-
   final ScrollController _scrollController = ScrollController();
 
   String selectedCategory = '전체';
@@ -53,25 +50,16 @@ class _TopicsPageState extends State<TopicsPage> {
     setState(() => isLoading = true);
 
     try {
-      final token = await TokenStorage.getAccessToken();
       final categoryTag = categoryMap[selectedCategory];
-
-      Uri uri = Uri.parse('$_baseUrl/api/topics');
-      if (categoryTag != null) {
-        uri = uri.replace(queryParameters: {'category': categoryTag});
-      }
-
-      final response = await http.get(
-        uri,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await ApiClient.dio.get(
+        '/topics',
+        queryParameters: categoryTag == null ? null : {'category': categoryTag},
       );
 
       if (response.statusCode == 200) {
-        final String bodyString = utf8.decode(response.bodyBytes);
-        final dynamic decoded = jsonDecode(bodyString);
+        final dynamic decoded = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
 
         List<dynamic> newBooks = [];
 
@@ -84,6 +72,14 @@ class _TopicsPageState extends State<TopicsPage> {
         }
         else if (decoded is Map && decoded.containsKey('books')) {
           newBooks = decoded['books'];
+        }
+        else if (decoded is Map && decoded['result'] != null) {
+          final result = decoded['result'];
+          if (result is List) {
+            newBooks = result;
+          } else if (result is Map && result['books'] is List) {
+            newBooks = result['books'];
+          }
         }
 
         setState(() {

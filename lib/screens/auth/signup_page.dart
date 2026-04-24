@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:whoreads/screens/my_library/my_library_page.dart';
 
+import '../../core/network/api_client.dart';
 import '../../widgets/auth/common_dialog.dart';
 
 class SignupPage extends StatefulWidget {
@@ -47,10 +46,9 @@ class _SignupPageState extends State<SignupPage> {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('http://43.201.122.162/api/auth/check-id'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({"login_id": id}),
+      final response = await ApiClient.dio.post(
+        '/auth/check-id',
+        data: {"login_id": id},
       );
 
       // 상태 코드에 따른 분기 처리

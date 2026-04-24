@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../../core/network/api_client.dart';
 
 class CelebrityDetailPage extends StatefulWidget {
   final int celebrityId;
@@ -53,15 +53,25 @@ class _CelebrityDetailPageState extends State<CelebrityDetailPage> {
   }
 
   Future<void> fetchCelebrityDetail() async {
-    final uri = Uri.parse(
-      'https://your-domain.com/api/celebrities/${widget.celebrityId}',
-    );
+    try {
+      final response = await ApiClient.dio.get(
+        '/celebrities/${widget.celebrityId}',
+      );
 
-    final response = await http.get(uri);
+      final decoded = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
+      final data = decoded is Map<String, dynamic> && decoded['result'] is Map<String, dynamic>
+          ? decoded['result'] as Map<String, dynamic>
+          : (decoded is Map<String, dynamic> ? decoded : null);
 
-    if (response.statusCode == 200) {
       setState(() {
-        celebrity = jsonDecode(utf8.decode(response.bodyBytes));
+        celebrity = response.statusCode == 200 ? data : null;
+        isLoading = false;
+      });
+    } catch (_) {
+      setState(() {
+        celebrity = null;
         isLoading = false;
       });
     }
@@ -98,6 +108,8 @@ class _CelebrityDetailPageState extends State<CelebrityDetailPage> {
 
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
+          : celebrity == null
+          ? const Center(child: Text('정보를 불러올 수 없습니다.'))
           : SingleChildScrollView(
         child: Column(
           children: [

@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
-import '../../../core/auth/token_storage.dart';
+import 'package:flutter/foundation.dart';
+import '../auth/token_storage.dart';
 
 class ApiClient {
-  static String baseUrl = 'http://192.168.35.89:8080/api';
+  static String baseUrl = 'https://api.whoreads.kro.kr/api';
 
   static final Dio _dio =
       Dio(
@@ -12,6 +12,7 @@ class ApiClient {
             baseUrl: baseUrl,
             connectTimeout: const Duration(seconds: 8),
             receiveTimeout: const Duration(seconds: 5),
+            validateStatus: (status) => status != null && status < 600,
             headers: {
               "Content-Type": "application/json",
               "Accept": "application/json",

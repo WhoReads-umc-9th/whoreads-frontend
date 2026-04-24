@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../../core/auth/token_storage.dart';
+import '../../core/network/api_client.dart';
 
 // --- 모델 클래스 ---
 class CelebrityDetail {
@@ -90,21 +89,11 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
   }
 
   Future<void> _fetchAllData() async {
-    final token = await TokenStorage.getAccessToken();
-    final headers = {
-      if (token != null) 'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-
     try {
-      final profileUrl = Uri.parse('http://43.201.122.162/api/celebrities/${widget.celebrityId}');
-      final booksUrl = Uri.parse('http://43.201.122.162/api/quotes/celebrities/${widget.celebrityId}');
-      final libraryUrl = Uri.parse('http://43.201.122.162/api/me/library/list?status=WISH&size=100');
-
       final results = await Future.wait([
-        http.get(profileUrl, headers: headers),
-        http.get(booksUrl, headers: headers),
-        http.get(libraryUrl, headers: headers),
+        ApiClient.dio.get('/celebrities/${widget.celebrityId}'),
+        ApiClient.dio.get('/quotes/celebrities/${widget.celebrityId}'),
+        ApiClient.dio.get('/me/library/list', queryParameters: {'status': 'WISH', 'size': 100}),
       ]);
 
       final profileResponse = results[0];
@@ -112,11 +101,17 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
       final libraryResponse = results[2];
 
       if (profileResponse.statusCode == 200 && booksResponse.statusCode == 200) {
-        final profileData = jsonDecode(utf8.decode(profileResponse.bodyBytes));
-        final booksData = jsonDecode(utf8.decode(booksResponse.bodyBytes));
+        final profileData = profileResponse.data is String
+            ? jsonDecode(profileResponse.data as String)
+            : profileResponse.data;
+        final booksData = booksResponse.data is String
+            ? jsonDecode(booksResponse.data as String)
+            : booksResponse.data;
 
         if (libraryResponse.statusCode == 200) {
-          final libraryData = jsonDecode(utf8.decode(libraryResponse.bodyBytes));
+          final libraryData = libraryResponse.data is String
+              ? jsonDecode(libraryResponse.data as String)
+              : libraryResponse.data;
           final resultData = libraryData['result'];
           List<dynamic> libraryItems = [];
 
@@ -164,16 +159,9 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
   // 🌟 [추가됨] 유명인 팔로우 / 언팔로우 API (POST / DELETE)
   Future<void> _toggleFollow() async {
     try {
-      final token = await TokenStorage.getAccessToken();
-      final uri = Uri.parse('http://43.201.122.162/api/members/follow/${widget.celebrityId}');
-      final headers = {
-        if (token != null) 'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
-
       if (isFollowing) {
         // 이미 팔로우 중이면 취소 (DELETE)
-        final response = await http.delete(uri, headers: headers);
+        final response = await ApiClient.dio.delete('/members/follow/${widget.celebrityId}');
         if (response.statusCode == 200 || response.statusCode == 204) {
           setState(() => isFollowing = false);
         } else {
@@ -181,7 +169,7 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
         }
       } else {
         // 팔로우 안 했으면 추가 (POST)
-        final response = await http.post(uri, headers: headers);
+        final response = await ApiClient.dio.post('/members/follow/${widget.celebrityId}');
         if (response.statusCode == 200 || response.statusCode == 201) {
           setState(() => isFollowing = true);
         } else {
@@ -198,19 +186,14 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
     if (bookId == 0) return;
 
     try {
-      final token = await TokenStorage.getAccessToken();
-      final uri = Uri.parse('http://43.201.122.162/api/me/library/book/$bookId');
-
-      final response = await http.post(
-        uri,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await ApiClient.dio.post(
+        '/me/library/book/$bookId',
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+        final decoded = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
         final int? newUserBookId = decoded['result']?['user_book_id'];
 
         setState(() {
@@ -238,14 +221,8 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
     if (userBookId == null) return;
 
     try {
-      final token = await TokenStorage.getAccessToken();
-      final uri = Uri.parse('http://43.201.122.162/api/me/library/book/$userBookId');
-
-      final response = await http.delete(
-        uri,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+      final response = await ApiClient.dio.delete(
+        '/me/library/book/$userBookId',
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {

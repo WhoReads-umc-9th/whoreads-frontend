@@ -1,40 +1,36 @@
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import '../models/library_book_model.dart';
+import '../core/network/api_client.dart';
 
 class LibraryService {
-  static const String _baseUrl = 'http://43.201.122.162';
-
   static Future<List<LibraryBookModel>> fetchBooks({
     required String status, // WISH / READING / COMPLETE
-    required String accessToken,
     int size = 10,
   }) async {
-    final uri = Uri.parse(
-        '$_baseUrl/api/me/library/list?status=$status&size=$size');
+    try {
+      final response = await ApiClient.dio.get(
+        '/me/library/list',
+        queryParameters: {
+          'status': status,
+          'size': size,
+        },
+      );
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-      },
-    );
+      final decoded = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
 
-    // String responseBody = utf8.decode(response.bodyBytes);
-    // debugPrint('응답 Body: $responseBody');
-
-    if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
-
-      if (decoded['is_success'] == true) {
+      if (response.statusCode == 200 && decoded['is_success'] == true) {
         final List books = decoded['result']['books'];
-
-        return books
-            .map((e) => LibraryBookModel.fromJson(e))
-            .toList();
+        return books.map((e) => LibraryBookModel.fromJson(e)).toList();
       }
+    } on DioException catch (e) {
+      // 네트워크/SSL/401 등 예외가 있어도 리스트 탭이 죽지 않도록 빈 배열 반환
+      // ignore: avoid_print
+      print('LibraryService.fetchBooks failed: ${e.message}');
+    } catch (_) {
+      // 실패 시 빈 배열
     }
 
     return [];

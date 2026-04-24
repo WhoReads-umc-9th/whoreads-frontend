@@ -25,7 +25,6 @@ class _FinishedTabState extends State<FinishedTab> {
   Future<void> _load() async {
     final result = await LibraryService.fetchBooks(
       status: "COMPLETE",
-      accessToken: widget.accessToken,
     );
 
     setState(() {

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../../core/auth/token_storage.dart';
+import '../../core/network/api_client.dart';
 import '../../models/dna_models.dart';
 import 'DnaResultPage.dart';
 
@@ -37,24 +36,15 @@ class _DnaTestPageState extends State<DnaTestPage> {
     _fetchRootQuestion();
   }
 
-  Future<Map<String, String>> _getHeaders() async {
-    final token = await TokenStorage.getAccessToken();
-    return {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-  }
-
   // [API 1] Q1 로드
   Future<void> _fetchRootQuestion() async {
     try {
-      final headers = await _getHeaders();
-      final url = Uri.parse('http://43.201.122.162/api/dna/questions/root');
-
-      final response = await http.get(url, headers: headers);
+      final response = await ApiClient.dio.get('/dna/questions/root');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final data = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
         final result = data['result'];
 
         setState(() {
@@ -84,13 +74,15 @@ class _DnaTestPageState extends State<DnaTestPage> {
     setState(() => isNextLoading = true);
 
     try {
-      final headers = await _getHeaders();
-      final url = Uri.parse('http://43.201.122.162/api/dna/questions?trackCode=$code');
-
-      final response = await http.get(url, headers: headers);
+      final response = await ApiClient.dio.get(
+        '/dna/questions',
+        queryParameters: {'trackCode': code},
+      );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final data = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
         final resultData = data['result'];
 
         // result 안에 questions 리스트가 있는지 확인
@@ -122,18 +114,17 @@ class _DnaTestPageState extends State<DnaTestPage> {
     }
 
     try {
-      final headers = await _getHeaders();
-      final url = Uri.parse('http://43.201.122.162/api/dna/results');
-
-      final body = jsonEncode({
+      final body = {
         "track_code": trackCode,
         "selected_option_ids": selectedOptionIds,
-      });
+      };
 
-      final response = await http.post(url, headers: headers, body: body);
+      final response = await ApiClient.dio.post('/dna/results', data: body);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        final data = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
         final resultData = DnaResult.fromJson(data['result']);
 
         if (!mounted) return;

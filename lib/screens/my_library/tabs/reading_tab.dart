@@ -26,7 +26,6 @@ class _ReadingTabState extends State<ReadingTab> {
   Future<void> _load() async {
     final result = await LibraryService.fetchBooks(
       status: "READING",
-      accessToken: widget.accessToken,
     );
 
     setState(() {

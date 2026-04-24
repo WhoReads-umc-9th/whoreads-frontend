@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import '../../core/auth/token_storage.dart';
+import '../../core/network/api_client.dart';
 
 class SignupOverlayDialog extends StatefulWidget {
   final String email;
@@ -37,10 +37,9 @@ class _SignupOverlayDialogState extends State<SignupOverlayDialog> {
   Future<void> _submitSignup() async {
     setState(() => isLoading = true);
 
-    final response = await http.post(
-      Uri.parse('http://43.201.122.162/api/auth/signup'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
+    final response = await ApiClient.dio.post(
+      '/auth/signup',
+      data: {
         "request": {
           "login_id": widget.loginId,
           "email": widget.email,
@@ -51,17 +50,19 @@ class _SignupOverlayDialogState extends State<SignupOverlayDialog> {
           "gender": selectedGender,
           "age_group": selectedAge,
         }
-      }),
+      },
     );
 
     /// 🔥 콘솔 로그 출력
     print("회원가입 응답 status: ${response.statusCode}");
-    print("회원가입 응답 body: ${response.body}");
+    print("회원가입 응답 body: ${response.data}");
 
     setState(() => isLoading = false);
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+      final data = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
       final newAccessToken = data['access_token'];
       final newRefreshToken = data['refresh_token'];
 

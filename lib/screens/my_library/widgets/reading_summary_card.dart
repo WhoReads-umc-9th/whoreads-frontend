@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:http/http.dart' as http;
 import '../../../models/library_summary_model.dart';
+import '../../../core/network/api_client.dart';
 
 class ReadingSummaryCard extends StatefulWidget {
   final String username;
@@ -46,20 +46,16 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
 
     try {
       // 🌟 [수정] TokenStorage 대신 부모가 넘겨준 최신 토큰(widget.accessToken) 사용
-      final token = widget.accessToken;
-
-      final response = await http.get(
-        Uri.parse('http://43.201.122.162/api/me/library/summary'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+      final response = await ApiClient.dio.get(
+        '/me/library/summary',
       );
 
       // 🌟 [중요] API 통신이 끝난 후 이 위젯이 화면에 아직 존재하는지 확인!
       if (!mounted) return;
 
-      final decoded = jsonDecode(response.body);
+      final decoded = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
 
       if (response.statusCode == 200 && decoded['is_success'] == true) {
         final result = decoded['result'];

@@ -27,7 +27,6 @@ class _SavedTabState extends State<SavedTab> {
   Future<void> _load() async {
     final result = await LibraryService.fetchBooks(
       status: "WISH",
-      accessToken: widget.accessToken,
     );
 
     setState(() {

@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
+import '../../core/network/api_client.dart';
 import '../../widgets/auth/common_dialog.dart';
 import 'signup_page.dart';
 
@@ -39,8 +39,6 @@ class _EmailVerifyPageState extends State<EmailVerifyPage> {
   final TextEditingController _codeController = TextEditingController();
 
   final FocusNode _codeFocusNode = FocusNode();
-
-  static const String _baseUrl = 'http://43.201.122.162';
 
   // ================= Timer =================
   void _startTimer() {
@@ -90,13 +88,14 @@ class _EmailVerifyPageState extends State<EmailVerifyPage> {
     setState(() => isLoading = true);
 
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/auth/email/send'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
+      final response = await ApiClient.dio.post(
+        '/auth/email/send',
+        data: {'email': email},
       );
 
-      final decoded = jsonDecode(response.body);
+      final decoded = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
 
       if (response.statusCode == 200 && decoded['is_success'] == true) {
         setState(() {
@@ -129,19 +128,20 @@ class _EmailVerifyPageState extends State<EmailVerifyPage> {
     setState(() => isLoading = true);
 
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/auth/email/verify'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await ApiClient.dio.post(
+        '/auth/email/verify',
+        data: {
           'email': email,
           'code': code,
-        }),
+        },
       );
 
       debugPrint('📩 상태 코드: ${response.statusCode}');
-      debugPrint('📩 응답 바디: ${utf8.decode(response.bodyBytes)}');
+      debugPrint('📩 응답 바디: ${response.data}');
 
-      final decoded = jsonDecode(response.body);
+      final decoded = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
       bool isActuallySuccess = false;
 
       if (response.statusCode == 200) {

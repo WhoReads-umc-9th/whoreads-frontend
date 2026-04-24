@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:http/http.dart' as http;
 import 'package:whoreads/screens/notification_screen.dart';
 import 'package:whoreads/screens/timer/timer_default_screen.dart';
 import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/auth/token_storage.dart';
+import '../../core/network/api_client.dart';
 import '../auth/SignupOverlayDialog.dart';
 import '../celebrities/celebrities_page.dart';
 import '../dna_test/dnaTestDialog.dart';
@@ -112,12 +112,8 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
   // 🌟 DNA 결과 확인 API 호출
   Future<void> _checkDnaResult() async {
     try {
-      final response = await http.get(
-        Uri.parse('http://43.201.122.162/api/dna/results'),
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-        },
+      final response = await ApiClient.dio.get(
+        '/dna/results',
       );
 
       // 200 성공이면 결과를 가지고 있는 것으로 판단
@@ -140,16 +136,14 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
 
   Future<void> _fetchMyInfo() async {
     try {
-      final response = await http.get(
-        Uri.parse('http://43.201.122.162/api/members/me'),
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-        },
+      final response = await ApiClient.dio.get(
+        '/members/me',
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
         final result = data['result'];
 
         setState(() {

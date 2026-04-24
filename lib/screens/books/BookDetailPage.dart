@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/book/QuoteCard.dart';
-import '../../core/auth/token_storage.dart';
+import '../../core/network/api_client.dart';
 
 class BookDetailPage extends StatefulWidget {
   final int bookId;
@@ -56,19 +55,14 @@ class _BookDetailPageState extends State<BookDetailPage> {
 
   Future<void> _fetchBookDetail() async {
     try {
-      final token = await TokenStorage.getAccessToken();
-
-      final response = await http.get(
-        Uri.parse('http://43.201.122.162/api/books/${widget.bookId}/detail'),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await ApiClient.dio.get(
+        '/books/${widget.bookId}/detail',
       );
 
       if (response.statusCode == 200) {
-        final String responseBody = utf8.decode(response.bodyBytes);
-        final decoded = jsonDecode(responseBody);
+        final decoded = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
         final result = decoded['result'] ?? {};
         final readingInfo = result['reading_info'] ?? {};
 
@@ -104,21 +98,15 @@ class _BookDetailPageState extends State<BookDetailPage> {
   // 🌟 [새로 추가됨] 서재에 책 추가 API 호출 (POST)
   Future<void> _addBook() async {
     try {
-      final token = await TokenStorage.getAccessToken();
-      // POST 요청은 책 자체의 ID(bookId)를 사용해 요청합니다.
-      final uri = Uri.parse('http://43.201.122.162/api/me/library/book/${widget.bookId}');
-
-      final response = await http.post(
-        uri,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await ApiClient.dio.post(
+        '/me/library/book/${widget.bookId}',
       );
 
       // 201 Created 또는 200 OK
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+        final decoded = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
 
         setState(() {
           // 🌟 서버에서 내려준 새로 생성된 user_book_id 저장!
@@ -133,7 +121,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
           );
         }
       } else {
-        debugPrint('추가 실패: ${response.statusCode} - ${response.body}');
+        debugPrint('추가 실패: ${response.statusCode} - ${response.data}');
       }
     } catch (e) {
       debugPrint('추가 에러: $e');
@@ -148,14 +136,8 @@ class _BookDetailPageState extends State<BookDetailPage> {
     }
 
     try {
-      final token = await TokenStorage.getAccessToken();
-      final uri = Uri.parse('http://43.201.122.162/api/me/library/book/$userBookId');
-
-      final response = await http.delete(
-        uri,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+      final response = await ApiClient.dio.delete(
+        '/me/library/book/$userBookId',
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -170,7 +152,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
           );
         }
       } else {
-        debugPrint('삭제 실패: ${response.statusCode} - ${response.body}');
+        debugPrint('삭제 실패: ${response.statusCode} - ${response.data}');
       }
     } catch (e) {
       debugPrint('삭제 에러: $e');
@@ -180,11 +162,8 @@ class _BookDetailPageState extends State<BookDetailPage> {
   // 수정 내용 저장 API 호출 (PATCH)
   Future<void> _saveChanges() async {
     try {
-      final token = await TokenStorage.getAccessToken();
-
       // 🌟 저장해둔 userBookId를 사용해서 PATCH 요청
       final targetId = userBookId ?? widget.bookId;
-      final uri = Uri.parse('http://43.201.122.162/api/me/library/book/$targetId');
 
       Map<String, dynamic> body = {
         "reading_status": editStatus,
@@ -194,13 +173,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
         body["reading_page"] = int.tryParse(pageController.text) ?? 0;
       }
 
-      final response = await http.patch(
-        uri,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
+      final response = await ApiClient.dio.patch(
+        '/me/library/book/$targetId',
+        data: body,
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -220,7 +195,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
           );
         }
       } else {
-        debugPrint('수정 실패: ${response.statusCode} - ${response.body}');
+        debugPrint('수정 실패: ${response.statusCode} - ${response.data}');
       }
     } catch (e) {
       debugPrint('수정 에러: $e');

@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:whoreads/screens/my_library/my_library_page.dart';
 import 'package:whoreads/services/notification/fcm_service.dart';
 
 import '../../core/auth/token_storage.dart';
+import '../../core/network/api_client.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -21,8 +21,6 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _obscurePw = true;
   bool _isLoading = false;
-
-  static const String _baseUrl = 'http://43.201.122.162';
 
   @override
   void dispose() {
@@ -60,18 +58,17 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/auth/login'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
+      final response = await ApiClient.dio.post(
+        '/auth/login',
+        data: {
           'login_id': loginId,
           'password': password,
-        }),
+        },
       );
 
-      final decoded = jsonDecode(response.body);
+      final decoded = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
 
       if (response.statusCode == 200 && decoded['is_success'] == true) {
         final result = decoded['result'];
@@ -84,8 +81,12 @@ class _LoginPageState extends State<LoginPage> {
           accessToken: accessToken,
           refreshToken: refreshToken,
         );
-        // 로그인 시점에 FCM 토큰 서버로 전송
-        await FcmService.sendTokenToServer();
+        // 로그인은 성공 처리하고, FCM 토큰 전송 실패는 로그인 흐름을 막지 않음
+        try {
+          await FcmService.sendTokenToServer();
+        } catch (e) {
+          debugPrint('⚠️ FCM 토큰 전송 실패(로그인은 유지): $e');
+        }
 
         debugPrint('✅ 로그인 성공 & 토큰 저장 완료');
 

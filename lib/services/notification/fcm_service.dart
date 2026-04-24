@@ -61,10 +61,10 @@ class FcmService {
 
   /// 서버로 토큰 전송
   static Future<void> sendTokenToServer() async {
-    bool isAuthorized = await requestNotificationPermission();
-    if (!isAuthorized) return;
-
     try {
+      bool isAuthorized = await requestNotificationPermission();
+      if (!isAuthorized) return;
+
       String? token = await _messaging.getToken();
       if (token == null) return;
 

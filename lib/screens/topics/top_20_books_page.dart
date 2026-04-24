@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../../core/auth/token_storage.dart';
+import '../../core/network/api_client.dart';
 // 🌟 1. 상세 페이지 import 주석 해제
 import '../books/BookDetailPage.dart';
 
@@ -24,26 +23,27 @@ class _Top20BooksPageState extends State<Top20BooksPage> {
 
   Future<void> _fetchTop20Books() async {
     try {
-      final token = await TokenStorage.getAccessToken();
-
-      final uri = Uri.parse('http://43.201.122.162/api/books/ranks?limit=20');
-
-      final response = await http.get(
-        uri,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await ApiClient.dio.get(
+        '/books/ranks',
+        queryParameters: {'limit': 20},
       );
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+        final decoded = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
 
         final prettyString = const JsonEncoder.withIndent('  ').convert(decoded);
         debugPrint('📦 [TOP 20 API 응답]:\n$prettyString');
 
         setState(() {
-          topBooks = decoded is List ? decoded : [];
+          if (decoded is List) {
+            topBooks = decoded;
+          } else if (decoded is Map && decoded['result'] is List) {
+            topBooks = decoded['result'];
+          } else {
+            topBooks = [];
+          }
           isLoading = false;
         });
       } else {

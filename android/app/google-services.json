@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "854444457810",
+    "project_id": "whoreads-a9a84",
+    "storage_bucket": "whoreads-a9a84.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:854444457810:android:9bce372fa404a93a97048b",
+        "android_client_info": {
+          "package_name": "com.example.whoreads"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAabw1q3HhmtzuFPORuvfRF_rRNseZ8OsM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
