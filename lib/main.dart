@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:whoreads/core/router/app_router.dart';
 import 'package:whoreads/services/notification/fcm_service.dart';
+import 'package:whoreads/services/timer/foreground_service_manager.dart';
 import 'screens/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -11,7 +12,10 @@ Future<void> main() async {
   if (isFirebaseReady && _supportsFcmNotifications()) {
     await FcmService.initialize();
   }
-  runApp(const WhoReadsApp());
+  if (defaultTargetPlatform == TargetPlatform.android) {
+    await ForegroundServiceManager().init();
+  }
+    runApp(const WhoReadsApp());
 }
 
 Future<bool> _initializeFirebaseSafely() async {

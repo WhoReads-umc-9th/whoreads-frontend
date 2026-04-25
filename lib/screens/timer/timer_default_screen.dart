@@ -14,15 +14,27 @@ class TimerPage extends StatefulWidget {
 class _TimerPageState extends State<TimerPage> {
   final TimerService _service = TimerService();
 
-@override
+  @override
+  void initState() {
+    super.initState();
+
+    // ⭐ 핵심: 화면 들어올 때 복구
+    Future.microtask(() async {
+      await _service.restore();
+    });
+  }
+
+  @override
+  void dispose() {
+    // ❗ 절대 stop 호출하면 안 됨 (백그라운드 유지해야 함)
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: true, // 뒤로가기 허용
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
-          _service.resetTimer();
-        }
-      },
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {},
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: _buildAppBar(context),
@@ -44,16 +56,17 @@ class _TimerPageState extends State<TimerPage> {
     );
   }
 
-  // 1. 타이머 표시부 (피커 or 시계)
+  // =========================
+  // 1. 타이머 표시
+  // =========================
   Widget _buildTimerDisplay() {
     Widget child;
 
-    if (!_service.isRunning) {
+    if (!_service.isRunning && !_service.isStopping) {
       child = Center(
         child: TimePickerWidget(onTimeSelected: _service.onTimeSelected),
       );
     } else {
-      // 나누기 0 오류 방지
       double progress = _service.totalSeconds > 0
           ? _service.currentSeconds / _service.totalSeconds
           : 0.0;
@@ -69,7 +82,9 @@ class _TimerPageState extends State<TimerPage> {
     return SizedBox(height: 280, child: child);
   }
 
-  // 2. 하단 컨트롤 버튼 레이아웃
+  // =========================
+  // 2. 컨트롤 버튼
+  // =========================
   Widget _buildControlButtons() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -80,30 +95,40 @@ class _TimerPageState extends State<TimerPage> {
             label: '취소',
             color: const Color(0xFFEFF1F3),
             textColor: Colors.black,
-            onTap: _service.resetTimer,
+            onTap: () async {
+              await _service.resetTimer();
+            },
           ),
-          _buildActionButton(), // 시작/일시정지/재개 상황별 버튼
+          _buildActionButton(),
         ],
       ),
     );
   }
 
-  // 3. 상황에 따른 우측 액션 버튼 생성
+  // =========================
+  // 3. 상태별 버튼
+  // =========================
   Widget _buildActionButton() {
     String label;
     VoidCallback onTap;
-    Color color = const Color(0xFFFF5722); // 기본 오렌지색
+    Color color = const Color(0xFFFF5722);
 
     if (!_service.isRunning) {
       label = '시작';
-      onTap = _service.startTimer;
+      onTap = () async {
+        await _service.startTimer();
+      };
     } else if (!_service.isStopping) {
       label = '일시정지';
-      onTap = _service.pauseTimer;
-      color = const Color(0xFFFFAB91); // 연한 오렌지
+      onTap = () async {
+        await _service.pauseTimer();
+      };
+      color = const Color(0xFFFFAB91);
     } else {
       label = '재개';
-      onTap = _service.resumeTimer;
+      onTap = () async {
+        await _service.resumeTimer();
+      };
     }
 
     return _roundButton(
@@ -114,6 +139,9 @@ class _TimerPageState extends State<TimerPage> {
     );
   }
 
+  // =========================
+  // 버튼 UI
+  // =========================
   Widget _roundButton({
     required String label,
     required Color color,
@@ -125,7 +153,10 @@ class _TimerPageState extends State<TimerPage> {
       child: Container(
         width: 80,
         height: 80,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+        ),
         child: Center(
           child: Text(
             label,
@@ -140,7 +171,9 @@ class _TimerPageState extends State<TimerPage> {
     );
   }
 
-  // AppBar 분리 (가독성)
+  // =========================
+  // AppBar
+  // =========================
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       automaticallyImplyLeading: false,
@@ -148,7 +181,8 @@ class _TimerPageState extends State<TimerPage> {
       scrolledUnderElevation: 0,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+        icon: const Icon(Icons.arrow_back_ios,
+            color: Colors.black, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
@@ -159,7 +193,8 @@ class _TimerPageState extends State<TimerPage> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const TimerStatisticsPage(),
+                builder: (context) =>
+                const TimerStatisticsPage(),
               ),
             );
           },
