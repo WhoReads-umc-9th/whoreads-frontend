@@ -1,22 +1,34 @@
 import 'package:flutter/cupertino.dart';
-import 'package:whoreads/core/auth/token_storage.dart';
 import 'package:whoreads/core/network/api_client.dart';
 import '../../models/reading_session_model.dart';
 
 class TimerApiService {
+
+  Future<void> setReadingSessionTime({required int totalMinutes}) async {
+    try {
+      final response = await ApiClient.dio.patch(
+        '/me/reading-sessions/settings/time',
+        data: {
+          'time': totalMinutes,
+        },
+      );
+      debugPrint('setReadingSessionTime 성공 : ${response.data}');
+    } catch (e) {
+      debugPrint('setReadingSessionTime 실패: $e');
+      rethrow;
+    }
+  }
+
   Future<ActiveReadingSession?> getActiveSession() async {
     try {
       final response = await ApiClient.dio.get(
         '/reading-sessions/incomplete',
       );
-
       final data = response.data;
-
       if (data == null || data['result'] == null) {
         return null;
       }
-      print("데이터 ${data['result']}");
-
+      debugPrint('getActiveSession 성공: $data');
       return ActiveReadingSession.fromJson(data);
     } catch (e) {
       debugPrint('getActiveSession 실패: $e');
@@ -24,46 +36,34 @@ class TimerApiService {
     }
   }
 
-  Future<ActiveReadingSession> startTimer({
-    required int totalMinutes,
-  }) async {
+  Future<int> startTimer({required int totalMinutes}) async {
     try {
-      debugPrint("accessToken : ${await TokenStorage.getAccessToken()}");
-
       final response = await ApiClient.dio.post(
         '/reading-sessions/start',
-        data: {
-          'total_minutes': totalMinutes,
-        },
       );
-
-      return ActiveReadingSession.fromJson(response.data);
+      return response.data['result']['session_id'];
     } catch (e) {
       debugPrint('startTimer 실패: $e');
       rethrow;
     }
   }
 
-  Future<ActiveReadingSession> pauseTimer(int sessionId) async {
+  Future<void> pauseTimer(int sessionId) async {
     try {
       final response = await ApiClient.dio.post(
         '/reading-sessions/$sessionId/pause',
       );
-
-      return ActiveReadingSession.fromJson(response.data);
     } catch (e) {
       debugPrint('pauseTimer 실패: $e');
       rethrow;
     }
   }
 
-  Future<ActiveReadingSession> resumeTimer(int sessionId) async {
+  Future<void> resumeTimer(int sessionId) async {
     try {
-      final response = await ApiClient.dio.post(
+      await ApiClient.dio.post(
         '/reading-sessions/$sessionId/resume',
       );
-
-      return ActiveReadingSession.fromJson(response.data);
     } catch (e) {
       debugPrint('resumeTimer 실패: $e');
       rethrow;
@@ -77,17 +77,6 @@ class TimerApiService {
       );
     } catch (e) {
       debugPrint('completeTimer 실패: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> cancelTimer(int sessionId) async {
-    try {
-      await ApiClient.dio.delete(
-        '/reading-sessions/$sessionId',
-      );
-    } catch (e) {
-      debugPrint('cancelTimer 실패: $e');
       rethrow;
     }
   }
