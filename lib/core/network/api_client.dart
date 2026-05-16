@@ -1,14 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../auth/token_storage.dart';
 
 class ApiClient {
-  static String baseUrl = 'https://api.whoreads.kro.kr/api';
+  static String baseUrl = '${dotenv.env['BASE_URL']}/api';
 
   static final Dio _dio =
       Dio(
           BaseOptions(
-            // 실제에서 env로 빼야 됨
             baseUrl: baseUrl,
             connectTimeout: const Duration(seconds: 8),
             receiveTimeout: const Duration(seconds: 5),
