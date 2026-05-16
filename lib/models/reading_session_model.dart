@@ -1,3 +1,5 @@
+import 'package:flutter/cupertino.dart';
+
 class ActiveReadingSession {
   final int sessionId;
   final String status;
@@ -9,7 +11,6 @@ class ActiveReadingSession {
   final bool focusBlockEnabled;
   final bool whiteNoiseEnabled;
 
-  final DateTime serverTime;
 
   ActiveReadingSession({
     required this.sessionId,
@@ -19,7 +20,6 @@ class ActiveReadingSession {
     required this.idleMinutes,
     required this.focusBlockEnabled,
     required this.whiteNoiseEnabled,
-    required this.serverTime,
   });
 
   bool get isRunning => status == 'RUNNING';
@@ -32,16 +32,17 @@ class ActiveReadingSession {
   factory ActiveReadingSession.fromJson(Map<String, dynamic> json) {
     final result = json['result'];
 
+    debugPrint('ActiveReadingSession.fromJson 성공: $result');
+
 
     return ActiveReadingSession(
-      sessionId: result['sessionId'],
+      sessionId: result['session_id'],
       status: result['status'],
-      totalReadMinutes: result['totalReadMinutes'],
-      remainingMinutes: result['remainingMinutes'],
-      idleMinutes: result['idleMinutes'],
-      focusBlockEnabled: result['focusBlockEnabled'],
-      whiteNoiseEnabled: result['whiteNoiseEnabled'],
-      serverTime: DateTime.parse(json['server_time']),
+      totalReadMinutes: result['total_read_minutes'],
+      remainingMinutes: result['remaining_minutes'],
+      idleMinutes: result['idle_minutes'],
+      focusBlockEnabled: result['focus_block_enabled'],
+      whiteNoiseEnabled: result['white_noise_enabled'],
     );
   }
 
@@ -54,7 +55,6 @@ class ActiveReadingSession {
       'idleMinutes': idleMinutes,
       'focusBlockEnabled': focusBlockEnabled,
       'whiteNoiseEnabled': whiteNoiseEnabled,
-      'serverTime': serverTime.toIso8601String(),
     };
   }
 }
