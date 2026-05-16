@@ -1,134 +1,57 @@
-import 'dart:io';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:whoreads/services/timer/foreground_service.dart';
+import 'foreground_service.dart';
 
 class ForegroundServiceManager {
-  static final ForegroundServiceManager _instance =
-  ForegroundServiceManager._internal();
-
-  factory ForegroundServiceManager() => _instance;
-
-  ForegroundServiceManager._internal();
-
-  bool _initialized = false;
-
-  Future<void> init() async {
-    if (_initialized) return;
-
-    await requestPermissions();
-
+  void initService() {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
-        channelId: 'whoreads_timer',
-        channelName: '독서 타이머',
-        channelDescription: '독서 타이머용 알림 채널.',
+        channelId: 'reading_timer_channel',
+        channelName: '독서 타이머 알림',
+        channelDescription: '독서 타이머가 백그라운드에서 동작할 때 알림을 제공합니다.',
+        channelImportance: NotificationChannelImportance.MAX,
         priority: NotificationPriority.HIGH,
-        enableVibration: false,
-        playSound: false,
-        showWhen: false,
-        showBadge: true,
-        onlyAlertOnce: true,
+        enableVibration: true,
+        playSound: false
       ),
       iosNotificationOptions: const IOSNotificationOptions(
         showNotification: true,
         playSound: false,
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
-        autoRunOnBoot: false,
-        autoRunOnMyPackageReplaced: false,
-        allowWakeLock: true,
-        allowWifiLock: true,
         eventAction: ForegroundTaskEventAction.repeat(1000),
+        autoRunOnBoot: false,
+        allowWakeLock: true,
+        allowWifiLock: false,
       ),
     );
-
-    _initialized = true;
   }
 
-  Future<ServiceRequestResult> start({
-    String title = '독서타이머',
-    required String timerText,
-    String text = '타이머 측정 중입니다.',
-  }) async {
-    await init();
+  Future<void> start({required int currentSeconds}) async {
+    await FlutterForegroundTask.saveData(key: 'currentSeconds', value: currentSeconds);
 
-    debugPrint('포그라운드 시작됨 $timerText');
-
-    final isRunning = await FlutterForegroundTask.isRunningService;
-
-    if (isRunning) {
-      await update(
-        title: title,
-        timerText: timerText,
-        text: text,
+    if (await FlutterForegroundTask.isRunningService) {
+      await FlutterForegroundTask.restartService();
+    } else {
+      await FlutterForegroundTask.startService(
+        notificationTitle: '독서 타이머',
+        notificationText: '타이머 측정 중입니다.',
+        callback: startCallback,
       );
-
-      return const ServiceRequestSuccess();
     }
-
-    return FlutterForegroundTask.startService(
-      serviceId: 100,
-      notificationTitle: '$title   $timerText',
-      notificationText: text,
-      callback: startCallback,
-      serviceTypes: const [
-        ForegroundServiceTypes.dataSync,
-      ],
-      notificationButtons: const [
-        NotificationButton(id: 'cancel', text: '취소'),
-        NotificationButton(id: 'pause', text: '일시정지'),
-      ],
-    );
   }
 
-  Future<void> update({
-    String title = '독서타이머',
-    required String timerText,
-    String text = '타이머 측정 중입니다.',
-    bool isPaused = false,
-  }) async {
-    final isRunning = await FlutterForegroundTask.isRunningService;
-
-    if (!isRunning) return;
-
-    await FlutterForegroundTask.updateService(
-      notificationTitle: '$title   $timerText',
-      notificationText: text,
-      notificationButtons: [
-        const NotificationButton(id: 'cancel', text: '취소'),
-        NotificationButton(
-          id: isPaused ? 'resume' : 'pause',
-          text: isPaused ? '계속' : '일시정지',
-        ),
-      ],
-    );
+  Future<void> update({required String title, required String text}) async {
+    if (await FlutterForegroundTask.isRunningService) {
+      await FlutterForegroundTask.updateService(
+        notificationTitle: title,
+        notificationText: text,
+      );
+    }
   }
 
   Future<void> stop() async {
-    final isRunning = await FlutterForegroundTask.isRunningService;
-
-    if (!isRunning) return;
-
-    await FlutterForegroundTask.stopService();
-  }
-
-  static Future<void> requestPermissions() async {
-    final permission =
-    await FlutterForegroundTask.checkNotificationPermission();
-
-    if (permission != NotificationPermission.granted) {
-      await FlutterForegroundTask.requestNotificationPermission();
-    }
-
-    if (Platform.isAndroid) {
-      final ignoring =
-      await FlutterForegroundTask.isIgnoringBatteryOptimizations;
-
-      if (!ignoring) {
-        await FlutterForegroundTask.requestIgnoreBatteryOptimization();
-      }
+    if (await FlutterForegroundTask.isRunningService) {
+      await FlutterForegroundTask.stopService();
     }
   }
 }
