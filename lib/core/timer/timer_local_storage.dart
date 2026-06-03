@@ -26,7 +26,6 @@ class TimerLocalStorage {
       'idleMinutes': session.idleMinutes,
       'focusBlockEnabled': session.focusBlockEnabled,
       'whiteNoiseEnabled': session.whiteNoiseEnabled,
-      'serverTime': session.serverTime.toIso8601String(),
       'savedAt': DateTime.now().toIso8601String(), // ⭐ 중요
     };
 
@@ -54,7 +53,6 @@ class TimerLocalStorage {
         idleMinutes: data['idleMinutes'],
         focusBlockEnabled: data['focusBlockEnabled'],
         whiteNoiseEnabled: data['whiteNoiseEnabled'],
-        serverTime: DateTime.parse(data['serverTime']),
       );
     } catch (e) {
       return null;

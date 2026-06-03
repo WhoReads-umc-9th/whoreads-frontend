@@ -1,23 +1,21 @@
 import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-
 import '../../core/timer/timer_local_storage.dart';
 import 'foreground_service_manager.dart';
 import 'timer_api_service.dart';
 
 class TimerService with ChangeNotifier {
   static final TimerService _instance = TimerService._internal();
-
   factory TimerService() => _instance;
 
-  TimerService._internal();
+  TimerService._internal() {
+    _serviceManager.initService();
+  }
 
   final TimerApiService _apiService = TimerApiService();
   final ForegroundServiceManager _serviceManager = ForegroundServiceManager();
 
-  Timer? _timer;
   Timer? _heartbeatTimer;
 
   int _totalSeconds = 0;
@@ -26,7 +24,6 @@ class TimerService with ChangeNotifier {
   bool _isRunning = false;
   bool _isStopping = false;
   bool _isRestoring = false;
-
   int sessionId = -1;
 
   int get totalSeconds => _totalSeconds;
@@ -35,9 +32,14 @@ class TimerService with ChangeNotifier {
   bool get isStopping => _isStopping;
   bool get isRestoring => _isRestoring;
 
+  Future<void> checkOverlayPermission() async {
+    if (!await FlutterForegroundTask.canDrawOverlays) {
+      await FlutterForegroundTask.openSystemAlertWindowSettings();
+    }
+  }
+
   Future<void> restore() async {
     if (_isRestoring) return;
-
     _isRestoring = true;
     notifyListeners();
 
@@ -55,53 +57,45 @@ class TimerService with ChangeNotifier {
         return;
       }
 
-      final foregroundRunning =
-      await FlutterForegroundTask.isRunningService;
-
       sessionId = activeSession.sessionId;
-
       _totalSeconds = activeSession.remainingMinutes * 60;
-      _currentSeconds = activeSession.remainingMinutes * 60;
 
-      _isRunning = activeSession.status == 'RUNNING';
+      if (_totalSeconds <= 0) {
+        await _apiService.completeTimer(activeSession.sessionId);
+        await _clearAll();
+        return;
+      }
+
+      debugPrint('TimerService restore 성공: $activeSession');
+
+      final bool isServiceRunning = await FlutterForegroundTask.isRunningService;
+
+      debugPrint('TimerService restore 성공 후 isServiceRunning: $isServiceRunning');
+      debugPrint('TimerService restore 성공 후 currentSeconds: '
+          '${await FlutterForegroundTask.getData<int>(key: 'currentSeconds')}');
+
+      if (isServiceRunning) {
+        _currentSeconds = await FlutterForegroundTask.getData<int>(key: 'currentSeconds') ?? _totalSeconds;
+      } else {
+        _currentSeconds = _totalSeconds;
+      }
+      debugPrint('TimerService restore 성공 후 currentSeconds: $_currentSeconds');
+
+      _isRunning = activeSession.status == 'IN_PROGRESS' || activeSession.status == 'RUNNING';
       _isStopping = activeSession.status == 'PAUSED';
 
       await TimerLocalStorage.instance.save(activeSession);
 
       if (_isRunning) {
-        _runTimer();
-
-        if (!foregroundRunning) {
-          await _serviceManager.start(
-            title: '독서 타이머',
-            timerText: formatTime(_currentSeconds),
-            text: '타이머 측정 중입니다.',
-          );
+        if (!isServiceRunning) {
+          await _serviceManager.start(currentSeconds: _currentSeconds);
         }
-
         _startHeartbeat();
       }
-
       notifyListeners();
     } catch (e) {
       debugPrint('TimerService restore 실패: $e');
-
-      final localSession = await TimerLocalStorage.instance.load();
-
-      if (localSession != null) {
-        sessionId = localSession.sessionId;
-        _totalSeconds = localSession.remainingMinutes * 60;
-        _currentSeconds = localSession.remainingMinutes * 60;
-        _isRunning = localSession.status == 'RUNNING';
-        _isStopping = localSession.status == 'PAUSED';
-
-        if (_isRunning) {
-          _runTimer();
-          _startHeartbeat();
-        }
-
-        notifyListeners();
-      }
+      await _clearAll();
     } finally {
       _isRestoring = false;
       notifyListeners();
@@ -113,29 +107,21 @@ class TimerService with ChangeNotifier {
     if (_isRunning) return;
 
     try {
-      final startedSession = await _apiService.startTimer(
-        totalMinutes: _totalSeconds ~/ 60,
-      );
+      final int targetMinutes = _totalSeconds ~/ 60;
 
-      sessionId = startedSession.sessionId;
+      debugPrint('TimerService startTimer 호출: $targetMinutes');
+      await _apiService.setReadingSessionTime(totalMinutes: targetMinutes);
 
-      _totalSeconds = startedSession.remainingMinutes * 60;
-      _currentSeconds = startedSession.remainingMinutes * 60;
+      final int responseSessionId = await _apiService.startTimer(totalMinutes: targetMinutes);
+      sessionId = responseSessionId;
 
+      _currentSeconds = _totalSeconds;
       _isRunning = true;
       _isStopping = false;
 
-      await TimerLocalStorage.instance.save(startedSession);
+      await _serviceManager.start(currentSeconds: _currentSeconds);
 
-      await _serviceManager.start(
-        title: '독서 타이머',
-        timerText: formatTime(_currentSeconds),
-        text: '타이머 측정 중입니다.',
-      );
-
-      _runTimer();
       _startHeartbeat();
-
       notifyListeners();
     } catch (e) {
       debugPrint('TimerService startTimer 실패: $e');
@@ -143,29 +129,15 @@ class TimerService with ChangeNotifier {
   }
 
   Future<void> pauseTimer() async {
-    if (!_isRunning) return;
-    if (sessionId == -1) return;
-
-    _timer?.cancel();
-    _timer = null;
+    if (!_isRunning || sessionId == -1) return;
 
     try {
-      final pausedSession = await _apiService.pauseTimer(sessionId);
-
       _isRunning = false;
       _isStopping = true;
-
-      _totalSeconds = pausedSession.remainingMinutes * 60;
-      _currentSeconds = pausedSession.remainingMinutes * 60;
-
-      await TimerLocalStorage.instance.save(pausedSession);
-
-      await _serviceManager.update(
-        title: '독서 타이머',
-        timerText: formatTime(_currentSeconds),
-        text: '일시정지됨',
-      );
-
+      await _apiService.pauseTimer(sessionId);
+      FlutterForegroundTask.sendDataToTask({
+        "type": "pause"
+      });
       _stopHeartbeat();
 
       notifyListeners();
@@ -175,27 +147,18 @@ class TimerService with ChangeNotifier {
   }
 
   Future<void> resumeTimer() async {
-    if (_isRunning) return;
-    if (sessionId == -1) return;
+    if (_isRunning || sessionId == -1) return;
 
     try {
-      final resumedSession = await _apiService.resumeTimer(sessionId);
-
-      _totalSeconds = resumedSession.remainingMinutes * 60;
-      _currentSeconds = resumedSession.remainingMinutes * 60;
+      await _apiService.resumeTimer(sessionId);
 
       _isRunning = true;
       _isStopping = false;
 
-      await TimerLocalStorage.instance.save(resumedSession);
-
-      await _serviceManager.start(
-        title: '독서 타이머',
-        timerText: formatTime(_currentSeconds),
-        text: '타이머 측정 중입니다.',
-      );
-
-      _runTimer();
+      await _serviceManager.start(currentSeconds: _currentSeconds);
+      FlutterForegroundTask.sendDataToTask({
+        "type": "resume"
+      });
       _startHeartbeat();
 
       notifyListeners();
@@ -209,7 +172,6 @@ class TimerService with ChangeNotifier {
       await _clearAll();
       return;
     }
-
     try {
       await _apiService.completeTimer(sessionId);
     } catch (e) {
@@ -220,69 +182,31 @@ class TimerService with ChangeNotifier {
   }
 
   Future<void> cancelTimer() async {
-    if (sessionId != -1) {
-      try {
-        await _apiService.cancelTimer(sessionId);
-      } catch (e) {
-        debugPrint('TimerService cancelTimer 실패: $e');
-      }
-    }
-
+    await completeTimer();
     await _clearAll();
   }
 
   Future<void> resetTimer() async {
-    await completeTimer();
+    await cancelTimer();
   }
 
   void onTimeSelected(int minutes) {
     if (_isRunning) return;
-
     _totalSeconds = minutes * 60;
     _currentSeconds = _totalSeconds;
-
     notifyListeners();
-  }
-
-  void _runTimer() {
-    _timer?.cancel();
-
-    _isRunning = true;
-    _isStopping = false;
-
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) async {
-      if (_currentSeconds > 0) {
-        _currentSeconds--;
-
-        await _serviceManager.update(
-          title: '독서 타이머',
-          timerText: formatTime(_currentSeconds),
-          text: '타이머 측정 중입니다.',
-        );
-
-        notifyListeners();
-        return;
-      }
-
-      await completeTimer();
-    });
   }
 
   void _startHeartbeat() {
     _stopHeartbeat();
-
-    _heartbeatTimer = Timer.periodic(
-      const Duration(minutes: 5),
-          (_) async {
-        if (!_isRunning || sessionId == -1) return;
-
-        try {
-          await _apiService.heartbeat(sessionId);
-        } catch (e) {
-          debugPrint('TimerService heartbeat 실패: $e');
-        }
-      },
-    );
+    _heartbeatTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+      if (!_isRunning || sessionId == -1) return;
+      try {
+        await _apiService.heartbeat(sessionId);
+      } catch (e) {
+        debugPrint('TimerService heartbeat 실패: $e');
+      }
+    });
   }
 
   void _stopHeartbeat() {
@@ -291,11 +215,7 @@ class TimerService with ChangeNotifier {
   }
 
   Future<void> _clearAll() async {
-    _timer?.cancel();
-    _timer = null;
-
     _stopHeartbeat();
-
     _totalSeconds = 0;
     _currentSeconds = 0;
     _isRunning = false;
@@ -304,14 +224,23 @@ class TimerService with ChangeNotifier {
 
     await TimerLocalStorage.instance.clear();
     await _serviceManager.stop();
-
     notifyListeners();
   }
 
   String formatTime(int seconds) {
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
-
     return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
   }
-}
+
+    void handleForegroundData(dynamic data) {
+      if (data is int) {
+        if (data == -1) {
+          completeTimer();
+        } else {
+          _currentSeconds = data;
+          notifyListeners();
+        }
+      }
+    }
+  }

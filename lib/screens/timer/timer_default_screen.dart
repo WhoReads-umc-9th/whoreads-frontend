@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:whoreads/screens/timer/timer_statics_screen.dart';
 import 'package:whoreads/services/timer/timer_service.dart';
 import 'package:whoreads/widgets/timer/time_picker.dart';
 import 'package:whoreads/widgets/timer/timer_view.dart';
+import 'timer_statics_screen.dart';
 
 class TimerPage extends StatefulWidget {
   const TimerPage({super.key});
@@ -17,24 +17,15 @@ class _TimerPageState extends State<TimerPage> {
   @override
   void initState() {
     super.initState();
-
-    // ⭐ 핵심: 화면 들어올 때 복구
     Future.microtask(() async {
       await _service.restore();
     });
   }
 
   @override
-  void dispose() {
-    // ❗ 절대 stop 호출하면 안 됨 (백그라운드 유지해야 함)
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: true,
-      onPopInvokedWithResult: (didPop, result) {},
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: _buildAppBar(context),
@@ -56,12 +47,8 @@ class _TimerPageState extends State<TimerPage> {
     );
   }
 
-  // =========================
-  // 1. 타이머 표시
-  // =========================
   Widget _buildTimerDisplay() {
     Widget child;
-
     if (!_service.isRunning && !_service.isStopping) {
       child = Center(
         child: TimePickerWidget(onTimeSelected: _service.onTimeSelected),
@@ -78,13 +65,9 @@ class _TimerPageState extends State<TimerPage> {
         ),
       );
     }
-
     return SizedBox(height: 280, child: child);
   }
 
-  // =========================
-  // 2. 컨트롤 버튼
-  // =========================
   Widget _buildControlButtons() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -105,29 +88,27 @@ class _TimerPageState extends State<TimerPage> {
     );
   }
 
-  // =========================
-  // 3. 상태별 버튼
-  // =========================
   Widget _buildActionButton() {
     String label;
     VoidCallback onTap;
     Color color = const Color(0xFFFF5722);
 
-    if (!_service.isRunning) {
-      label = '시작';
+
+    if (_service.isStopping) {
+      label = '재개';
       onTap = () async {
-        await _service.startTimer();
+        await _service.resumeTimer();
       };
-    } else if (!_service.isStopping) {
+    } else if (!_service.isStopping && _service.isRunning) {
       label = '일시정지';
       onTap = () async {
         await _service.pauseTimer();
       };
       color = const Color(0xFFFFAB91);
     } else {
-      label = '재개';
+      label = '시작';
       onTap = () async {
-        await _service.resumeTimer();
+        await _service.startTimer();
       };
     }
 
@@ -139,9 +120,6 @@ class _TimerPageState extends State<TimerPage> {
     );
   }
 
-  // =========================
-  // 버튼 UI
-  // =========================
   Widget _roundButton({
     required String label,
     required Color color,
@@ -171,9 +149,6 @@ class _TimerPageState extends State<TimerPage> {
     );
   }
 
-  // =========================
-  // AppBar
-  // =========================
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       automaticallyImplyLeading: false,
@@ -181,21 +156,16 @@ class _TimerPageState extends State<TimerPage> {
       scrolledUnderElevation: 0,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios,
-            color: Colors.black, size: 20),
+        icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.bar_chart, color: Colors.black),
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) =>
-                const TimerStatisticsPage(),
-              ),
+              MaterialPageRoute(builder: (context) => const TimerStatisticsPage()),
             );
           },
         ),
