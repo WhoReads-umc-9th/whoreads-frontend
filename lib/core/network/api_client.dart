@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../auth/token_storage.dart';
 
 class ApiClient {
-  static String baseUrl = 'https://api.whoreads.kro.kr/api';
+  static String baseUrl = 'http://43.203.218.136/api';
 
   static final Dio _dio =
       Dio(

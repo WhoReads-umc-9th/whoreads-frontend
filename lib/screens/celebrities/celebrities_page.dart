@@ -5,7 +5,7 @@ import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/network/api_client.dart';
 import '../my_library/my_library_page.dart';
 import '../profile.dart';
-import 'celebrities_book_page.dart'; // [중요] 방금 만든 페이지 import 확인해주세요!
+import 'celebrities_book_page.dart';
 
 class CelebritiesPage extends StatefulWidget {
   const CelebritiesPage({super.key});

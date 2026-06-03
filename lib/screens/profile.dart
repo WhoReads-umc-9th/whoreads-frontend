@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../core/auth/token_storage.dart';
+import '../core/network/api_client.dart';
+import 'celebrities/celebrities_book_page.dart';
 import 'dna_test/dnaTestDialog.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -15,18 +16,16 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   bool isLoading = true;
 
-  // API 데이터 저장 변수
   Map<String, dynamic> userInfo = {};
   List<dynamic> follows = [];
   Map<String, dynamic> dnaResult = {};
 
-  // 스위치 상태 관리
   bool isLibraryUpdateOn = true;
   bool isRoutineMorningOn = false;
   bool isRoutineNightOn = true;
 
   final Color primaryOrange = const Color(0xFFFF6A00);
-  final Color bgColor = const Color(0xFFF2F4F6); // 배경 회색
+  final Color bgColor = const Color(0xFFF2F4F6);
 
   @override
   void initState() {
@@ -34,41 +33,28 @@ class _ProfilePageState extends State<ProfilePage> {
     _fetchAllData();
   }
 
-  // 🌟 3개의 API를 동시에 호출하여 데이터 가져오기
   Future<void> _fetchAllData() async {
-    final token = await TokenStorage.getAccessToken();
-    final headers = {
-      if (token != null) 'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-
     try {
-      final meUrl = Uri.parse('http://43.201.122.162/api/members/me');
-      final followsUrl = Uri.parse('http://43.201.122.162/api/members/me/follows');
-      final dnaUrl = Uri.parse('http://43.201.122.162/api/dna/results');
-
+      // Future.wait로 3개 API 동시 호출
       final results = await Future.wait([
-        http.get(meUrl, headers: headers),
-        http.get(followsUrl, headers: headers),
-        http.get(dnaUrl, headers: headers),
+        ApiClient.dio.get('/members/me'),
+        ApiClient.dio.get('/members/me/follows'),
+        ApiClient.dio.get('/dna/results'),
       ]);
 
-      // 1. 내 정보 파싱
+      // 1. 내 정보 파싱 (dio는 response.data로 바로 접근)
       if (results[0].statusCode == 200) {
-        final decoded = jsonDecode(utf8.decode(results[0].bodyBytes));
-        userInfo = decoded['result'] ?? {};
+        userInfo = results[0].data['result'] ?? {};
       }
 
       // 2. 팔로우 목록 파싱
       if (results[1].statusCode == 200) {
-        final decoded = jsonDecode(utf8.decode(results[1].bodyBytes));
-        follows = decoded['result'] ?? [];
+        follows = results[1].data['result'] ?? [];
       }
 
       // 3. 독서 DNA 파싱
       if (results[2].statusCode == 200) {
-        final decoded = jsonDecode(utf8.decode(results[2].bodyBytes));
-        dnaResult = decoded['result'] ?? {};
+        dnaResult = results[2].data['result'] ?? {};
       }
 
       setState(() {
@@ -183,11 +169,45 @@ class _ProfilePageState extends State<ProfilePage> {
                       separatorBuilder: (context, index) => const SizedBox(width: 12),
                       itemBuilder: (context, index) {
                         final follow = follows[index];
-                        return CircleAvatar(
-                          radius: 25,
-                          backgroundColor: Colors.grey[200],
-                          backgroundImage: follow['image_url'] != null ? NetworkImage(follow['image_url']) : null,
-                          child: follow['image_url'] == null ? const Icon(Icons.person, color: Colors.grey) : null,
+                        final int? celebrityId = follow['id'] is int
+                            ? follow['id'] as int
+                            : int.tryParse('${follow['id']}');
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: celebrityId == null
+                                ? null
+                                : () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            CelebritiesBookPage(
+                                          celebrityId: celebrityId,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                            customBorder: const CircleBorder(),
+                            child: CircleAvatar(
+                              radius: 25,
+                              backgroundColor: Colors.grey[200],
+                              backgroundImage:
+                                  follow['image_url'] != null &&
+                                          (follow['image_url']
+                                                  as String)
+                                              .isNotEmpty
+                                      ? NetworkImage(follow['image_url'] as String)
+                                      : null,
+                              child: follow['image_url'] == null ||
+                                      (follow['image_url'] as String?)
+                                              ?.isEmpty ==
+                                          true
+                                  ? const Icon(Icons.person,
+                                      color: Colors.grey)
+                                  : null,
+                            ),
+                          ),
                         );
                       },
                     ),

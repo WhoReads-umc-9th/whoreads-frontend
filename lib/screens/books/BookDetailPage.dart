@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/book/QuoteCard.dart';
 import '../../core/network/api_client.dart';
+import '../../services/library_service.dart';
 
 class BookDetailPage extends StatefulWidget {
   final int bookId;
@@ -53,6 +54,42 @@ class _BookDetailPageState extends State<BookDetailPage> {
     super.dispose();
   }
 
+  Map<String, dynamic>? _asStringKeyMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
+  }
+
+  int? _readInt(Map<String, dynamic>? map, List<String> keys) {
+    if (map == null) return null;
+    for (final k in keys) {
+      final v = map[k];
+      if (v == null) continue;
+      if (v is int) return v;
+      return int.tryParse(v.toString());
+    }
+    return null;
+  }
+
+  /// API·UI 공통 표기 `yyyy-MM-dd`
+  String _todayYmd() {
+    final n = DateTime.now();
+    final y = n.year.toString().padLeft(4, '0');
+    final m = n.month.toString().padLeft(2, '0');
+    final d = n.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  /// `2026-05-16T12:34:56` → `2026-05-16`
+  String? _toApiDateOnly(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final s = raw.trim();
+    final t = s.indexOf('T');
+    if (t >= 10) return s.substring(0, 10);
+    if (s.length >= 10) return s.substring(0, 10);
+    return s;
+  }
+
   Future<void> _fetchBookDetail() async {
     try {
       final response = await ApiClient.dio.get(
@@ -64,7 +101,50 @@ class _BookDetailPageState extends State<BookDetailPage> {
             ? jsonDecode(response.data as String)
             : response.data;
         final result = decoded['result'] ?? {};
-        final readingInfo = result['reading_info'] ?? {};
+        final readingInfo =
+            _asStringKeyMap(result['reading_info'] ?? result['readingInfo']);
+
+        String nextStatus =
+            readingInfo?['reading_status']?.toString() ??
+                readingInfo?['readingStatus']?.toString() ??
+                'NONE';
+        if (nextStatus.isEmpty) nextStatus = 'NONE';
+
+        int? nextUserBookId = _readInt(
+          readingInfo,
+          ['user_book_id', 'userBookId'],
+        );
+        int? nextReadingPage = _readInt(
+          readingInfo,
+          ['reading_page', 'readingPage'],
+        );
+        int? nextTotalPage = _readInt(
+          readingInfo,
+          ['total_page', 'totalPage'],
+        );
+        String? nextStarted =
+            readingInfo?['started_at']?.toString() ??
+                readingInfo?['startedAt']?.toString();
+        String? nextCompleted =
+            readingInfo?['completed_at']?.toString() ??
+                readingInfo?['completedAt']?.toString();
+
+        final snapshot =
+            await LibraryService.lookupCatalogBookInLibrary(widget.bookId);
+        if (snapshot != null) {
+          nextUserBookId ??= snapshot.userBookId;
+          if (nextStatus == 'NONE') {
+            nextStatus = snapshot.readingStatus;
+          }
+          nextReadingPage ??= snapshot.readingPage;
+          nextTotalPage ??= snapshot.totalPage;
+        }
+
+        final resultMap = _asStringKeyMap(result);
+        nextTotalPage ??=
+            _readInt(resultMap, ['total_page', 'totalPage']);
+        nextStarted ??= snapshot?.startedAt;
+        nextCompleted ??= snapshot?.completedAt;
 
         setState(() {
           title = result['title'];
@@ -73,13 +153,13 @@ class _BookDetailPageState extends State<BookDetailPage> {
           genre = result['genre'];
           link = result['link'];
 
-          readingStatus = readingInfo['reading_status'] ?? "NONE";
-          readingPage = readingInfo['reading_page'];
-          totalPage = readingInfo['total_page'];
-          startedAt = readingInfo['started_at'];
-          completedAt = readingInfo['completed_at'];
+          readingStatus = nextStatus;
+          readingPage = nextReadingPage;
+          totalPage = nextTotalPage;
+          startedAt = nextStarted;
+          completedAt = nextCompleted;
 
-          userBookId = readingInfo['user_book_id'];
+          userBookId = nextUserBookId;
 
           quotes = result['quotes'] ?? [];
 
@@ -109,8 +189,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
             : response.data;
 
         setState(() {
+          final resMap = _asStringKeyMap(decoded['result']);
           // 🌟 서버에서 내려준 새로 생성된 user_book_id 저장!
-          userBookId = decoded['result']['user_book_id'];
+          userBookId = _readInt(resMap, ['user_book_id', 'userBookId']);
           // 🌟 책이 추가되었으므로 기본 상태를 '담아둠(WISH)'으로 변경
           readingStatus = 'WISH';
         });
@@ -166,11 +247,22 @@ class _BookDetailPageState extends State<BookDetailPage> {
       final targetId = userBookId ?? widget.bookId;
 
       Map<String, dynamic> body = {
-        "reading_status": editStatus,
+        "reading_status": editStatus == 'DONE' ? 'COMPLETE' : editStatus,
       };
 
       if (editStatus == 'READING') {
         body["reading_page"] = int.tryParse(pageController.text) ?? 0;
+        final started = _toApiDateOnly(startedAt);
+        if (started != null) {
+          body["started_at"] = started;
+        }
+      }
+
+      if (editStatus == 'COMPLETE' || editStatus == 'DONE') {
+        final ended = _toApiDateOnly(completedAt);
+        if (ended != null) {
+          body["completed_at"] = ended;
+        }
       }
 
       final response = await ApiClient.dio.patch(
@@ -183,8 +275,12 @@ class _BookDetailPageState extends State<BookDetailPage> {
           readingStatus = editStatus;
           if (editStatus == 'READING') {
             readingPage = int.tryParse(pageController.text) ?? readingPage;
-          } else if (editStatus == 'COMPLETE') {
+            final s = _toApiDateOnly(startedAt);
+            if (s != null) startedAt = s;
+          } else if (editStatus == 'COMPLETE' || editStatus == 'DONE') {
             readingPage = totalPage;
+            final e = _toApiDateOnly(completedAt);
+            if (e != null) completedAt = e;
           }
           isEditing = false;
         });
@@ -212,7 +308,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
         if (isEditing) {
           setState(() {
             editStatus = value;
+            if (value == 'READING') {
+              startedAt = _todayYmd();
+            }
             if (value == 'COMPLETE') {
+              completedAt = _todayYmd();
               pageController.text = (totalPage ?? 0).toString();
             }
           });
@@ -344,6 +444,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                           setState(() {
                             pageController.text = totalPage.toString();
                             editStatus = 'COMPLETE';
+                            completedAt = _todayYmd();
                           });
                         }
                       },
@@ -452,7 +553,8 @@ class _BookDetailPageState extends State<BookDetailPage> {
                 if (value == 'edit') {
                   setState(() {
                     isEditing = true;
-                    editStatus = readingStatus;
+                    editStatus =
+                        readingStatus == 'DONE' ? 'COMPLETE' : readingStatus;
                     pageController.text = (readingPage ?? 0).toString();
                   });
                 } else if (value == 'delete') {

@@ -45,7 +45,6 @@ class _ReadingSummaryCardState extends State<ReadingSummaryCard> {
     });
 
     try {
-      // 🌟 [수정] TokenStorage 대신 부모가 넘겨준 최신 토큰(widget.accessToken) 사용
       final response = await ApiClient.dio.get(
         '/me/library/summary',
       );

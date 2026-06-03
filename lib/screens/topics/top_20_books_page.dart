@@ -24,7 +24,7 @@ class _Top20BooksPageState extends State<Top20BooksPage> {
   Future<void> _fetchTop20Books() async {
     try {
       final response = await ApiClient.dio.get(
-        '/books/ranks',
+        '/books/most-recommended',
         queryParameters: {'limit': 20},
       );
 

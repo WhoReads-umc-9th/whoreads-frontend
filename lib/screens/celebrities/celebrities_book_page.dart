@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
+import '../../services/library_service.dart';
 
 // --- 모델 클래스 ---
 class CelebrityDetail {
@@ -93,12 +94,12 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
       final results = await Future.wait([
         ApiClient.dio.get('/celebrities/${widget.celebrityId}'),
         ApiClient.dio.get('/quotes/celebrities/${widget.celebrityId}'),
-        ApiClient.dio.get('/me/library/list', queryParameters: {'status': 'WISH', 'size': 100}),
       ]);
 
       final profileResponse = results[0];
+      debugPrint(profileResponse.toString());
       final booksResponse = results[1];
-      final libraryResponse = results[2];
+      debugPrint(booksResponse.toString());
 
       if (profileResponse.statusCode == 200 && booksResponse.statusCode == 200) {
         final profileData = profileResponse.data is String
@@ -108,29 +109,8 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
             ? jsonDecode(booksResponse.data as String)
             : booksResponse.data;
 
-        if (libraryResponse.statusCode == 200) {
-          final libraryData = libraryResponse.data is String
-              ? jsonDecode(libraryResponse.data as String)
-              : libraryResponse.data;
-          final resultData = libraryData['result'];
-          List<dynamic> libraryItems = [];
-
-          if (resultData is List) {
-            libraryItems = resultData;
-          } else if (resultData is Map) {
-            if (resultData.containsKey('content')) libraryItems = resultData['content'];
-            else if (resultData.containsKey('books')) libraryItems = resultData['books'];
-          }
-
-          for (var item in libraryItems) {
-            int? bId = item['book_id'] ?? (item['book'] != null ? item['book']['id'] : null);
-            int? uBId = item['user_book_id'] ?? item['id'];
-
-            if (bId != null && uBId != null) {
-              _addedBooksMap[bId] = uBId;
-            }
-          }
-        }
+        final addedMap =
+            await LibraryService.fetchAddedBookIdsByUserBookIds();
 
         setState(() {
           celebrityProfile = CelebrityDetail.fromJson(profileData);
@@ -145,6 +125,9 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
               bookList = resultData.map((e) => CelebrityBook.fromJson(e)).toList();
             }
           }
+          _addedBooksMap
+            ..clear()
+            ..addAll(addedMap);
           isLoading = false;
         });
       } else {
