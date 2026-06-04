@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -25,6 +26,11 @@ Future<void> main() async {
     runApp(const WhoReadsApp());
 }
 void _onReceiveTaskData(dynamic data) {
+  if (data is Map &&
+      data['type'] == 'notification_pressed') {
+    AppRouter.navigateAndRemoveUntil('/timer');
+    return;
+  }
   TimerService().handleForegroundData(data);
 }
 
@@ -59,6 +65,7 @@ class WhoReadsApp extends StatelessWidget {
       home: const SplashScreen(),
       onGenerateRoute: AppRouter.generateRoute,
       navigatorKey: AppRouter.navigatorKey,
+      initialRoute: '/',
     );
   }
 }

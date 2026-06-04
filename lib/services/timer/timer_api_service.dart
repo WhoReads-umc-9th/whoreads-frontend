@@ -69,6 +69,26 @@ class TimerApiService {
       rethrow;
     }
   }
+  Future<void> recoverTimer(int sessionId) async {
+    try {
+      await ApiClient.dio.get(
+        '/reading-sessions/$sessionId/recover/',
+      );
+    } catch (e) {
+      debugPrint('recoverTimer 실패: $e');
+      rethrow;
+    }
+  }
+  Future<void> reflectTimer(int sessionId) async {
+    try {
+      await ApiClient.dio.patch(
+        '/reading-sessions/$sessionId/complete-idle-time/',
+      );
+    } catch (e) {
+      debugPrint('reflectTimer 실패: $e');
+      rethrow;
+    }
+  }
 
   Future<void> completeTimer(int sessionId) async {
     try {
@@ -83,7 +103,7 @@ class TimerApiService {
 
   Future<void> heartbeat(int sessionId) async {
     try {
-      await ApiClient.dio.post(
+      await ApiClient.dio.patch(
         '/reading-sessions/$sessionId/heartbeat',
       );
     } catch (e) {
@@ -118,16 +138,32 @@ class TimerApiService {
     }
   }
 
-  Future<List<dynamic>> getMonthlyFocusTime() async {
+  Future<List<dynamic>> getMonthlyFocusTime(String year, String month) async {
     try {
       final response = await ApiClient.dio.get(
-        '/me/reading-sessions/stats/monthly',
+        '/me/reading-sessions/records/monthly?year=$year&month=$month',
       );
 
-      return response.data['result'] as List<dynamic>;
+      return response.data['result']['records'] as List<dynamic>;
     } catch (e) {
       debugPrint('getMonthlyFocusTime 실패: $e');
       rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getReadingSessionSettings() async {
+    try {
+      final response = await ApiClient.dio.get('/me/reading-sessions/settings');
+
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data['is_success'] == true) {
+          return response.data['result'] as Map<String, dynamic>;
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('getReadingSessionSettings API 통신 실패: $e');
+      return null;
     }
   }
 }

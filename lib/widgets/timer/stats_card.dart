@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 class StatsDetailCard extends StatelessWidget {
-  // 생성자 파라미터들 (필요한 것만 남김)
   final List<Map<String, String>> records;
   final String selectedDate;
   final VoidCallback onTap;
@@ -31,15 +30,12 @@ class StatsDetailCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               GestureDetector(
                 onTap: onTap,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey[300]!),
                     borderRadius: BorderRadius.circular(4),
@@ -67,11 +63,18 @@ class StatsDetailCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Row(
                   children: [
-                    Text(
-                      item['date'] ?? '',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    SizedBox(
+                      width: 48,
+                      child: Text(
+                        item['date'] ?? '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1C1B1F),
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         item['timeRange'] ?? '시간 정보 없음',
@@ -80,7 +83,11 @@ class StatsDetailCard extends StatelessWidget {
                     ),
                     Text(
                       item['duration'] ?? '',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1C1B1F),
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -94,16 +101,16 @@ class StatsDetailCard extends StatelessWidget {
 
 class StatusPreviewCard extends StatelessWidget {
   final String title;
-  final String value;
-  final String? arrowValue;
+  final int totalMinutes;
+  final int? arrowDeltaMinutes;
   final bool hasArrow;
   final IconData? icon;
 
   const StatusPreviewCard({
     super.key,
     required this.title,
-    required this.value,
-    this.arrowValue,
+    required this.totalMinutes,
+    this.arrowDeltaMinutes,
     this.hasArrow = false,
     this.icon,
   });
@@ -120,7 +127,6 @@ class StatusPreviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // 상단: 타이틀 + 아이콘
           Row(
             children: [
               Icon(
@@ -138,76 +144,77 @@ class StatusPreviewCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 4),
-          if (hasArrow && arrowValue != null)
+          const SizedBox(height: 4),
+
+          if (hasArrow && arrowDeltaMinutes != null)
             Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.start, // 왼쪽 정렬
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Text(
-                      "어제 $arrowValue",
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      "어제 ${_formatSubText(arrowDeltaMinutes!)}",
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
-                    const Icon(
-                      Icons.arrow_upward,
-                      size: 13,
-                      color: Colors.green,
+                    const SizedBox(width: 2),
+                    Icon(
+                      arrowDeltaMinutes! >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
+                      size: 12,
+                      color: arrowDeltaMinutes! >= 0 ? Colors.green : Colors.red,
                     ),
                   ],
                 ),
-                // Row 바깥(아래)에 간격을 줍니다.
                 const SizedBox(height: 4),
               ],
             )
           else
             const SizedBox(),
 
-          // 하단: 메인 값
-          _buildValueText(value),
+          _buildCustomFormattedTime(totalMinutes),
         ],
       ),
     );
   }
 
-  Widget _buildValueText(String value) {
-    final parts = value.split(' ');
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.end,
-      children: parts.map((part) {
-        final unitMatch = RegExp(r'^(\d+)(h|m)$').firstMatch(part);
-        if (unitMatch != null) {
-          final number = unitMatch.group(1)!;
-          final unit = unitMatch.group(2)!;
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                number,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 3, right: 4),
-                child: Text(
-                  unit,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-        return Text(
-          part,
-          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-        );
-      }).toList(),
+  Widget _buildCustomFormattedTime(int totalMin) {
+    final int hours = totalMin ~/ 60;
+    final int minutes = totalMin % 60;
+
+    const TextStyle numberStyle = TextStyle(
+      fontSize: 28,
+      fontWeight: FontWeight.w700,
+      color: Color(0xFF1C1B1F),
+      fontFamily: 'Roboto',
     );
+
+    const TextStyle unitStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+    );
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(hours.toString().padLeft(2, '0'), style: numberStyle),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 2, left: 2, right: 6),
+          child: Text('h', style: unitStyle),
+        ),
+        Text(minutes.toString().padLeft(2, '0'), style: numberStyle),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 2, left: 2),
+          child: Text('m', style: unitStyle),
+        ),
+      ],
+    );
+  }
+
+  String _formatSubText(int min) {
+    final int absMin = min.abs();
+    final int h = absMin ~/ 60;
+    final int m = absMin % 60;
+    return "${h.toString().padLeft(2, '0')}h ${m.toString().padLeft(2, '0')}m";
   }
 }

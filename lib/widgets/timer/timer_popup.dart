@@ -31,18 +31,20 @@ class TimerPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: Colors.white,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            /// 타이틀
             Text(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
+                color: Color(0xFF1C1B1F),
+                height: 1.4,
               ),
             ),
 
@@ -51,65 +53,122 @@ class TimerPopup extends StatelessWidget {
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14),
+                style: const TextStyle(fontSize: 14, color: Colors.black),
               ),
             ],
 
             if (highlights != null && highlights!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Column(
-                children: highlights!
-                    .map((e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text(
-                    "${e.label}: ${e.value}",
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ))
-                    .toList(),
-              ),
-            ],
-
-            if (description != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                description!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: highlights!.map((e) {
+                    final bool isRecord = e.label == '기록';
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "${e.label} : ",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: isRecord ? FontWeight.w500 : FontWeight.w600,
+                              color: isRecord ? const Color(0xFF49454F) : const Color(0xFFFF5722),
+                            ),
+                          ),
+                          Text(
+                            e.value,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isRecord ? const Color(0xFF1C1B1F) : const Color(0xFFFF5722),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ],
 
-            const SizedBox(height: 20),
+            if (description != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                description!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF79747E),
+                  height: 1.4,
+                ),
+              ),
+            ],
 
-            /// 버튼 영역
+            const SizedBox(height: 24),
+
             if (singleButton)
               SizedBox(
                 width: double.infinity,
+                height: 48,
                 child: ElevatedButton(
                   onPressed: onRightPressed,
-                  child: Text(rightButtonText),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1C1B1F),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    rightButtonText,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
                 ),
               )
             else
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: onLeftPressed,
-                      child: Text(leftButtonText),
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: onLeftPressed,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFCAC4D0)),
+                          foregroundColor: const Color(0xFF1C1B1F),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text(
+                          leftButtonText,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: onRightPressed,
-                      child: Text(rightButtonText),
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: onRightPressed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1C1B1F),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          rightButtonText,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ),
                   ),
                 ],

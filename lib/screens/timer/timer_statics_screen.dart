@@ -16,10 +16,21 @@ class _TimerStatisticsPageState extends State<TimerStatisticsPage> {
   @override
   void initState() {
     super.initState();
-    _service.addListener(() => setState(() {}));
+    _service.addListener(_onServiceUpdated);
     _service.fetchAllData();
   }
 
+  @override
+  void dispose() {
+    _service.removeListener(_onServiceUpdated);
+    super.dispose();
+  }
+
+  void _onServiceUpdated() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
   void _showDatePicker() {
     MyDatePicker.show(
       context,
@@ -39,6 +50,7 @@ class _TimerStatisticsPageState extends State<TimerStatisticsPage> {
         automaticallyImplyLeading: false,
         backgroundColor: const Color(0xFFF5F6F8),
         elevation: 0,
+        scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -71,8 +83,8 @@ class _TimerStatisticsPageState extends State<TimerStatisticsPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            SizedBox(height: 20),
-            // 1. 상단 카드 섹션 (Padding으로 감쌈)
+            const SizedBox(height: 20),
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15),
               child: IntrinsicHeight(
@@ -82,8 +94,8 @@ class _TimerStatisticsPageState extends State<TimerStatisticsPage> {
                     Expanded(
                       child: StatusPreviewCard(
                         title: "오늘의 포커스(h)",
-                        value: _service.todayFocusTime,
-                        arrowValue: _service.increasedFocusTime,
+                        totalMinutes: _service.todayFocusMinutes,
+                        arrowDeltaMinutes: _service.yesterdayFocusMinutes,
                         hasArrow: true,
                         icon: Icons.update,
                       ),
@@ -92,7 +104,7 @@ class _TimerStatisticsPageState extends State<TimerStatisticsPage> {
                     Expanded(
                       child: StatusPreviewCard(
                         title: "총 집중 시간",
-                        value: _service.totalFocusTime,
+                        totalMinutes: _service.totalFocusMinutes,
                         icon: Icons.hourglass_empty,
                       ),
                     ),
@@ -101,20 +113,17 @@ class _TimerStatisticsPageState extends State<TimerStatisticsPage> {
               ),
             ),
 
-            // 2. 카드와 리스트 사이 간격 (Column의 자식으로 배치)
             const SizedBox(height: 12),
-
-            // 3. 기록 리스트 섹션 (리스트에도 좌우 여백이 필요하면 Padding으로 감쌈)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15),
               child: StatsDetailCard(
-                // title 속성은 StatsDetailCard 정의에 따라 생략하거나 추가하세요.
                 records: _service.records,
                 selectedDate: _service.selectedYearMonth,
                 onTap: _showDatePicker,
-                title: '이번 달 기록',
+                title: '집중 기록',
               ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
