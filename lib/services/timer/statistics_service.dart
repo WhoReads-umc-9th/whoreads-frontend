@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-
 import 'timer_api_service.dart';
 
-class TimerStatisticsService extends ChangeNotifier {
+class TimerStatisticsService with ChangeNotifier {
   final TimerApiService _apiService = TimerApiService();
 
-  // 1. 상태 데이터 (상단 카드용)
-  String todayFocusTime = "0h 0m";
-  String totalFocusTime = "0h 0m";
+  int todayFocusMinutes = 0;
+  int yesterdayFocusMinutes = 0;
+  int totalFocusMinutes = 0;
+
   String selectedYear = DateTime.now().year.toString();
   String selectedMonth = DateTime.now().month.toString();
   String selectedYearMonth = "${DateTime.now().year}년 ${DateTime.now().month}월";
-  String increasedFocusTime = "0m";
 
   // 2. 리스트 데이터 (집중 기록용)
   List<Map<String, String>> records = [];
@@ -19,44 +18,43 @@ class TimerStatisticsService extends ChangeNotifier {
   Future<void> fetchAllData() async {
     try {
       await Future.wait([
-        // 오늘 데이터 가져오기
         _apiService.getTodayFocusTime().then((data) {
-          todayFocusTime = _formatTime(data['today_minutes'] ?? 0);
-          increasedFocusTime = _formatTime(
-            data['difference_from_yesterday'] ?? 0,
-          );
+          todayFocusMinutes = data['today_minutes'] ?? 0;
+          yesterdayFocusMinutes = data['difference_from_yesterday'] ?? 0;
         }),
 
-        // 전체 집중 시간 가져오기
         _apiService.getTotalFocusTime().then((time) {
-          totalFocusTime = _formatTime(time);
+          totalFocusMinutes = time;
         }),
 
-        // 월간 기록 가져오기
-        _apiService.getMonthlyFocusTime().then((fetchRecords) {
+        _apiService.getMonthlyFocusTime(selectedYear, selectedMonth).then((fetchRecords) {
+          String? lastProcessedDay;
+
           records = fetchRecords.map((item) {
+            final String currentDay = (item['day'] ?? "").toString();
             final String start = item['start_time'] ?? "00:00";
             final String end = item['end_time'] ?? "00:00";
             final int duration = item['total_minutes'] ?? 0;
 
+            String displayDay = "";
+            if (currentDay != lastProcessedDay) {
+              displayDay = "${currentDay}일";
+              lastProcessedDay = currentDay;
+            }
+
             return {
-              "date": "${item['day']}일", // '1' -> '1일'
-              "timeRange": formatTimeRange(start, end), // '14:00' -> '오후 2:00'
-              "duration": "${duration}m", // '45' -> '00:45'
+              "date": displayDay,
+              "timeRange": formatTimeRange(start, end),
+              "duration": "${duration}m",
             };
           }).toList();
         }),
       ]);
       notifyListeners();
     } catch (e) {
+      debugPrint('통계 데이터 패치 실패: $e');
       return;
     }
-  }
-
-  String _formatTime(int minutes) {
-    String hour = (minutes ~/ 60).toString().padLeft(2, '0');
-    String remainingMinutes = (minutes % 60).toString().padLeft(2, '0');
-    return '${hour}h${remainingMinutes.toString().padLeft(2, '0')}m';
   }
 
   String formatTimeRange(String start, String end) {
@@ -69,7 +67,6 @@ class TimerStatisticsService extends ChangeNotifier {
       int displayHour = hour % 12;
       if (displayHour == 0) displayHour = 12;
 
-      // 분이 한 자릿수일 경우를 대비해 padLeft 사용 (예: 2:05)
       String displayMinute = minute.toString().padLeft(2, '0');
 
       return "$period $displayHour:$displayMinute";
@@ -83,6 +80,6 @@ class TimerStatisticsService extends ChangeNotifier {
     selectedMonth = month;
     selectedYear = year;
     selectedYearMonth = "$year년 $month월";
-    notifyListeners();
+    fetchAllData();
   }
 }
