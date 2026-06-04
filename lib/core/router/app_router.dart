@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:whoreads/screens/celebrities/celebrities_book_page.dart';
-import 'package:whoreads/screens/auth/login_page.dart';
+import 'package:whoreads/screens/my_library/my_library_page.dart';
+import 'package:whoreads/screens/splash_screen.dart';
 import 'package:whoreads/screens/timer/timer_default_screen.dart';
 
 class AppRouter {
-  // 💡 싱글톤 패턴: 내부 생성자를 private으로 선언
   AppRouter._internal();
 
-  // 💡 전역에서 사용할 단 하나의 NavigatorKey
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
-  // 💡 [추가] 어디서든 context 없이 이동할 수 있는 함수 (Controller의 redirect 역할)
   static Future<dynamic>? navigateTo(String routeName, {Object? arguments}) {
     return navigatorKey.currentState?.pushNamed(
       routeName,
@@ -19,7 +17,6 @@ class AppRouter {
     );
   }
 
-  // 💡 [추가] 현재 스택을 다 날리고 이동 (로그아웃 등 세션 만료 시 사용)
   static Future<dynamic>? navigateAndRemoveUntil(
     String routeName, {
     Object? arguments,
@@ -34,7 +31,7 @@ class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/':
-        return MaterialPageRoute(builder: (_) => const LoginPage());
+        return MaterialPageRoute(builder: (_) => const SplashScreen());
 
       case '/celebrity/book':
         final args = settings.arguments;
@@ -50,6 +47,10 @@ class AppRouter {
 
       case '/timer':
         return MaterialPageRoute(builder: (_) => const TimerPage());
+
+      case '/library':
+        return MaterialPageRoute(builder: (_) => const MyLibraryPage());
+
 
       default:
         return _errorRoute(settings.name);
