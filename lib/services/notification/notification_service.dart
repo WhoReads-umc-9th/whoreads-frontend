@@ -100,7 +100,7 @@ class NotificationService {
   // ---------------------------------------------------------
   // 3. 알림 읽음 처리 (단건/전체)
   // ---------------------------------------------------------
-  Future<void> markAsRead(int id) async {
+  Future<void> markAsRead(String id) async {
     try {
       await _apiService.readNotification(id);
       // 로컬 상태 즉시 업데이트 (사용자 경험 개선)
@@ -113,9 +113,9 @@ class NotificationService {
     }
   }
 
-  Future<void> markAllAsRead(int id) async {
+  Future<void> markAllAsRead() async {
     try {
-      await _apiService.readAllNotifications(id);
+      await _apiService.readAllNotifications();
       // 리스트 전체를 읽음으로 변경
       for (var n in _notifications) {
         n['is_read'] = true;
@@ -128,7 +128,7 @@ class NotificationService {
   // ---------------------------------------------------------
   // 4. 알림 삭제 및 테스트
   // ---------------------------------------------------------
-  Future<void> removeNotification(int id) async {
+  Future<void> removeNotification(String id) async {
     try {
       await _apiService.deleteNotification(id);
       _notifications.removeWhere((n) => n['id'] == id);
@@ -136,11 +136,5 @@ class NotificationService {
     } catch (e) {
       return;
     }
-  }
-
-  Future<void> triggerTest() async {
-    await _apiService.sendTestNotification();
-    // 테스트 발송 후 목록을 다시 불러오고 싶다면:
-    await refresh();
   }
 }
