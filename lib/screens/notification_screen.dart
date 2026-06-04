@@ -162,7 +162,7 @@ class _NotificationPageState extends State<NotificationPage> {
     debugPrint("딥링크 데이터: type=$type, celebrityId=$celebrityId");
 
     if (type == 'ROUTINE') {
-      AppRouter.navigateTo('/timer');
+      AppRouter.navigateTo('/library');
     } else if (type == 'FOLLOW' && celebrityId != null) {
       AppRouter.navigateTo('/celebrity/book', arguments: celebrityId);
     }

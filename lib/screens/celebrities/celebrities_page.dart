@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:whoreads/screens/notification_screen.dart';
 import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/network/api_client.dart';
 import '../my_library/my_library_page.dart';
@@ -100,7 +101,15 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
         elevation: 0,
         title: SvgPicture.asset('assets/images/logo.svg', height: 18),
         actions: [
-          const Icon(Icons.notifications_none, color: Colors.black),
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.black),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const NotificationPage()),
+              );
+            },
+          ),
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.person_outline, color: Colors.black),
