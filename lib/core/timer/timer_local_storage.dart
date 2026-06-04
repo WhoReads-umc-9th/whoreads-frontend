@@ -12,9 +12,6 @@ class TimerLocalStorage {
 
   static const _key = 'timer_session';
 
-  // =========================
-  // 저장
-  // =========================
   Future<void> save(ActiveReadingSession session) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -26,15 +23,11 @@ class TimerLocalStorage {
       'idleMinutes': session.idleMinutes,
       'focusBlockEnabled': session.focusBlockEnabled,
       'whiteNoiseEnabled': session.whiteNoiseEnabled,
-      'savedAt': DateTime.now().toIso8601String(), // ⭐ 중요
+      'savedAt': DateTime.now().toIso8601String(),
     };
 
     await prefs.setString(_key, jsonEncode(data));
   }
-
-  // =========================
-  // 불러오기
-  // =========================
   Future<ActiveReadingSession?> load() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -58,18 +51,11 @@ class TimerLocalStorage {
       return null;
     }
   }
-
-  // =========================
-  // 삭제
-  // =========================
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key);
   }
 
-  // =========================
-  // 존재 여부
-  // =========================
   Future<bool> hasSession() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.containsKey(_key);
