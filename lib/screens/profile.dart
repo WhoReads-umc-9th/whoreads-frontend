@@ -96,6 +96,11 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     final String nickname = userInfo['nickname'] ?? '이름 없음';
+    final headline = dnaResult['result_headline'] ?? '';
+
+    final match = RegExp(r"'(.*?)'").firstMatch(headline);
+
+    final extractedText = match?.group(1) ?? '';
 
     return Scaffold(
       backgroundColor: bgColor, // 전체 배경색 지정
@@ -271,11 +276,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         children: [
                           TextSpan(text: '$nickname님은 '),
                           TextSpan(
-                            text:
-                            "' ${dnaResult['result_hea_line'] ?? '현실과 사회를 더 잘 이해하기 위해'} '",
+                            text: "'${extractedText.isNotEmpty ? extractedText : '현실과 사회를 더 잘 이해하기 위해'}'",
                             style: TextStyle(
-                                color: primaryOrange,
-                                fontWeight: FontWeight.bold),
+                              color: primaryOrange,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const TextSpan(
+                            text: ' 독서하는 사람입니다',
                           ),
                         ],
                       ),

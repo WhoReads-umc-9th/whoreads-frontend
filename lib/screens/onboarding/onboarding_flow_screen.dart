@@ -8,6 +8,7 @@ import '../../widgets/onboarding/dot_indicator.dart';
 import '../../widgets/onboarding/onboarding_page.dart';
 import '../../widgets/onboarding/primary_buttons.dart';
 import '../../widgets/auth/signup_terms_sheet.dart';
+import '../my_library/my_library_page.dart';
 import 'onboarding_data.dart';
 
 class OnboardingFlowScreen extends StatefulWidget {
@@ -146,10 +147,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                           child: OutlineActionButton(
                             label: '로그인',
                             onPressed: () {
-                              Navigator.of(context).push(
+                              Navigator.pushAndRemoveUntil(
+                                context,
                                 MaterialPageRoute(
                                   builder: (_) => const LoginPage(),
                                 ),
+                                    (route) => false,
                               );
                             },
                           ),
