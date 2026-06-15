@@ -149,11 +149,6 @@ class DnaResultPage extends StatelessWidget {
                     height: 56,
                     child: ElevatedButton(
                       onPressed: () {
-                        // [페이지 이동 로직]
-                        // API에서 받은 celebrityId가 필요합니다.
-                        // DnaResult 모델에 id 필드가 없으면 임시로 1 등을 넣거나 모델을 수정해야 합니다.
-                        // 예시: result.celebrityId (모델에 추가 필요)
-
                         Navigator.push(
                           context,
                           MaterialPageRoute(

@@ -18,6 +18,7 @@ Future<void> main() async {
   if (isFirebaseReady && _supportsFcmNotifications()) {
     await FcmService.initialize();
   }
+
   if (defaultTargetPlatform == TargetPlatform.android) {
     ForegroundServiceManager().initService();
     FlutterForegroundTask.initCommunicationPort();

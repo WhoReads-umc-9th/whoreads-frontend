@@ -66,7 +66,7 @@ class DnaResult {
 
   factory DnaResult.fromJson(Map<String, dynamic> json) {
     return DnaResult(
-      headline: json['result_hea_line'] ?? '',
+      headline: json['result_headline'] ?? '',
       description: List<String>.from(json['description'] ?? []),
       celebrityId: json['celebrity_id'] ?? 0, // [추가] JSON에서 int형으로 파싱
       celebrityName: json['celebrity_name'] ?? '',
