@@ -64,21 +64,6 @@ class _TimerStatisticsPageState extends State<TimerStatisticsPage> {
             fontSize: 16,
           ),
         ),
-        actions: [
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.more_horiz, color: Colors.black),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const TimerStatisticsPage(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 16),
-        ],
       ),
       body: SingleChildScrollView(
         child: Column(
