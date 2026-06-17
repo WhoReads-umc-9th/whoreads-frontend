@@ -6,9 +6,8 @@ import '../../books/BookDetailPage.dart';
 import '../../celebrities/celebrities_page.dart';
 
 class SavedTab extends StatefulWidget {
-  final String accessToken;
 
-  const SavedTab({super.key, required this.accessToken});
+  const SavedTab({super.key});
 
   @override
   State<SavedTab> createState() => _SavedTabState();

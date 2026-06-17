@@ -3,12 +3,12 @@ import 'package:whoreads/screens/celebrities/celebrities_book_page.dart';
 import 'package:whoreads/screens/my_library/my_library_page.dart';
 import 'package:whoreads/screens/splash_screen.dart';
 import 'package:whoreads/screens/timer/timer_default_screen.dart';
+import 'package:whoreads/services/auth_service.dart';
 
 class AppRouter {
   AppRouter._internal();
-
   static final GlobalKey<NavigatorState> navigatorKey =
-      GlobalKey<NavigatorState>();
+  GlobalKey<NavigatorState>();
 
   static Future<dynamic>? navigateTo(String routeName, {Object? arguments}) {
     return navigatorKey.currentState?.pushNamed(
@@ -18,12 +18,12 @@ class AppRouter {
   }
 
   static Future<dynamic>? navigateAndRemoveUntil(
-    String routeName, {
-    Object? arguments,
-  }) {
+      String routeName, {
+        Object? arguments,
+      }) {
     return navigatorKey.currentState?.pushNamedAndRemoveUntil(
       routeName,
-      (route) => false,
+          (route) => false,
       arguments: arguments,
     );
   }
@@ -31,11 +31,31 @@ class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case '/':
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
+        return MaterialPageRoute(
+          builder: (_) => FutureBuilder<bool>(
+            future: AuthService().getLoggedIn(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              if (snapshot.hasData) {
+                final bool isLoggedIn = snapshot.data ?? false;
+
+                return isLoggedIn ? const MyLibraryPage() : const SplashScreen();
+              }
+
+              return const Scaffold(
+                body: Center(child: Text('인증 에러가 발생했습니다.')),
+              );
+            },
+          ),
+        );
 
       case '/celebrity/book':
         final args = settings.arguments;
-        // Null 방어 로직 추가
         if (args == null) return _errorRoute(settings.name);
 
         final int celebId = args is int
@@ -50,7 +70,6 @@ class AppRouter {
 
       case '/library':
         return MaterialPageRoute(builder: (_) => const MyLibraryPage());
-
 
       default:
         return _errorRoute(settings.name);

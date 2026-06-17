@@ -5,9 +5,8 @@ import '../../books/BookDetailPage.dart';
 import '../widgets/book_list_item.dart';
 
 class ReadingTab extends StatefulWidget {
-  final String accessToken;
 
-  const ReadingTab({super.key, required this.accessToken, required List<dynamic> books});
+  const ReadingTab({super.key, required List<dynamic> books});
 
   @override
   State<ReadingTab> createState() => _ReadingTabState();

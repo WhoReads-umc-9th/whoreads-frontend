@@ -74,7 +74,7 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
 
       setState(() {
         nickname = resultNickname;
-        _refreshKey++; // 값이 변경되면 Key가 바뀌면서 탭들이 새로 그려짐
+        _refreshKey++;
       });
     }
   }
@@ -102,21 +102,18 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
 
     accessToken = token;
 
-    // 🌟 내 정보와 DNA 결과를 동시에 불러옵니다.
     await Future.wait([
       _checkDnaResult(),
       _fetchMyInfo(),
     ]);
   }
 
-  // 🌟 DNA 결과 확인 API 호출
   Future<void> _checkDnaResult() async {
     try {
       final response = await ApiClient.dio.get(
         '/dna/results',
       );
 
-      // 200 성공이면 결과를 가지고 있는 것으로 판단
       if (response.statusCode == 200) {
         setState(() {
           hasDnaResult = true;
@@ -156,6 +153,7 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
         });
       }
     } catch (e) {
+      debugPrint('내 정보 조회 에러: $e');
       setState(() {
         isLoading = false;
       });
@@ -277,9 +275,9 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
               child: TabBarView(
                 key: ValueKey(_refreshKey),
                 children: [
-                  SavedTab(accessToken: accessToken!),
-                  ReadingTab(accessToken: accessToken!, books: []),
-                  FinishedTab(accessToken: accessToken!, books: []),
+                  SavedTab(),
+                  ReadingTab(books: const []),
+                  FinishedTab(books: const []),
                 ],
               ),
             ),

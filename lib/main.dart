@@ -6,7 +6,6 @@ import 'package:whoreads/core/router/app_router.dart';
 import 'package:whoreads/services/notification/fcm_service.dart';
 import 'package:whoreads/services/timer/foreground_service_manager.dart';
 import 'package:whoreads/services/timer/timer_service.dart';
-import 'screens/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
@@ -63,7 +62,6 @@ class WhoReadsApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const SplashScreen(),
       onGenerateRoute: AppRouter.generateRoute,
       navigatorKey: AppRouter.navigatorKey,
       initialRoute: '/',

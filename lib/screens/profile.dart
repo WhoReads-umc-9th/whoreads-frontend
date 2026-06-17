@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../core/auth/token_storage.dart';
+import 'package:whoreads/services/auth_service.dart';
 import '../core/network/api_client.dart';
 import 'celebrities/celebrities_book_page.dart';
 import 'dna_test/dnaTestDialog.dart';
@@ -14,6 +13,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final AuthService _authService = AuthService();
   bool isLoading = true;
 
   Map<String, dynamic> userInfo = {};
@@ -35,7 +35,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _fetchAllData() async {
     try {
-      // Future.wait로 3개 API 동시 호출
       final results = await Future.wait([
         ApiClient.dio.get('/members/me'),
         ApiClient.dio.get('/members/me/follows'),
@@ -376,8 +375,27 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
-
-            const SizedBox(height: 40),
+            _buildCard(
+              child: InkWell(
+                onTap: () async {
+                  await _authService.logout();
+                  if (context.mounted) {
+                    Navigator.pushNamedAndRemoveUntil(context, '/', (route)=> false);
+                  }
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('로그아웃', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
