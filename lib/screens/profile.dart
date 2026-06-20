@@ -1,7 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:whoreads/screens/routine_setting.dart';
 import 'package:whoreads/services/auth_service.dart';
 import '../core/network/api_client.dart';
+import '../services/notification_setting.dart';
 import 'celebrities/celebrities_book_page.dart';
 import 'dna_test/dnaTestDialog.dart';
 
@@ -14,18 +16,20 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final AuthService _authService = AuthService();
+  final NotificationSettingService _notificationSettingService = NotificationSettingService();
   bool isLoading = true;
 
   Map<String, dynamic> userInfo = {};
   List<dynamic> follows = [];
   Map<String, dynamic> dnaResult = {};
-
-  bool isLibraryUpdateOn = true;
-  bool isRoutineMorningOn = false;
-  bool isRoutineNightOn = true;
+  List<dynamic> routineSettings = [];
+  dynamic followSetting = {'id':-1,'is_enabled':true};
 
   final Color primaryOrange = const Color(0xFFFF6A00);
   final Color bgColor = const Color(0xFFF2F4F6);
+
+  final List<String> _daysOfWeekEng = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+  final List<String> _daysOfWeekKor = ['일', '월', '화', '수', '목', '금', '토'];
 
   @override
   void initState() {
@@ -41,9 +45,21 @@ class _ProfilePageState extends State<ProfilePage> {
         ApiClient.dio.get('/dna/results'),
       ]);
 
-      // 1. 내 정보 파싱 (dio는 response.data로 바로 접근)
+      Map<String, dynamic>? settings = await _notificationSettingService.getAllSettings();
+
+      if (settings == null) {
+        await _notificationSettingService.addFollowSetting();
+        settings = await _notificationSettingService.getAllSettings();
+      }
+      if (settings?['follow_setting'] != null) {
+        followSetting = settings?['follow_setting'];
+      }
+      routineSettings = settings?['routine_settings'] ?? [];
+
+
+      // 1. 내 정보 파싱
       if (results[0].statusCode == 200) {
-        userInfo = results[0].data['result'] ?? {};
+        userInfo = AntiquityUserInfo(results[0].data['result']);
       }
 
       // 2. 팔로우 목록 파싱
@@ -67,7 +83,31 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // 데이터 변환 헬퍼 함수 (영어 -> 한글)
+  Map<String, dynamic> AntiquityUserInfo(dynamic raw) {
+    return raw ?? {};
+  }
+
+  String _formatTime(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty) return '00:00';
+    try {
+      final parts = timeStr.split(':');
+      int hour = int.parse(parts[0]);
+      int minute = int.parse(parts[1]);
+
+      String period = '오전';
+      if (hour >= 12) {
+        period = '오후';
+        if (hour > 12) hour -= 12;
+      } else if (hour == 0) {
+        hour = 12;
+      }
+
+      return '$period $hour:${minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return timeStr;
+    }
+  }
+
   String _getGender(String? gender) {
     if (gender == 'MALE') return '남자';
     if (gender == 'FEMALE') return '여자';
@@ -96,13 +136,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final String nickname = userInfo['nickname'] ?? '이름 없음';
     final headline = dnaResult['result_headline'] ?? '';
-
     final match = RegExp(r"'(.*?)'").firstMatch(headline);
-
     final extractedText = match?.group(1) ?? '';
 
     return Scaffold(
-      backgroundColor: bgColor, // 전체 배경색 지정
+      backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
         elevation: 0,
@@ -122,7 +160,7 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             const SizedBox(height: 10),
 
-            /// 1. 프로필 상단 영역 (아바타 & 닉네임)
+            /// 1. 프로필 상단 영역
             Center(
               child: Column(
                 children: [
@@ -161,8 +199,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // 팔로우 아바타 리스트
                   follows.isEmpty
                       ? const Text('팔로우한 유명인이 없습니다.', style: TextStyle(color: Colors.grey, fontSize: 13))
                       : SizedBox(
@@ -179,36 +215,18 @@ class _ProfilePageState extends State<ProfilePage> {
                         return Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: celebrityId == null
-                                ? null
-                                : () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            CelebritiesBookPage(
-                                          celebrityId: celebrityId,
-                                        ),
-                                      ),
-                                    );
-                                  },
+                            onTap: celebrityId == null ? null : () {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => CelebritiesBookPage(celebrityId: celebrityId)));
+                            },
                             customBorder: const CircleBorder(),
                             child: CircleAvatar(
                               radius: 25,
                               backgroundColor: Colors.grey[200],
-                              backgroundImage:
-                                  follow['image_url'] != null &&
-                                          (follow['image_url']
-                                                  as String)
-                                              .isNotEmpty
-                                      ? NetworkImage(follow['image_url'] as String)
-                                      : null,
-                              child: follow['image_url'] == null ||
-                                      (follow['image_url'] as String?)
-                                              ?.isEmpty ==
-                                          true
-                                  ? const Icon(Icons.person,
-                                      color: Colors.grey)
+                              backgroundImage: follow['image_url'] != null && (follow['image_url'] as String).isNotEmpty
+                                  ? NetworkImage(follow['image_url'] as String)
+                                  : null,
+                              child: follow['image_url'] == null || (follow['image_url'] as String?)?.isEmpty == true
+                                  ? const Icon(Icons.person, color: Colors.grey)
                                   : null,
                             ),
                           ),
@@ -216,7 +234,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       },
                     ),
                   ),
-
                   const SizedBox(height: 20),
                   Row(
                     children: [
@@ -224,8 +241,18 @@ class _ProfilePageState extends State<ProfilePage> {
                       const Spacer(),
                       CupertinoSwitch(
                         activeColor: primaryOrange,
-                        value: isLibraryUpdateOn,
-                        onChanged: (val) => setState(() => isLibraryUpdateOn = val),
+                        value: followSetting['is_enabled'],
+                        onChanged: (val) {
+                          setState(() {
+                            followSetting['is_enabled'] = val;
+                          });
+
+                          _notificationSettingService.updateSetting(
+                              settingId: followSetting['id'],
+                              notificationType: NotificationSettingType.follow,
+                              isEnabled: val
+                          );
+                        },
                       ),
                     ],
                   )
@@ -236,10 +263,7 @@ class _ProfilePageState extends State<ProfilePage> {
             /// 3. 독서 DNA 카드
             GestureDetector(
               onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => const DnaTestDialog(),
-                );
+                showDialog(context: context, builder: (context) => const DnaTestDialog());
               },
               child: _buildCard(
                 child: Column(
@@ -247,43 +271,26 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.auto_awesome_mosaic_outlined,
-                            color: Colors.black54, size: 20),
+                        const Icon(Icons.auto_awesome_mosaic_outlined, color: Colors.black54, size: 20),
                         const SizedBox(width: 8),
-                        const Text('독서 DNA',
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87)),
+                        const Text('독서 DNA', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
                         const Spacer(),
-                        const Icon(Icons.chevron_right,
-                            color: Colors.grey, size: 20),
+                        const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
                       ],
                     ),
                     const SizedBox(height: 16),
                     dnaResult.isEmpty
-                        ? const Text(
-                      '진행한 독서 DNA 테스트가 없습니다.',
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
-                    )
+                        ? const Text('진행한 독서 DNA 테스트가 없습니다.', style: TextStyle(color: Colors.grey, fontSize: 14))
                         : RichText(
                       text: TextSpan(
-                        style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                            height: 1.5),
+                        style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
                         children: [
                           TextSpan(text: '$nickname님은 '),
                           TextSpan(
                             text: "'${extractedText.isNotEmpty ? extractedText : '현실과 사회를 더 잘 이해하기 위해'}'",
-                            style: TextStyle(
-                              color: primaryOrange,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: primaryOrange, fontWeight: FontWeight.bold),
                           ),
-                          const TextSpan(
-                            text: ' 독서하는 사람입니다',
-                          ),
+                          const TextSpan(text: ' 독서하는 사람입니다'),
                         ],
                       ),
                     ),
@@ -292,7 +299,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
 
-            /// 4. 독서 루틴 알림 카드 (정적 UI)
+            /// 4. 독서 루틴 알림 카드
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,49 +307,101 @@ class _ProfilePageState extends State<ProfilePage> {
                   Row(
                     children: [
                       const Text('독서 루틴 알림', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                      const Spacer(),
-                      const Icon(Icons.add, color: Colors.black54, size: 22),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 첫 번째 알람
-                  Row(
-                    children: [
-                      const Text('오전 8:00', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                      const Spacer(),
-                      const Text('매일', style: TextStyle(fontSize: 13, color: Colors.grey)),
-                      const SizedBox(width: 12),
-                      CupertinoSwitch(
-                        activeColor: primaryOrange,
-                        value: isRoutineMorningOn,
-                        onChanged: (val) => setState(() => isRoutineMorningOn = val),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: const Icon(Icons.add, color: Colors.black87, size: 22),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const RoutineSettingPage()),
+                          ).then((_) {
+                            setState(() { isLoading = true; });
+                            _fetchAllData();
+                          });
+                        },
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
 
-                  // 두 번째 알람
-                  Row(
-                    children: [
-                      const Text('오후 10:00', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                      const Spacer(),
-                      RichText(
-                        text: TextSpan(
-                            style: const TextStyle(fontSize: 13),
-                            children: [
-                              TextSpan(text: '일 월 화 수 ', style: TextStyle(color: primaryOrange, fontWeight: FontWeight.bold)),
-                              const TextSpan(text: '목 금 토', style: TextStyle(color: Colors.grey)),
-                            ]
+                  routineSettings.isEmpty
+                      ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16.0),
+                    child: Text('설정된 독서 루틴 알림이 없습니다.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                  )
+                      : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: routineSettings.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final routine = routineSettings[index];
+                      final String formattedTime = _formatTime(routine['time']);
+                      final bool isEnabled = routine['is_enabled'] ?? false;
+                      final int routineId = routine['id'] ?? -1;
+
+                      final List<String> targetDays = (routine['days'] as List<dynamic>? ?? []).cast<String>().toList();
+                      final bool isEveryday = targetDays.length == 7;
+
+                      return InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RoutineSettingPage(routine: routine),
+                            ),
+                          ).then((_) {
+                            setState(() { isLoading = true; });
+                            _fetchAllData();
+                          });
+                        },
+                        child: Row(
+                          children: [
+                            Text(formattedTime, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
+                            const Spacer(),
+
+                            isEveryday
+                                ? const Text('매일', style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500))
+                                : RichText(
+                              text: TextSpan(
+                                children: List.generate(7, (dayIdx) {
+                                  final engDay = _daysOfWeekEng[dayIdx];
+                                  final korDay = _daysOfWeekKor[dayIdx];
+                                  final isHighlighted = targetDays.contains(engDay);
+
+                                  return TextSpan(
+                                    text: '$korDay ',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
+                                      color: isHighlighted ? primaryOrange : Colors.grey,
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                            CupertinoSwitch(
+                              activeColor: primaryOrange,
+                              value: isEnabled,
+                              onChanged: (val) {
+                                setState(() {
+                                  routine['is_enabled'] = val;
+                                });
+
+                                _notificationSettingService.updateSetting(
+                                    settingId: routineId,
+                                    notificationType: NotificationSettingType.routine,
+                                    rawTimeStr: routine['time']?.toString().substring(0, 5),
+                                    rawDayStr: routine['days'].cast<String>().toList(),
+                                    isEnabled: val
+                                );
+                              },
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      CupertinoSwitch(
-                        activeColor: primaryOrange,
-                        value: isRoutineNightOn,
-                        onChanged: (val) => setState(() => isRoutineNightOn = val),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -359,8 +418,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildAccountRow('닉네임', nickname),
                   _buildAccountRow('성별', _getGender(userInfo['gender'])),
                   _buildAccountRow('연령', _getAge(userInfo['age_group'])),
-
-                  // API에 아이디/이메일이 없다면 UI 사진대로 하드코딩 표시
                   _buildAccountRow('아이디', userInfo['login_id'] ?? 'yhj8081'),
                   _buildAccountRow('이메일', userInfo['email'] ?? 'yhj8081@naver.com'),
 
@@ -375,6 +432,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
+
+            /// 6. 로그아웃 카드
             _buildCard(
               child: InkWell(
                 onTap: () async {
@@ -391,18 +450,17 @@ class _ProfilePageState extends State<ProfilePage> {
                         const Text('로그아웃', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
                       ],
                     ),
-                    const SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
+            SizedBox(height: 20)
           ],
         ),
       ),
     );
   }
 
-  // 흰색 둥근 카드 컨테이너 빌더
   Widget _buildCard({required Widget child}) {
     return Container(
       width: double.infinity,
@@ -416,7 +474,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 계정 관리 내부 Row 위젯
   Widget _buildAccountRow(String title, String value) {
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),

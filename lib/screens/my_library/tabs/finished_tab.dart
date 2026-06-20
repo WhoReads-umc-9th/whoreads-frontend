@@ -4,9 +4,8 @@ import '../../../services/library_service.dart';
 import '../widgets/book_list_item.dart';
 
 class FinishedTab extends StatefulWidget {
-  final String accessToken;
 
-  const FinishedTab({super.key, required this.accessToken, required List<dynamic> books});
+  const FinishedTab({super.key, required List<dynamic> books});
 
   @override
   State<FinishedTab> createState() => _FinishedTabState();

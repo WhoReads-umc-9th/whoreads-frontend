@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:whoreads/core/network/api_client.dart';
 
 class NotificationApiService {
@@ -41,6 +42,82 @@ class NotificationApiService {
     try {
       await ApiClient.dio.delete('/notifications/me/$notificationId');
     } catch (e) {
+      rethrow;
+    }
+  }
+  Future<void> addNotificationSetting({
+    List<String>? days,
+    String? time,
+    required String notificationType
+  })
+  async {
+    try {
+      await ApiClient.dio.post(
+        '/notifications/me/settings',
+        data: {
+          'time': time,
+          'type': notificationType,
+          'days': days,
+          'is_enabled' : true,
+        },
+      );
+
+    } catch (e) {
+      debugPrint('routine 추가 실패: $e');
+      rethrow;
+    }
+  }
+  Future<Map<String,dynamic>> getNotificationSetting({
+    String? notificationType
+  })
+  async {
+    try {
+      final response = await ApiClient.dio.get(
+        '/notifications/me/settings',
+        queryParameters: {
+          if (notificationType != null) 'type': notificationType,
+        },
+      );
+      return response.data['result'] as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('routine 추가 실패: $e');
+      rethrow;
+    }
+  }
+  Future<void> deleteNotificationSetting({
+    required int notificationSettingId
+  })
+  async {
+    try {
+      await ApiClient.dio.delete(
+        '/notifications/me/settings/$notificationSettingId',
+      );
+    } catch (e) {
+      debugPrint('routine 삭제 실패: $e');
+      rethrow;
+    }
+  }
+  Future<void> updateNotificationSetting({
+    List<String>? days,
+    String? time,
+    required String notificationType,
+    required bool isEnabled,
+    required int notificationSettingId,
+  })
+  async {
+    try {
+      await ApiClient.dio.patch(
+        '/notifications/me/settings/$notificationSettingId',
+        data: {
+          'time': time,
+          'type': notificationType,
+          'days': days,
+          'is_enabled' : isEnabled,
+        },
+      );
+
+    } catch (e) {
+      debugPrint('routine 수정 실패: $e');
       rethrow;
     }
   }
