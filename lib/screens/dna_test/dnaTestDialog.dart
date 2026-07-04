@@ -34,7 +34,7 @@ class DnaTestDialog extends StatelessWidget {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => Navigator.pop(context),
+                  onTap: () => Navigator.maybePop(context),
                   child: const Icon(Icons.close, color: Colors.black, size: 28),
                 ),
               ],
@@ -99,7 +99,7 @@ class DnaTestDialog extends StatelessWidget {
                   final navigator = Navigator.of(context);
 
                   // 1. 다이얼로그 닫기
-                  navigator.pop();
+                  Navigator.maybePop();
 
                   // 2. 페이지 이동
                   navigator.push(

@@ -139,7 +139,7 @@ class _DatePickerWidgetState extends State<_DatePickerWidget> {
           child: SizedBox(
             height: 51,
             child: OutlinedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.maybePop(context),
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white,
                 padding: const EdgeInsets.all(10),
@@ -163,7 +163,7 @@ class _DatePickerWidgetState extends State<_DatePickerWidget> {
             child: ElevatedButton(
               onPressed: () {
                 widget.onConfirm(selectedYear, selectedMonth);
-                Navigator.pop(context);
+                Navigator.maybePop(context);
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(10),

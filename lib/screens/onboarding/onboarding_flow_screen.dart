@@ -83,9 +83,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   /// ===============================
   /// UI Logic
   /// ===============================
-  void _onSkip() {
-    // TODO: 홈/메인 화면으로 이동
-  }
 
   void _openSignupTermsSheet() {
     showModalBottomSheet(
@@ -147,12 +144,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                           child: OutlineActionButton(
                             label: '로그인',
                             onPressed: () {
-                              Navigator.pushAndRemoveUntil(
+                              Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => const LoginPage(),
                                 ),
-                                    (route) => false,
                               );
                             },
                           ),

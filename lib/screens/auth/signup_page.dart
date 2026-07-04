@@ -165,7 +165,6 @@ class _SignupPageState extends State<SignupPage> {
           onPressed: () => Navigator.maybePop(context),
         ),
       ),
-      // [삭제] 기존 bottomNavigationBar 코드 제거됨
 
       body: SafeArea(
         child: SingleChildScrollView( // 키보드가 올라왔을 때 스크롤 가능하도록 감싸는 것 추천

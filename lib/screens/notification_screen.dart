@@ -65,7 +65,7 @@ class _NotificationPageState extends State<NotificationPage> {
       scrolledUnderElevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
-        onPressed: () => Navigator.pop(context),
+        onPressed: () => Navigator.maybePop(context),
       ),
       title: const Text(
         '알림',
@@ -104,7 +104,6 @@ class _NotificationPageState extends State<NotificationPage> {
       controller: _scrollController,
       itemCount: list.length + (_notificationService.hasNext ? 1 : 0),
       itemBuilder: (context, index) {
-        // 리스트의 마지막 아이템이 로딩바인 경우
         if (index == list.length) {
           return _buildLoadingIndicator();
         }
@@ -125,7 +124,7 @@ class _NotificationPageState extends State<NotificationPage> {
         // 읽음 처리
 
         if (item['is_read'] == false) {
-          await _notificationService.markAsRead(item['id']);
+          await _notificationService.markAsRead(item['id'].toString());
           if (mounted) setState(() {});
         }
 
@@ -134,7 +133,7 @@ class _NotificationPageState extends State<NotificationPage> {
         _handleDeepLink(item['type'], item['link'] ?? {});
 
         if (item['type'] == 'ROUTINE') {
-          _notificationService.removeNotification(item['id']);
+          _notificationService.removeNotification(item['id'].toString());
           await _notificationService.refresh();
           if (mounted) setState(() {});
         }
@@ -142,7 +141,6 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  /// 추가 데이터 로딩 시 하단에 보여줄 인디케이터
   Widget _buildLoadingIndicator() {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 20),
@@ -155,7 +153,6 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  /// 딥링크 라우팅 로직 분리
   void _handleDeepLink(String type, dynamic linkData) {
     final String? celebrityId = linkData['celebrity_id']?.toString();
 
