@@ -122,10 +122,10 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
         leftButtonText: '취소',
         rightButtonText: '확인',
         singleButton: false,
-        onLeftPressed: () => Navigator.pop(context),
+        onLeftPressed: () => Navigator.maybePop(context),
         onRightPressed: () {
-          Navigator.pop(context); // 팝업 닫기
-          Navigator.pop(context); // 화면 이탈
+          Navigator.maybePop(context); // 팝업 닫기
+          Navigator.maybePop(context); // 화면 이탈
         },
       ),
     );
@@ -140,16 +140,16 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
         leftButtonText: '취소',
         rightButtonText: '확인',
         singleButton: false,
-        onLeftPressed: () => Navigator.pop(context),
+        onLeftPressed: () => Navigator.maybePop(context),
         onRightPressed: () async {
           try {
-            Navigator.pop(context);
+            Navigator.maybePop(context);
 
             await _settingService.deleteSetting(
               settingId: widget.routine!['id'],
             );
 
-            if (mounted) Navigator.pop(context);
+            if (mounted) Navigator.maybePop(context);
           } catch (e) {
             debugPrint("루틴 알림 삭제 오류: $e");
           }
@@ -190,7 +190,7 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
           days: selectedDaysEnum,
         );
       }
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.maybePop(context);
     } catch (e) {
       debugPrint("저장 오류: $e");
     }
@@ -210,7 +210,7 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
             if (!_hasSelectedAnyDay) {
               _showExitWarningDialog();
             } else {
-              Navigator.pop(context);
+              Navigator.maybePop(context);
             }
           },
         ),

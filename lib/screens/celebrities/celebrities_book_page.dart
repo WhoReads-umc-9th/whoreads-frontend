@@ -243,7 +243,7 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.maybePop(context),
           ),
         ),
         body: const Center(child: Text("정보를 불러올 수 없습니다.")),
@@ -257,7 +257,7 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.maybePop(context),
         ),
         actions: [
           Padding(

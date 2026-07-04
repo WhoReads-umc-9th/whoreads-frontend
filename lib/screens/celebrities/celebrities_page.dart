@@ -24,7 +24,6 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
   List<dynamic> celebrities = [];
   bool isLoading = false;
 
-  /// 카테고리 매핑 (UI 텍스트 → API tag)
   final Map<String, String?> categoryMap = {
     '전체': null, '학자': 'SCHOLAR', '스포츠선수': 'ATHLETE', '과학관장': 'SCIENCE_DIRECTOR',
     '가수': 'SINGER', '아나운서': 'ANNOUNCER', '개그맨': 'COMEDIAN', '영화평론가': 'MOVIE_CRITIC',
@@ -35,7 +34,6 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
     '아이돌': 'IDOL', '문학평론가': 'LITERARY_CRITIC',
   };
 
-  // 맵의 키만 리스트로 변환 (순서 보장용)
   List<String> get categoryKeys => categoryMap.keys.toList();
 
   @override
@@ -46,7 +44,6 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
 
   Future<void> fetchCelebrities() async {
     setState(() => isLoading = true);
-
     final tag = categoryMap[selectedCategory];
 
     try {
@@ -123,7 +120,7 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
           const SizedBox(width: 16),
         ],
       ),
-      body: Stack( // 드롭다운이 컨텐츠 위에 떠야 하므로 Stack 사용
+      body: Stack(
         children: [
           Column(
             children: [
@@ -133,7 +130,6 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // [왼쪽] 선택된 카테고리 (주황색)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
@@ -149,8 +145,6 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
                         ),
                       ),
                     ),
-
-                    // [오른쪽] 접기/펼치기 버튼 (회색)
                     GestureDetector(
                       onTap: () {
                         setState(() => isDropdownOpen = !isDropdownOpen);
@@ -158,14 +152,14 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6), // 연한 회색 배경
+                          color: const Color(0xFFF3F4F6),
                           borderRadius: BorderRadius.circular(50),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              isDropdownOpen ? '접기' : '카테고리', // 텍스트 변경
+                              isDropdownOpen ? '접기' : '카테고리',
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.black87,
@@ -188,7 +182,7 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
                 ),
               ),
 
-              /// ===== 인물 리스트 (기존 코드) =====
+              /// ===== 인물 리스트 =====
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -201,11 +195,10 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
                     crossAxisCount: 3,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 24,
-                    childAspectRatio: 0.52,
+                    childAspectRatio: 0.48,
                   ),
                   itemCount: celebrities.length,
                   itemBuilder: (context, index) {
-                    // ... (기존 _CelebrityCard 호출 코드)
                     return _CelebrityCard(celeb: celebrities[index]);
                   },
                 ),
@@ -216,12 +209,11 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
           /// ===== [드롭다운 오버레이] =====
           if (isDropdownOpen)
             Positioned(
-              top: 60, // 상단 바 높이만큼 띄움
+              top: 60,
               left: 0,
               right: 0,
               child: Container(
                 width: double.infinity,
-                // 화면 높이의 일부까지만 차지하도록 제한 (스크롤 가능하게)
                 constraints: const BoxConstraints(maxHeight: 400),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -238,19 +230,17 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
                   padding: const EdgeInsets.all(16),
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      // 한 줄에 4개 배치하기 위한 너비 계산
-                      // (전체너비 - (간격 * 3)) / 4
                       final itemWidth = (constraints.maxWidth - (8 * 3)) / 4;
 
                       return Wrap(
-                        spacing: 8, // 가로 간격
-                        runSpacing: 8, // 세로 간격
+                        spacing: 8,
+                        runSpacing: 8,
                         children: categoryKeys.map((category) {
                           final isSelected = category == selectedCategory;
                           return GestureDetector(
                             onTap: () => onCategorySelected(category),
                             child: Container(
-                              width: itemWidth, // [핵심] 4등분 너비 강제 지정
+                              width: itemWidth,
                               padding: const EdgeInsets.symmetric(vertical: 6),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
@@ -259,14 +249,14 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
                                 border: Border.all(
                                   color: isSelected
                                       ? const Color(0xFFFB9566)
-                                      : const Color(0xFFE5E7EB), // 선택 안됨: 연한 회색 테두리
+                                      : const Color(0xFFE5E7EB),
                                   width: 1,
                                 ),
                               ),
                               child: Text(
                                 category,
                                 style: TextStyle(
-                                  fontSize: 12, // 글자 크기 조정 (칸에 맞게)
+                                  fontSize: 12,
                                   color: isSelected ? const Color(0xFFFB9566) : Colors.black87,
                                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 ),
@@ -294,14 +284,10 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
           if (index == 0) {
           } else if (index == 1) {
             Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const MyLibraryPage())
-            );
-          }else if (index == 2) {
+                context, MaterialPageRoute(builder: (context) => const MyLibraryPage()));
+          } else if (index == 2) {
             Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const TopicsPage())
-            );
+                context, MaterialPageRoute(builder: (context) => const TopicsPage()));
           }
         },
         items: const [
@@ -324,43 +310,22 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
 }
 
 /// ================= 인물 카드 =================
-/// ================= 인물 카드 =================
 class _CelebrityCard extends StatelessWidget {
   final dynamic celeb;
 
   const _CelebrityCard({required this.celeb});
 
-  /// 직업별 색상 매핑 함수
   Color _getJobColor(String job) {
     const Map<String, int> jobColorMap = {
-      '가수': 0xFF0881F9,
-      '배우': 0xFF0F09B2,
-      '기업가': 0xFF9747FF,
-      '학자': 0xFF1BA430,
-      '스포츠선수': 0xFF7C98FD,
-      '아이돌': 0xFFFF95C0,
-      '유튜버': 0xFF0DA7FA,
-      '아나운서': 0xFFF89B05,
-      '개그맨': 0xFF179B7C,
-      '영화평론가': 0xFF9B4E17,
-      '작가': 0xFF6A8CC7,
-      '영화감독': 0xFF8FBA21,
-      '교수': 0xFF350AC3,
-      '요리사': 0xFFB98F82,
-      '뮤지컬배우': 0xFFE8C252,
-      '강사': 0xFF6D524D,
-      '프로파일러': 0xFF295E55,
-      '문학평론가': 0xFFF84E00,
-      '과학관장': 0xFF064D93,
-      '언론비평가': 0xFF93064D,
-      '번역가': 0xFFCF33D2,
-      '작사가': 0xFFF28789,
-      '생물학자': 0xFFC0ACEC,
-      '대통령': 0xFF373638,
+      '가수': 0xFF0881F9, '배우': 0xFF0F09B2, '기업가': 0xFF9747FF, '학자': 0xFF1BA430,
+      '스포츠선수': 0xFF7C98FD, '아이돌': 0xFFFF95C0, '유튜버': 0xFF0DA7FA, '아나운서': 0xFFF89B05,
+      '개그맨': 0xFF179B7C, '영화평론가': 0xFF9B4E17, '작가': 0xFF6A8CC7, '영화감독': 0xFF8FBA21,
+      '교수': 0xFF350AC3, '요리사': 0xFFB98F82, '뮤지컬배우': 0xFFE8C252, '강사': 0xFF6D524D,
+      '프로파일러': 0xFF295E55, '문학평론가': 0xFFF84E00, '과학관장': 0xFF064D93, '언론비평가': 0xFF93064D,
+      '번역가': 0xFFCF33D2, '작사가': 0xFFF28789, '생물학자': 0xFFC0ACEC, '대통령': 0xFF373638,
       '정치인': 0xFF7C8A98,
     };
 
-    // 맵에 없으면 기본 회색 반환
     final hexValue = jobColorMap[job];
     return hexValue != null ? Color(hexValue) : Colors.grey;
   }
@@ -372,7 +337,6 @@ class _CelebrityCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         debugPrint('인물 클릭: ${celeb['name']} (ID: ${celeb['id']})');
-
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -401,52 +365,55 @@ class _CelebrityCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // 이름
           Text(
             celeb['name']?.toString() ?? '이름 없음',
             style: const TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 15,
+              fontSize: 14,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center, // 텍스트 자체도 가운데 정렬
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
-          /// [수정 3] 태그 레이아웃 (색상 적용 및 가운데 정렬)
-          LayoutBuilder(
-            builder: (context, constraints) {
-              return Wrap(
-                alignment: WrapAlignment.center, // Wrap 내부 아이템 가운데 정렬
-                spacing: 6,
-                runSpacing: 4,
-                children: tags.take(2).map<Widget>((tag) {
-                  final color = _getJobColor(tag); // 색상 가져오기
+          // 3. 태그 영역 (FittedBox를 활용해 남은 공간 안에서 자동 스케일 다운)
+          Expanded(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: tags.take(2).map<Widget>((tag) {
+                    final color = _getJobColor(tag);
 
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4
-                    ),
-                    decoration: BoxDecoration(
-                      color: color, // 직업별 색상 적용
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      tag,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.white, // 배경이 진하므로 글자는 흰색
-                        fontWeight: FontWeight.w500,
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                    ),
-                  );
-                }).toList(),
-              );
-            },
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          tag,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
           ),
         ],
       ),
