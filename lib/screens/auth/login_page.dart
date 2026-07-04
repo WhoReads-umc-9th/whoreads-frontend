@@ -37,7 +37,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _clearOldTokens() async {
-    await TokenStorage.clear(); // 🌟 이거 한 줄이면 기존 whoreads 토큰이 날아갑니다.
+    await TokenStorage.clear();
   }
   
   bool get _canLogin {
@@ -158,7 +158,7 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context), // 닫기
+                    onPressed: () => Navigator.maybePop(context), // 닫기
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1C1C22), // 진한 검정색
                       shape: RoundedRectangleBorder(

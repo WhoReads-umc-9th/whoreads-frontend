@@ -12,54 +12,71 @@ class OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double svgAreaHeight = MediaQuery.of(context).size.height * 0.46;
+    final double screenHeight = MediaQuery.of(context).size.height;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 8),
+    final double svgAreaHeight = screenHeight < 800
+        ? screenHeight * 0.38
+        : screenHeight * 0.46;
 
-          SizedBox(
-            height: svgAreaHeight,
-            child: _buildSvgArea(context),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 8),
 
-          const SizedBox(height: 20),
+                  SizedBox(
+                    height: svgAreaHeight,
+                    child: _buildSvgArea(context),
+                  ),
 
-          Text(
-            data.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF111111),
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              height: 1.4,
-              fontFamily: 'Pretendard Variable',
+                  const SizedBox(height: 20),
+
+                  Text(
+                    data.title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF111111),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      height: 1.4,
+                      fontFamily: 'Pretendard Variable',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Text(
+                    data.description,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF767676),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
+                      fontFamily: 'Pretendard Variable',
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            data.description,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF767676),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-              fontFamily: 'Pretendard Variable',
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildSvgArea(BuildContext context) {
     final double width = MediaQuery.of(context).size.width;
 
-    // 👇 top / bottom SVG 겹치는 구조
     return Stack(
       alignment: Alignment.topCenter,
       children: [
@@ -72,7 +89,7 @@ class OnboardingPage extends StatelessWidget {
           ),
         ),
         Positioned(
-          top: width * 0.3, // 👈 겹침 정도 조절
+          top: width * 0.3,
           child: SvgPicture.asset(
             data.svgBottom!,
             width: width * 0.9,

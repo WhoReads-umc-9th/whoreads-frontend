@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-// 🌟 [수정됨] 상세 페이지 import 주석 해제
 import '../books/BookDetailPage.dart';
 import 'package:whoreads/screens/topics/top_20_books_page.dart';
 
@@ -289,13 +288,12 @@ class _TopicsPageState extends State<TopicsPage> {
                         crossAxisCount: 3,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 24,
-                        childAspectRatio: 0.55,
+                        childAspectRatio: 0.48, // 🌟 [수정] 오버플로우 방지를 위해 높이 비율 확보 (0.55 -> 0.48)
                       ),
                       itemCount: books.length,
                       itemBuilder: (context, index) {
                         final book = books[index];
                         return GestureDetector(
-                          // 🌟 [수정됨] 클릭 시 책 상세 페이지로 이동
                           onTap: () {
                             Navigator.push(
                               context,
@@ -305,7 +303,6 @@ class _TopicsPageState extends State<TopicsPage> {
                                 ),
                               ),
                             ).then((_) {
-                              // 뒤로가기 했을 때 상태 업데이트 (필요시)
                               _fetchTopicsData();
                             });
                           },
@@ -525,6 +522,7 @@ class _TopicBannerCard extends StatelessWidget {
   }
 }
 
+// 🌟 [수정 본] 반응형 최적화 및 하단 오버플로우 원천 차단된 도서 카드 구조
 class _TopicBookCard extends StatelessWidget {
   final dynamic book;
   const _TopicBookCard({required this.book});
@@ -575,7 +573,7 @@ class _TopicBookCard extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
         Text(
           title,
@@ -584,24 +582,30 @@ class _TopicBookCard extends StatelessWidget {
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 14,
+            fontSize: 13,
             color: Colors.black87,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
 
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: _getGenreColor(genre),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            genre,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+        Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _getGenreColor(genre),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                genre,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ),
