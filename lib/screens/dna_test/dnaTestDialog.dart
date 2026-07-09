@@ -99,7 +99,7 @@ class DnaTestDialog extends StatelessWidget {
                   final navigator = Navigator.of(context);
 
                   // 1. 다이얼로그 닫기
-                  Navigator.maybePop();
+                  Navigator.maybePop(context);
 
                   // 2. 페이지 이동
                   navigator.push(
