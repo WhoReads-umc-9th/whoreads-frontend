@@ -52,9 +52,14 @@ jobs:
       - name: Build Android App Bundle (Release)
         run: flutter build appbundle --release --no-tree-shake-icons
 
-      # 8. 빌드된 파일(AAB)을 GitHub에 업로드해서 다운받을 수 있게 만들기
+      - name: Build Android APK (Release)
+        run: flutter build apk --release --no-tree-shake-icons
+
+      # 8. 업로드 단계에서 APK 경로도 같이 포함시키기
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: build/app/outputs/bundle/release/app-release.aab
+          path: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/flutter-apk/app-release.apk
