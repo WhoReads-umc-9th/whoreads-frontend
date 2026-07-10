@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../services/library_service.dart';
@@ -89,17 +90,34 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
     _fetchAllData();
   }
 
+  Future<bool> _fetchFollowStatus() async {
+    try {
+      final response =
+          await ApiClient.dio.get('/members/follow/${widget.celebrityId}');
+
+      if (response.statusCode == 200) {
+        final decoded = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
+        return decoded['result'] == true;
+      }
+    } catch (e) {
+      debugPrint('팔로우 상태 조회 에러: $e');
+    }
+    return false;
+  }
+
   Future<void> _fetchAllData() async {
     try {
       final results = await Future.wait([
         ApiClient.dio.get('/celebrities/${widget.celebrityId}'),
         ApiClient.dio.get('/quotes/celebrities/${widget.celebrityId}'),
+        _fetchFollowStatus(),
       ]);
 
-      final profileResponse = results[0];
-      debugPrint(profileResponse.toString());
-      final booksResponse = results[1];
-      debugPrint(booksResponse.toString());
+      final profileResponse = results[0] as Response;
+      final booksResponse = results[1] as Response;
+      final followStatus = results[2] as bool;
 
       if (profileResponse.statusCode == 200 && booksResponse.statusCode == 200) {
         final profileData = profileResponse.data is String
@@ -114,8 +132,7 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
 
         setState(() {
           celebrityProfile = CelebrityDetail.fromJson(profileData);
-          // 🌟 프로필 데이터에서 현재 팔로우 상태 초기화
-          isFollowing = celebrityProfile!.isFollowing;
+          isFollowing = followStatus;
 
           if (booksData is List) {
             bookList = booksData.map((e) => CelebrityBook.fromJson(e)).toList();
