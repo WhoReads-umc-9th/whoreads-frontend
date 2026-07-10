@@ -30,6 +30,9 @@ jobs:
         run: |
           echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
 
+      - name: Create Real .env File
+        run: |
+          echo "BASE_URL=${{ secrets.BASE_URL }}" > ./.env
       # 5. key.jks 복원 및 key.properties 자동 생성
       - name: Configure Keystore & Properties
         run: |
