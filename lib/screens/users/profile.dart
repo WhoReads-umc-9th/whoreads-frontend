@@ -2,10 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:whoreads/screens/routine_setting.dart';
 import 'package:whoreads/services/auth_service.dart';
-import '../core/network/api_client.dart';
-import '../services/notification_setting.dart';
-import 'celebrities/celebrities_book_page.dart';
-import 'dna_test/dnaTestDialog.dart';
+import '../../core/network/api_client.dart';
+import '../../services/notification_setting.dart';
+import '../celebrities/celebrities_book_page.dart';
+import '../dna_test/dnaTestDialog.dart';
+import 'account_profile_page.dart';
+import 'follow_list_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -108,23 +110,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  String _getGender(String? gender) {
-    if (gender == 'MALE') return '남자';
-    if (gender == 'FEMALE') return '여자';
-    return '-';
-  }
-
-  String _getAge(String? age) {
-    switch (age) {
-      case 'TEENAGERS': return '10대';
-      case 'TWENTIES': return '20대';
-      case 'THIRTIES': return '30대';
-      case 'FORTIES': return '40대';
-      case 'FIFTIES_PLUS': return '50대 이상';
-      default: return '-';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -189,14 +174,22 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.group_add_outlined, color: Colors.black54, size: 20),
-                      const SizedBox(width: 8),
-                      const Text('팔로우 목록', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                      const Spacer(),
-                      const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-                    ],
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const FollowListPage()),
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        const Icon(Icons.group_add_outlined, color: Colors.black54, size: 20),
+                        const SizedBox(width: 8),
+                        const Text('팔로우 목록', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
+                        const Spacer(),
+                        const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   follows.isEmpty
@@ -413,22 +406,23 @@ class _ProfilePageState extends State<ProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('계정 관리', style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
+                  _buildNavRow(
+                    '프로필',
+                    onTap: () async {
+                      final updated = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AccountProfilePage(userInfo: userInfo),
+                        ),
+                      );
 
-                  _buildAccountRow('닉네임', nickname),
-                  _buildAccountRow('성별', _getGender(userInfo['gender'])),
-                  _buildAccountRow('연령', _getAge(userInfo['age_group'])),
-                  _buildAccountRow('아이디', userInfo['login_id'] ?? 'yhj8081'),
-                  _buildAccountRow('이메일', userInfo['email'] ?? 'yhj8081@naver.com'),
-
-                  const SizedBox(height: 16),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('비밀번호 재설정', style: TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.w500)),
-                      Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-                    ],
+                      if (updated == true && mounted) {
+                        setState(() => isLoading = true);
+                        await _fetchAllData();
+                      }
+                    },
                   ),
+                  _buildNavRow('비밀번호 재설정'),
                 ],
               ),
             ),
@@ -474,21 +468,25 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildAccountRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: const TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.w500)),
-          Row(
-            children: [
-              Text(value, style: TextStyle(fontSize: 15, color: Colors.grey[600])),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-            ],
-          ),
-        ],
+  Widget _buildNavRow(String title, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 15,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+          ],
+        ),
       ),
     );
   }

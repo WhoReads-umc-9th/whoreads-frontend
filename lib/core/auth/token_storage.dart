@@ -12,10 +12,12 @@ class TokenStorage {
 
   static Future<void> saveTokens({
     required String accessToken,
-    required String refreshToken,
+    String? refreshToken,
   }) async {
     await _storage.write(key: _accessKey, value: accessToken);
-    await _storage.write(key: _refreshKey, value: refreshToken);
+    if (refreshToken != null) {
+      await _storage.write(key: _refreshKey, value: refreshToken);
+    }
   }
 
   static Future<String?> getAccessToken() async {

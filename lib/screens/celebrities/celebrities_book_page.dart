@@ -49,13 +49,20 @@ class CelebrityBook {
   });
 
   factory CelebrityBook.fromJson(Map<String, dynamic> json) {
-    final bookNode = json['book'] ?? json;
+    // 이 응답은 QuoteResponse(인용)이라 최상위 'id'는 책 ID가 아니라 인용 ID다.
+    // 책 ID는 반드시 book_id(또는 중첩된 book.id)에서 읽어야 서재 추가/추가됨 판정이 어긋나지 않는다.
+    final bookNode = json['book'] is Map
+        ? Map<String, dynamic>.from(json['book'] as Map)
+        : null;
+
+    int? asInt(dynamic value) =>
+        value is int ? value : (value == null ? null : int.tryParse('$value'));
 
     return CelebrityBook(
-      bookId: bookNode['id'] ?? bookNode['book_id'] ?? json['book_id'] ?? 0,
-      title: bookNode['title'] ?? bookNode['book_title'] ?? json['book_title'] ?? '제목 없음',
-      coverUrl: bookNode['cover_url'] ?? bookNode['book_cover'] ?? json['book_cover'] ?? '',
-      author: bookNode['author_name'] ?? bookNode['author'] ?? json['author'] ?? '저자 미상',
+      bookId: asInt(bookNode?['id'] ?? bookNode?['book_id'] ?? json['book_id']) ?? 0,
+      title: bookNode?['title'] ?? json['book_title'] ?? '제목 없음',
+      coverUrl: bookNode?['cover_url'] ?? json['book_cover'] ?? '',
+      author: bookNode?['author_name'] ?? bookNode?['author'] ?? json['author'] ?? '저자 미상',
     );
   }
 }
@@ -107,6 +114,20 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
     return false;
   }
 
+  /// 같은 책에 인용이 여러 개 달릴 수 있는데, 이 화면은 인용문을 보여주지 않아
+  /// 중복 행으로만 보인다. 책 기준으로 한 번씩만 노출한다.
+  List<CelebrityBook> _parseBooks(List<dynamic> raw) {
+    final seen = <int>{};
+    final books = <CelebrityBook>[];
+    for (final e in raw) {
+      if (e is! Map) continue;
+      final book = CelebrityBook.fromJson(Map<String, dynamic>.from(e));
+      if (book.bookId == 0 || !seen.add(book.bookId)) continue;
+      books.add(book);
+    }
+    return books;
+  }
+
   Future<void> _fetchAllData() async {
     try {
       final results = await Future.wait([
@@ -135,11 +156,11 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
           isFollowing = followStatus;
 
           if (booksData is List) {
-            bookList = booksData.map((e) => CelebrityBook.fromJson(e)).toList();
+            bookList = _parseBooks(booksData);
           } else if (booksData is Map && booksData.containsKey('result')) {
             final resultData = booksData['result'];
             if (resultData is List) {
-              bookList = resultData.map((e) => CelebrityBook.fromJson(e)).toList();
+              bookList = _parseBooks(resultData);
             }
           }
           _addedBooksMap

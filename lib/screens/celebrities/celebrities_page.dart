@@ -5,7 +5,7 @@ import 'package:whoreads/screens/notification_screen.dart';
 import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/network/api_client.dart';
 import '../my_library/my_library_page.dart';
-import '../profile.dart';
+import '../users/profile.dart';
 import 'celebrities_book_page.dart';
 
 class CelebritiesPage extends StatefulWidget {
@@ -26,12 +26,12 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
 
   final Map<String, String?> categoryMap = {
     '전체': null, '학자': 'SCHOLAR', '스포츠선수': 'ATHLETE', '과학관장': 'SCIENCE_DIRECTOR',
-    '가수': 'SINGER', '아나운서': 'ANNOUNCER', '개그맨': 'COMEDIAN', '영화평론가': 'MOVIE_CRITIC',
+    '가수': 'SINGER', '아나운서': 'ANNOUNCER', '개그맨': 'COMEDIAN',
     '영화감독': 'MOVIE_DIRECTOR', '번역가': 'TRANSLATOR', '프로파일러': 'PROFILER', '정치인': 'POLITICIAN',
-    '강사': 'INSTRUCTOR', '대통령': 'PRESIDENT', '배우': 'ACTOR', '뮤지컬배우': 'MUSICAL_ACTOR',
+    '강사': 'INSTRUCTOR', '배우': 'ACTOR', '뮤지컬배우': 'MUSICAL_ACTOR',
     '작사가': 'LYRICIST', '생물학자': 'BIOLOGIST', '교수': 'PROFESSOR', '기업가': 'ENTREPRENEUR',
     '유튜버': 'YOUTUBER', '요리사': 'CHEF', '언론비평가': 'MEDIA_CRITIC', '작가': 'WRITER',
-    '아이돌': 'IDOL', '문학평론가': 'LITERARY_CRITIC',
+    '아이돌': 'IDOL',
   };
 
   List<String> get categoryKeys => categoryMap.keys.toList();
@@ -319,11 +319,10 @@ class _CelebrityCard extends StatelessWidget {
     const Map<String, int> jobColorMap = {
       '가수': 0xFF0881F9, '배우': 0xFF0F09B2, '기업가': 0xFF9747FF, '학자': 0xFF1BA430,
       '스포츠선수': 0xFF7C98FD, '아이돌': 0xFFFF95C0, '유튜버': 0xFF0DA7FA, '아나운서': 0xFFF89B05,
-      '개그맨': 0xFF179B7C, '영화평론가': 0xFF9B4E17, '작가': 0xFF6A8CC7, '영화감독': 0xFF8FBA21,
+      '개그맨': 0xFF179B7C, '작가': 0xFF6A8CC7, '영화감독': 0xFF8FBA21,
       '교수': 0xFF350AC3, '요리사': 0xFFB98F82, '뮤지컬배우': 0xFFE8C252, '강사': 0xFF6D524D,
-      '프로파일러': 0xFF295E55, '문학평론가': 0xFFF84E00, '과학관장': 0xFF064D93, '언론비평가': 0xFF93064D,
-      '번역가': 0xFFCF33D2, '작사가': 0xFFF28789, '생물학자': 0xFFC0ACEC, '대통령': 0xFF373638,
-      '정치인': 0xFF7C8A98,
+      '프로파일러': 0xFF295E55, '문학평론가': 0xFFF84E00, '과학관장': 0xFF064D93,
+      '번역가': 0xFFCF33D2, '작사가': 0xFFF28789, '생물학자': 0xFFC0ACEC, '정치인': 0xFF7C8A98,
     };
 
     final hexValue = jobColorMap[job];

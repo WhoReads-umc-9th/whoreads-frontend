@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/auth/token_storage.dart';
 import '../../core/network/api_client.dart';
+import '../../services/notification/fcm_service.dart';
 
 class SignupOverlayDialog extends StatefulWidget {
   final String email;
@@ -37,43 +38,67 @@ class _SignupOverlayDialogState extends State<SignupOverlayDialog> {
   Future<void> _submitSignup() async {
     setState(() => isLoading = true);
 
-    final response = await ApiClient.dio.post(
-      '/auth/signup',
-      data: {
-        "request": {
-          "login_id": widget.loginId,
-          "email": widget.email,
-          "password": widget.password,
+    try {
+      final response = await ApiClient.dio.post(
+        '/auth/signup',
+        data: {
+          "request": {
+            "login_id": widget.loginId,
+            "email": widget.email,
+            "password": widget.password,
+          },
+          "member_info": {
+            "nickname": _nicknameCtrl.text,
+            "gender": selectedGender,
+            "age_group": selectedAge,
+          }
         },
-        "member_info": {
-          "nickname": _nicknameCtrl.text,
-          "gender": selectedGender,
-          "age_group": selectedAge,
-        }
-      },
-    );
-
-    /// 🔥 콘솔 로그 출력
-    print("회원가입 응답 status: ${response.statusCode}");
-    print("회원가입 응답 body: ${response.data}");
-
-    setState(() => isLoading = false);
-
-    if (response.statusCode == 200) {
-      final data = response.data is String
-          ? jsonDecode(response.data as String)
-          : response.data;
-      final newAccessToken = data['access_token'];
-      final newRefreshToken = data['refresh_token'];
-
-      // 🌟 이 부분이 꼭 있어야 새 계정 정보로 덮어씌워집니다!
-      await TokenStorage.saveTokens(
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
       );
 
-      // 그 다음 메인 페이지(MyLibraryPage)로 이동
-      Navigator.pop(context, _nicknameCtrl.text);
+      final decoded = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
+
+      if (!mounted) return;
+
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          decoded['is_success'] == true) {
+        final result = decoded['result'];
+        final accessToken = result['access_token'] as String?;
+        final refreshToken = result['refresh_token'] as String?;
+
+        if (accessToken == null) {
+          throw Exception('access_token이 응답에 없습니다.');
+        }
+
+        await TokenStorage.saveTokens(
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+        );
+
+        try {
+          await FcmService.sendTokenToServer();
+        } catch (e) {
+          debugPrint('⚠️ FCM 토큰 전송 실패(회원가입은 유지): $e');
+        }
+
+        if (!mounted) return;
+        Navigator.pop(context, _nicknameCtrl.text);
+      } else {
+        final message = decoded['message'] ?? '회원가입에 실패했습니다.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message.toString())),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('회원가입 중 오류가 발생했습니다.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 

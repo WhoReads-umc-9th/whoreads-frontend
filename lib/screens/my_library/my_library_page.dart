@@ -9,7 +9,7 @@ import '../../core/network/api_client.dart';
 import '../auth/SignupOverlayDialog.dart';
 import '../celebrities/celebrities_page.dart';
 import '../dna_test/dnaTestDialog.dart';
-import '../profile.dart';
+import '../users/profile.dart';
 import 'tabs/saved_tab.dart';
 import 'tabs/reading_tab.dart';
 import 'tabs/finished_tab.dart';

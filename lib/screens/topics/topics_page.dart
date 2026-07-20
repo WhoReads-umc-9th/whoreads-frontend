@@ -8,7 +8,7 @@ import '../../core/network/api_client.dart';
 import '../celebrities/celebrities_page.dart';
 import '../my_library/my_library_page.dart';
 import '../notification_screen.dart';
-import '../profile.dart';
+import '../users/profile.dart';
 
 class TopicsPage extends StatefulWidget {
   const TopicsPage({super.key});
