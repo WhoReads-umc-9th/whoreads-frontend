@@ -1,4 +1,4 @@
-package com.example.whoreads
+package com.whoreads.mobile
 
 import io.flutter.embedding.android.FlutterActivity
 
