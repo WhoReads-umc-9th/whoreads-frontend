@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import '../books/BookDetailPage.dart';
-import 'package:whoreads/screens/topics/top_20_books_page.dart';
+import 'package:whoreads/screens/topics/topic_banner_page.dart';
 
 import '../../core/network/api_client.dart';
 import '../celebrities/celebrities_page.dart';
@@ -24,6 +24,7 @@ class _TopicsPageState extends State<TopicsPage> {
   bool isDropdownOpen = false;
   bool isLoading = false;
 
+  List<dynamic> rawTopicsData = [];
   List<dynamic> banners = [];
   List<dynamic> books = [];
 
@@ -61,30 +62,29 @@ class _TopicsPageState extends State<TopicsPage> {
             ? jsonDecode(response.data as String)
             : response.data;
 
-        List<dynamic> newBooks = [];
+        List<dynamic> topicList = [];
 
-        if (decoded is List && decoded.isNotEmpty) {
-          if (decoded[0] is Map && decoded[0].containsKey('books')) {
-            newBooks = decoded[0]['books'];
-          } else {
-            newBooks = decoded;
-          }
+        if (decoded is List) {
+          topicList = decoded;
+        } else if (decoded is Map && decoded['result'] is List) {
+          topicList = decoded['result'];
         }
-        else if (decoded is Map && decoded.containsKey('books')) {
-          newBooks = decoded['books'];
-        }
-        else if (decoded is Map && decoded['result'] != null) {
-          final result = decoded['result'];
-          if (result is List) {
-            newBooks = result;
-          } else if (result is Map && result['books'] is List) {
-            newBooks = result['books'];
+
+        rawTopicsData = topicList;
+
+        await _buildBannersFromApi();
+
+        List<dynamic> newBooks = [];
+        if (topicList.isNotEmpty) {
+          for (var item in topicList) {
+            if (item is Map && item['books'] is List) {
+              newBooks.addAll(item['books']);
+            }
           }
         }
 
         setState(() {
           books = newBooks;
-          if (banners.isEmpty) _setMockBanners();
         });
       } else {
         debugPrint('API Error: ${response.statusCode}');
@@ -96,29 +96,111 @@ class _TopicsPageState extends State<TopicsPage> {
     }
   }
 
-  void _setMockBanners() {
-    banners = [
+  Future<void> _buildBannersFromApi() async {
+    List<dynamic> generatedBanners = [];
+
+    for (int i = 0; i < 6; i++) {
+      final meta = _getBannerMeta(i);
+      final String theme = meta['theme'];
+
+      List<String> previewImages = [];
+      int actualCount = meta['defaultCount'];
+
+      try {
+        final response = await ApiClient.dio.get(
+          '/books/themes/$theme',
+          queryParameters: {'limit': 20},
+        );
+
+        if (response.statusCode == 200) {
+          final decoded = response.data is String
+              ? jsonDecode(response.data as String)
+              : response.data;
+
+          List<dynamic> themeBooks = [];
+          if (decoded is List) {
+            themeBooks = decoded;
+          } else if (decoded is Map && decoded['result'] is List) {
+            themeBooks = decoded['result'];
+          }
+
+          actualCount = themeBooks.length;
+
+          for (var b in themeBooks) {
+            if (b is Map && b['cover_url'] != null && (b['cover_url'] as String).isNotEmpty) {
+              previewImages.add(b['cover_url'] as String);
+              if (previewImages.length >= 3) break;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Banner fetch error for theme $theme: $e');
+      }
+
+      generatedBanners.add({
+        "theme": theme,
+        "title": meta['title'],
+        "subtitle": meta['subtitle'],
+        "description": meta['description'],
+        "count": actualCount,
+        "images": previewImages,
+      });
+    }
+
+    if (mounted) {
+      setState(() {
+        banners = generatedBanners;
+      });
+    }
+  }
+
+  Map<String, dynamic> _getBannerMeta(int index) {
+    final List<Map<String, dynamic>> metaList = [
       {
         "title": "WhoReads의 유명인들이\n가장 많이 추천한 책 TOP20",
         "subtitle": "가장 많이 언급된 책은 무엇일까요?",
-        "count": 20,
-        "images": [
-          "https://i.pravatar.cc/150?img=1",
-          "https://i.pravatar.cc/150?img=2",
-          "https://i.pravatar.cc/150?img=5",
-        ]
+        "description": "WhoReads에 모인 수많은 유명인 추천 중,\n가장 많이 언급되고 반복해서 추천된 책 TOP 20을 선정했습니다.",
+        "defaultCount": 20,
+        "theme": "TOP_20",
       },
       {
         "title": "각 분야의 유명인들이\n사회를 이해하기 위해 읽은 책",
         "subtitle": "세상은 왜 이렇게 돌아갈까요?",
-        "count": 15,
-        "images": [
-          "https://i.pravatar.cc/150?img=8",
-          "https://i.pravatar.cc/150?img=9",
-          "https://i.pravatar.cc/150?img=10",
-        ]
+        "description": "복잡한 현대 사회와 역사의 흐름을 파악하기 위해\n각 분야의 전문가와 유명인들이 읽었던 추천 도서입니다.",
+        "defaultCount": 20,
+        "theme": "SOCIETY",
+      },
+      {
+        "title": "각 분야의 유명인들이\n인간을 이해하기 위해 읽은 책",
+        "subtitle": "인간은 왜 그렇게 행동할까요?",
+        "description": "심리학과 인문학을 통찰하여\n사람의 마음과 행동의 본질을 다룬 도서 목록입니다.",
+        "defaultCount": 20,
+        "theme": "HUMAN_UNDERSTANDING",
+      },
+      {
+        "title": "각 분야의 유명인들의\n사고 방식을 바꾼 책",
+        "subtitle": "생각하는 방식이 달라지는 순간",
+        "description": "고정관념을 깨고 새로운 관점을 제시해 준\n명사들의 추천 서적입니다.",
+        "defaultCount": 20,
+        "theme": "MINDSET",
+      },
+      {
+        "title": "각 분야의 유명인들이\n삶의 방향을 고민할 때 읽은 책",
+        "subtitle": "나는 어떻게 살아야 할까?",
+        "description": "치열한 고민 끝에 삶의 이정표가 되어 준\n유명인들의 인생 책 모음입니다.",
+        "defaultCount": 20,
+        "theme": "LIFE_DIRECTION",
+      },
+      {
+        "title": "각 분야의 유명인들이\n인생의 전환점에서 만난 책",
+        "subtitle": "인생이 바뀌는 순간, 곁에 있던 책",
+        "description": "커다란 터닝포인트를 맞이했을 때\n깊은 영감을 선사했던 추천 도서들입니다.",
+        "defaultCount": 20,
+        "theme": "TURNING_POINT",
       },
     ];
+
+    return metaList[index % metaList.length];
   }
 
   void onCategorySelected(String category) {
@@ -190,26 +272,29 @@ class _TopicsPageState extends State<TopicsPage> {
 
                 SizedBox(
                   height: 150,
-                  child: PageView.builder(
+                  child: PageView(
                     controller: PageController(viewportFraction: 0.7),
                     padEnds: false,
-                    itemCount: banners.length,
-                    itemBuilder: (context, index) {
+                    children: banners.map((banner) {
                       return GestureDetector(
                         onTap: () {
-                          if (index == 0) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const Top20BooksPage()),
-                            );
-                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TopicBannerPage(
+                                theme: banner['theme'],
+                                title: banner['title'],
+                                description: banner['description'],
+                              ),
+                            ),
+                          );
                         },
                         child: Padding(
                           padding: const EdgeInsets.only(left: 12),
-                          child: _TopicBannerCard(banner: banners[index]),
+                          child: _TopicBannerCard(banner: banner),
                         ),
                       );
-                    },
+                    }).toList(),
                   ),
                 ),
 
@@ -288,7 +373,7 @@ class _TopicsPageState extends State<TopicsPage> {
                         crossAxisCount: 3,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 24,
-                        childAspectRatio: 0.48, // 🌟 [수정] 오버플로우 방지를 위해 높이 비율 확보 (0.55 -> 0.48)
+                        childAspectRatio: 0.48,
                       ),
                       itemCount: books.length,
                       itemBuilder: (context, index) {
@@ -488,23 +573,43 @@ class _TopicBannerCard extends StatelessWidget {
                 width: 80,
                 height: 30,
                 child: Stack(
-                  children: List.generate(images.take(3).length, (index) {
-                    return Positioned(
-                      left: index * 20.0,
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          image: DecorationImage(
-                            image: NetworkImage(images[index]),
-                            fit: BoxFit.cover,
+                  children: List.generate(
+                    images.isNotEmpty ? images.take(3).length : 3,
+                        (index) {
+                      final bool hasImage = images.length > index;
+                      final String? imgUrl = hasImage ? images[index] : null;
+
+                      return Positioned(
+                        left: index * 20.0,
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.orange.shade50,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: ClipOval(
+                            child: imgUrl != null && imgUrl.isNotEmpty
+                                ? Image.network(
+                              imgUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.book,
+                                size: 16,
+                                color: Color(0xFFFF6A00),
+                              ),
+                            )
+                                : const Icon(
+                              Icons.book,
+                              size: 16,
+                              color: Color(0xFFFF6A00),
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }),
+                      );
+                    },
+                  ),
                 ),
               ),
               Text(
@@ -522,7 +627,6 @@ class _TopicBannerCard extends StatelessWidget {
   }
 }
 
-// 🌟 [수정 본] 반응형 최적화 및 하단 오버플로우 원천 차단된 도서 카드 구조
 class _TopicBookCard extends StatelessWidget {
   final dynamic book;
   const _TopicBookCard({required this.book});
@@ -560,7 +664,8 @@ class _TopicBookCard extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: Image.network(
+              child: coverUrl.isNotEmpty
+                  ? Image.network(
                 coverUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
@@ -568,6 +673,12 @@ class _TopicBookCard extends StatelessWidget {
                   child: const Center(
                     child: Icon(Icons.book, color: Colors.grey),
                   ),
+                ),
+              )
+                  : Container(
+                color: Colors.grey[200],
+                child: const Center(
+                  child: Icon(Icons.book, color: Colors.grey),
                 ),
               ),
             ),

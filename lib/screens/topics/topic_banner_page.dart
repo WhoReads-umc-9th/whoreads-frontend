@@ -1,30 +1,44 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
-// 🌟 1. 상세 페이지 import 주석 해제
 import '../books/BookDetailPage.dart';
 
-class Top20BooksPage extends StatefulWidget {
-  const Top20BooksPage({super.key});
+class TopicBannerPage extends StatefulWidget {
+  final String? theme;
+  final String title;
+  final String? description;
+  final List<dynamic>? initialBooks;
+
+  const TopicBannerPage({
+    super.key,
+    this.theme,
+    required this.title,
+    this.description,
+    this.initialBooks,
+  });
 
   @override
-  State<Top20BooksPage> createState() => _Top20BooksPageState();
+  State<TopicBannerPage> createState() => _TopicBannerPageState();
 }
 
-class _Top20BooksPageState extends State<Top20BooksPage> {
-  bool isLoading = true;
-  List<dynamic> topBooks = [];
+class _TopicBannerPageState extends State<TopicBannerPage> {
+  bool isLoading = false;
+  List<dynamic> books = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchTop20Books();
+    _fetchTopicBooks();
   }
 
-  Future<void> _fetchTop20Books() async {
+  Future<void> _fetchTopicBooks() async {
+    if (widget.theme == null || widget.theme!.isEmpty) return;
+
+    setState(() => isLoading = true);
+
     try {
       final response = await ApiClient.dio.get(
-        '/books/most-recommended',
+        '/books/themes/${widget.theme}',
         queryParameters: {'limit': 20},
       );
 
@@ -33,25 +47,21 @@ class _Top20BooksPageState extends State<Top20BooksPage> {
             ? jsonDecode(response.data as String)
             : response.data;
 
-        final prettyString = const JsonEncoder.withIndent('  ').convert(decoded);
-        debugPrint('📦 [TOP 20 API 응답]:\n$prettyString');
-
         setState(() {
           if (decoded is List) {
-            topBooks = decoded;
+            books = decoded;
           } else if (decoded is Map && decoded['result'] is List) {
-            topBooks = decoded['result'];
+            books = decoded['result'];
+          } else if (decoded is Map && decoded['books'] is List) {
+            books = decoded['books'];
           } else {
-            topBooks = [];
+            books = [];
           }
-          isLoading = false;
         });
-      } else {
-        debugPrint('API 에러: ${response.statusCode}');
-        setState(() => isLoading = false);
       }
     } catch (e) {
-      debugPrint('네트워크 에러: $e');
+      debugPrint('주제 상세 도서 조회 오류: $e');
+    } finally {
       setState(() => isLoading = false);
     }
   }
@@ -85,11 +95,10 @@ class _Top20BooksPageState extends State<Top20BooksPage> {
           children: [
             const SizedBox(height: 10),
 
-            // 1. 헤더 타이틀 및 설명
-            const Text(
-              "WhoReads의 유명인들이\n가장 많이 추천한 책 TOP 20",
+            Text(
+              widget.title.replaceAll('\n', ' '),
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 height: 1.4,
@@ -97,10 +106,10 @@ class _Top20BooksPageState extends State<Top20BooksPage> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              "WhoReads에 모인 수많은 유명인 추천 중,\n가장 많이 언급되고 반복해서 추천된 책 TOP 20을 선정했습니다.\n지금 바로 유명인들의 인기 추천 도서를 확인해 보세요.",
+            Text(
+              widget.description ?? "WhoReads의 유명인들이 추천하고\n깊이 있게 읽은 대표 도서 목록입니다.",
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 height: 1.5,
                 color: Color(0xFF6B7280),
@@ -108,28 +117,32 @@ class _Top20BooksPageState extends State<Top20BooksPage> {
             ),
             const SizedBox(height: 24),
 
-            // 2. 가로 구분선
             const Divider(thickness: 1, color: Color(0xFFE5E7EB)),
             const SizedBox(height: 16),
 
-            // 3. 책 3열 그리드
             Expanded(
-              child: GridView.builder(
+              child: books.isEmpty
+                  ? const Center(
+                child: Text(
+                  '등록된 도서가 없습니다.',
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+              )
+                  : GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 24,
                   childAspectRatio: 0.55,
                 ),
-                itemCount: topBooks.length,
+                itemCount: books.length,
                 itemBuilder: (context, index) {
-                  final book = topBooks[index];
+                  final book = books[index];
                   final genre = book['genre'] ?? '기타';
                   final title = book['title'] ?? '제목 없음';
                   final coverUrl = book['cover_url'] ?? '';
 
                   return GestureDetector(
-                    // 🌟 2. 클릭 이벤트 활성화 (상세 페이지로 이동)
                     onTap: () {
                       Navigator.push(
                         context,
