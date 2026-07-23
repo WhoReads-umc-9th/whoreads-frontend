@@ -26,4 +26,17 @@ class AuthService {
       return false;
     }
   }
+  Future<bool> deleteAccount() async {
+    try {
+      final response = await ApiClient.dio.patch("/auth/delete");
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await TokenStorage.clear();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint("회원탈퇴 실패: $e");
+      return false;
+    }
+  }
 }

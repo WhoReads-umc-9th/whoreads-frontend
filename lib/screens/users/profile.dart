@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:whoreads/screens/routine_setting.dart';
 import 'package:whoreads/services/auth_service.dart';
+import 'package:whoreads/widgets/timer/timer_popup.dart';
 import '../../core/network/api_client.dart';
 import '../../services/notification_setting.dart';
 import '../celebrities/celebrities_book_page.dart';
@@ -25,7 +26,7 @@ class _ProfilePageState extends State<ProfilePage> {
   List<dynamic> follows = [];
   Map<String, dynamic> dnaResult = {};
   List<dynamic> routineSettings = [];
-  dynamic followSetting = {'id':-1,'is_enabled':true};
+  dynamic followSetting = {'id': -1, 'is_enabled': true};
 
   final Color primaryOrange = const Color(0xFFFF6A00);
   final Color bgColor = const Color(0xFFF2F4F6);
@@ -57,7 +58,6 @@ class _ProfilePageState extends State<ProfilePage> {
         followSetting = settings?['follow_setting'];
       }
       routineSettings = settings?['routine_settings'] ?? [];
-
 
       // 1. 내 정보 파싱
       if (results[0].statusCode == 200) {
@@ -108,6 +108,50 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       return timeStr;
     }
+  }
+
+  /// 회원 탈퇴 Confirm 팝업 노출 및 처리
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => TimerPopup(
+        title: '정말 회원 탈퇴를 진행하시겠습니까?',
+        description: '탈퇴 시 계정 정보 및 기록이 모두 삭제되며\n복구할 수 없습니다.',
+        leftButtonText: '계속 사용하기',
+        rightButtonText: '네 탈퇴할게요',
+        singleButton: false,
+        onLeftPressed: () => Navigator.maybePop(dialogContext),
+        onRightPressed: () async {
+          try {
+            Navigator.maybePop(dialogContext);
+            final bool isDeleted = await _authService.deleteAccount();
+
+            if (isDeleted && mounted) {
+              // 동일한 TimerPopup 디자인으로 탈퇴 완료 안내 팝업 노출
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (noticeContext) => TimerPopup(
+                  title: '회원 탈퇴 완료',
+                  description: '회원 탈퇴 접수가 완료되었습니다.\n7일 이내에 재로그인하시면 탈퇴를 취소할 수 있습니다.',
+                  rightButtonText: '확인',
+                  singleButton: true,
+                  onRightPressed: () {
+                    Navigator.maybePop(noticeContext);
+                    if (context.mounted) {
+                      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+                    }
+                  },
+                ),
+              );
+            }
+          } catch (e) {
+            debugPrint("회원 탈퇴 오류: $e");
+          }
+        },
+      ),
+    );
   }
 
   @override
@@ -208,7 +252,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         return Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: celebrityId == null ? null : () {
+                            onTap: celebrityId == null
+                                ? null
+                                : () {
                               Navigator.push(context, MaterialPageRoute(builder: (_) => CelebritiesBookPage(celebrityId: celebrityId)));
                             },
                             customBorder: const CircleBorder(),
@@ -400,7 +446,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
 
-            /// 5. 계정 관리 카드
+            /// 5. 계정 관리 카드 (회원 탈퇴 포함)
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,7 +468,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       }
                     },
                   ),
-                  _buildNavRow('비밀번호 재설정'),
+                  _buildNavRow(
+                    '회원 탈퇴',
+                    onTap: _showDeleteAccountDialog,
+                  ),
                 ],
               ),
             ),
@@ -433,7 +482,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: () async {
                   await _authService.logout();
                   if (context.mounted) {
-                    Navigator.pushNamedAndRemoveUntil(context, '/', (route)=> false);
+                    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
                   }
                 },
                 child: Column(
@@ -448,7 +497,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ),
-            SizedBox(height: 20)
+            const SizedBox(height: 20)
           ],
         ),
       ),
