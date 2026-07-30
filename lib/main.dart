@@ -8,11 +8,16 @@ import 'package:whoreads/services/timer/foreground_service_manager.dart';
 import 'package:whoreads/services/timer/timer_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 카카오 SDK 초기화 (네이티브 앱 키는 .env의 KAKAO_NATIVE_APP_KEY 사용)
+  KakaoSdk.init(nativeAppKey: dotenv.env['KAKAO_NATIVE_APP_KEY'] ?? '');
+
   final isFirebaseReady = await _initializeFirebaseSafely();
   if (isFirebaseReady && _supportsFcmNotifications()) {
     await FcmService.initialize();

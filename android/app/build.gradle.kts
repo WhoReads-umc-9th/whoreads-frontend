@@ -15,6 +15,15 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// 카카오 네이티브 앱 키: android/local.properties 의 kakao.nativeAppKey 값을 사용
+// (예: kakao.nativeAppKey=1234abcd...). 없으면 빈 값 → 카카오 로그인 리다이렉트 미동작.
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+val kakaoNativeAppKey: String = localProperties.getProperty("kakao.nativeAppKey") ?: ""
+
 android {
     namespace = "com.whoreads.mobile"
     compileSdk = flutter.compileSdkVersion
@@ -36,6 +45,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // AndroidManifest 의 kakao${KAKAO_NATIVE_APP_KEY} 리다이렉트 scheme 에 주입
+        manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = kakaoNativeAppKey
     }
 
     signingConfigs {

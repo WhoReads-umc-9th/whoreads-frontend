@@ -55,6 +55,19 @@
         <meta-data
                 android:name="firebase_analytics_collection_enabled"
                 android:value="false"/>
+
+        <!-- 카카오 로그인: 카카오계정(웹) 로그인 리다이렉트 처리 -->
+        <activity
+                android:name="com.kakao.sdk.flutter.AuthCodeCustomTabsActivity"
+                android:exported="true">
+            <intent-filter android:label="flutter_web_auth">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <!-- scheme 은 "kakao" + 네이티브 앱 키 (build.gradle.kts 의 manifestPlaceholders 로 주입) -->
+                <data android:scheme="kakao${KAKAO_NATIVE_APP_KEY}" android:host="oauth"/>
+            </intent-filter>
+        </activity>
     </application>
 
     <queries>
@@ -62,5 +75,7 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- 카카오톡 설치 여부 확인 및 카카오톡으로 로그인 -->
+        <package android:name="com.kakao.talk"/>
     </queries>
 </manifest>

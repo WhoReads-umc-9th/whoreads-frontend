@@ -8,6 +8,8 @@ import '../../widgets/onboarding/dot_indicator.dart';
 import '../../widgets/onboarding/onboarding_page.dart';
 import '../../widgets/onboarding/primary_buttons.dart';
 import '../../widgets/auth/signup_terms_sheet.dart';
+import '../../widgets/auth/login_method_sheet.dart';
+import '../../services/kakao_auth_service.dart';
 import '../my_library/my_library_page.dart';
 import 'onboarding_data.dart';
 
@@ -20,6 +22,7 @@ class OnboardingFlowScreen extends StatefulWidget {
 
 class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   late final PageController _pageController;
+  final KakaoAuthService _kakaoAuthService = KakaoAuthService();
   int _index = 0;
 
   @override
@@ -84,6 +87,59 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   /// UI Logic
   /// ===============================
 
+  void _openLoginMethodSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.35),
+      builder: (_) => LoginMethodSheet(
+        onKakaoLogin: () {
+          Navigator.of(context).pop();
+          _handleKakaoLogin();
+        },
+        onEmailLogin: () {
+          Navigator.of(context).pop();
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _handleKakaoLogin() async {
+    final result = await _kakaoAuthService.login();
+    if (!mounted) return;
+
+    switch (result.status) {
+      case KakaoLoginStatus.loggedIn:
+        // 기존 회원 → 바로 메인으로
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MyLibraryPage()),
+        );
+        break;
+      case KakaoLoginStatus.needsSignup:
+        // 신규 회원 → 닉네임/성별/연령 입력 화면(메인 위 다이얼로그)으로
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => MyLibraryPage(
+              kakaoRegistrationToken: result.registrationToken,
+              kakaoNickname: result.nickname,
+            ),
+          ),
+        );
+        break;
+      case KakaoLoginStatus.failed:
+        if (result.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result.errorMessage!)),
+          );
+        }
+        break;
+    }
+  }
+
   void _openSignupTermsSheet() {
     showModalBottomSheet(
       context: context,
@@ -143,14 +199,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                         Expanded(
                           child: OutlineActionButton(
                             label: '로그인',
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const LoginPage(),
-                                ),
-                              );
-                            },
+                            onPressed: _openLoginMethodSheet,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -161,30 +210,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 10),
-                    TextButton(
-                      onPressed: () {
-                        // TODO: 계정 찾기
-                      },
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        '계정이 기억나지 않나요? 계정 찾기',
-                        style: TextStyle(
-                          color: Color(0xFF767676),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          height: 1.4,
-                          fontFamily: 'Pretendard Variable',
-                        ),
-                      ),
                     ),
                   ],
                 ),

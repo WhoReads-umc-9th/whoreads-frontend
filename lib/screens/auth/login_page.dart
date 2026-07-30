@@ -7,6 +7,8 @@ import 'package:whoreads/services/notification/fcm_service.dart';
 
 import '../../core/auth/token_storage.dart';
 import '../../core/network/api_client.dart';
+import 'find_account_page.dart';
+import 'reset_password_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -185,8 +187,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _onTapResetPassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('비밀번호 재설정 클릭')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ResetPasswordPage()),
     );
   }
 
@@ -394,6 +397,33 @@ class _LoginPageState extends State<LoginPage> {
                       onTap: _onTapResetPassword,
                       child: const Text(
                         '비밀번호 재설정',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF4B5563),
+                          fontWeight: FontWeight.w700,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      '계정이 기억나지 않나요? ',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF9E9E9E),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const FindAccountPage(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        '계정 찾기',
                         style: TextStyle(
                           fontSize: 13,
                           color: Color(0xFF4B5563),
