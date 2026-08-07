@@ -26,7 +26,7 @@ class _FindAccountPageState extends State<FindAccountPage> {
   bool isLoading = false;
 
   String? selectedDomain;
-  String? foundAccount; // 찾은 계정(아이디)
+  String? sentEmail; // 아이디를 발송한 이메일 (결과 화면 표시용)
 
   Timer? _timer;
   int remainSeconds = 170; // 2:50
@@ -152,25 +152,10 @@ class _FindAccountPageState extends State<FindAccountPage> {
 
       if (isActuallySuccess) {
         _timer?.cancel();
-
-        // TODO: 계정 찾기 전용 API가 준비되면 result에서 login_id를 파싱하도록 교체.
-        //       현재 서버에는 이메일로 계정(아이디)을 조회하는 API가 없어,
-        //       임시로 응답 result 또는 이메일 로컬파트를 표시합니다.
-        final result = decoded['result'];
-        String? account;
-        if (result is Map) {
-          account = (result['login_id'] ?? result['loginId'])?.toString();
-        } else if (result is String && result.isNotEmpty) {
-          account = result;
-        }
-        account ??= _emailIdController.text.trim();
-
         if (!mounted) return;
         FocusScope.of(context).unfocus();
-        setState(() {
-          isVerified = true;
-          foundAccount = account;
-        });
+        // 인증 완료 → 아이디 찾기 API 호출 (가입된 이메일로 아이디 발송)
+        await _findLoginId();
       } else {
         if (!mounted) return;
         showCustomDialog(
@@ -188,6 +173,49 @@ class _FindAccountPageState extends State<FindAccountPage> {
       );
     } finally {
       if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  // ================= 아이디 찾기 (이메일로 아이디 발송) =================
+  Future<void> _findLoginId() async {
+    final email = _email;
+    if (email == null) return;
+
+    try {
+      final response = await ApiClient.dio.post(
+        '/auth/find-id',
+        data: {'email': email},
+      );
+
+      final decoded = response.data is String
+          ? jsonDecode(response.data as String)
+          : response.data;
+
+      if (response.statusCode == 200 &&
+          !(decoded is Map && decoded['is_success'] == false)) {
+        if (!mounted) return;
+        setState(() {
+          isVerified = true;
+          sentEmail = email;
+        });
+      } else if (response.statusCode == 404) {
+        if (!mounted) return;
+        showCustomDialog(
+          context,
+          title: '가입된 계정이 없습니다',
+          content: '입력하신 이메일로 가입된 계정을 찾을 수 없습니다.',
+        );
+      } else {
+        final message = decoded is Map ? decoded['message']?.toString() : null;
+        _showError(message ?? '아이디 발송에 실패했습니다.');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      showCustomDialog(
+        context,
+        title: '통신 오류',
+        content: '서버와 연결할 수 없습니다.\n잠시 후 다시 시도해주세요.',
+      );
     }
   }
 
@@ -225,8 +253,13 @@ class _FindAccountPageState extends State<FindAccountPage> {
       children: [
         const SizedBox(height: 24),
         const Text(
-          '이미 가입된 계정이 있습니다',
+          '이메일로 아이디를\n보내드렸어요',
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          '아래 이메일로 로그인 아이디를 발송했습니다.\n메일함을 확인해주세요.',
+          style: TextStyle(fontSize: 14, color: Color(0xFF6B7280), height: 1.4),
         ),
         const SizedBox(height: 28),
         Row(
@@ -238,7 +271,7 @@ class _FindAccountPageState extends State<FindAccountPage> {
             ),
             const SizedBox(width: 12),
             Text(
-              foundAccount ?? '',
+              sentEmail ?? '',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -388,7 +421,7 @@ class _FindAccountPageState extends State<FindAccountPage> {
                   decoration: const InputDecoration(
                     isDense: true,
                     counterText: '',
-                    hintText: '4자리 숫자 입력',
+                    hintText: '6자리 숫자 입력',
                     hintStyle:
                         TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
                     border: UnderlineInputBorder(),

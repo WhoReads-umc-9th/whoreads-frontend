@@ -67,7 +67,7 @@ class LoginMethodSheet extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // 이메일로 로그인
+            // 아이디로 로그인
             _LoginMethodButton(
               onPressed: onEmailLogin,
               backgroundColor: Colors.white,
@@ -77,7 +77,7 @@ class LoginMethodSheet extends StatelessWidget {
                 color: Color(0xFF1C1C22),
                 size: 20,
               ),
-              label: '이메일로 로그인',
+              label: '아이디로 로그인',
               textColor: const Color(0xFF1C1C22),
             ),
 

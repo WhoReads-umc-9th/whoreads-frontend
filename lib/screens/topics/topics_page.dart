@@ -234,7 +234,6 @@ class _TopicsPageState extends State<TopicsPage> {
               );
             },
           ),
-          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.person_outline, color: Colors.black),
             onPressed: () {

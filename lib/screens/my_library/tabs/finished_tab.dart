@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/library_book_model.dart';
 import '../../../services/library_service.dart';
+import '../../books/BookDetailPage.dart';
 import '../widgets/book_list_item.dart';
 
 class FinishedTab extends StatefulWidget {
@@ -45,9 +46,22 @@ class _FinishedTabState extends State<FinishedTab> {
     return ListView.builder(
       itemCount: books.length,
       itemBuilder: (_, index) {
+        final book = books[index];
+
         return BookListItem(
-          book: books[index],
+          book: book,
           showProgress: false,
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BookDetailPage(
+                  bookId: book.id,
+                ),
+              ),
+            );
+            _load();
+          },
         );
       },
     );
