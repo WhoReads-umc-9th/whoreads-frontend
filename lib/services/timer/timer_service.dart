@@ -85,29 +85,30 @@ class TimerService with ChangeNotifier {
 
         int localRemainingSeconds = _currentSeconds;
 
-        if (localRemainingSeconds <= 0 && jsonString != null) {
+        if (jsonString != null) {
           final localData = jsonDecode(jsonString);
+          int localTotalMinutes = (localData['totalReadMinutes'] ?? 0) + (localData['remainingMinutes'] ?? 0);
+          if (localTotalMinutes > 0) {
+            _totalSettingSeconds = localTotalMinutes * 60;
+          }
+
           final String? savedAtStr = localData['savedAt'];
           if (savedAtStr != null) {
             final savedAt = DateTime.parse(savedAtStr);
             final int elapsedOutsideSeconds = DateTime.now().difference(savedAt).inSeconds;
+
+            // 저장된 시각 기준 실제 경과시간 차감
             localRemainingSeconds = ((localData['remainingMinutes'] ?? 0) * 60) - elapsedOutsideSeconds;
-          } else {
+          } else if (localRemainingSeconds <= 0) {
             localRemainingSeconds = (localData['remainingMinutes'] ?? 0) * 60;
           }
-        }
-
-        if (jsonString != null) {
-          final localData = jsonDecode(jsonString);
-          int localTotalMinutes = (localData['totalReadMinutes'] ?? 0) + (localData['remainingMinutes'] ?? 0);
-          _totalSettingSeconds = localTotalMinutes * 60;
         }
 
         bool isServerZero = activeSession.remainingMinutes <= 0;
         bool isLocalZero = localRemainingSeconds <= 0;
 
-        if (activeSession.status == 'IN_PROGRESS' && isServerZero && isLocalZero) {
-          debugPrint('🏁 [메모리 코어 마감] 서버 0분 및 실시간 메모리 변수 마감 확인 ➔ 종료 선처리 진행');
+        if ((activeSession.status == 'IN_PROGRESS' || activeSession.status == 'RUNNING') && (isServerZero || isLocalZero)) {
+          debugPrint('🏁 [타이머 만료 선처리] 서버/로컬 시간 계산 결과 0초 이하 감지 ➔ 타이머 완료 확정 진행');
 
           await _apiService.completeTimer(sessionId);
 
@@ -117,13 +118,16 @@ class TimerService with ChangeNotifier {
           _isStopping = true;
 
           await _clearLocalSessionOnly(prefs);
+          await _serviceManager.stop();
+          _stopHeartbeat();
+          _stopLocalTimer();
 
           notifyListeners();
           _isCheckingRecovery = false;
           return TimerRecoveryType.timerCompleted;
         }
         else if (localRemainingSeconds <= 0) {
-          debugPrint('⏳ [백업 마감선 작동] 메모리 잔여 시간 소실 확인 ➔ 타이머 즉시 마감');
+          debugPrint('⏳ [백업 마감선 작동] 메모리/디스크 잔여 시간 소실 확인 ➔ 타이머 즉시 마감');
           _currentSeconds = 0;
           elapsedSeconds = _totalSettingSeconds;
           _isRunning = false;
@@ -133,7 +137,7 @@ class TimerService with ChangeNotifier {
           return TimerRecoveryType.timerCompleted;
         }
         else {
-          debugPrint('⏳ [실시간 싱크 전개] 디스크 캐시 우회 -> 현재 살아있는 정밀 메모리 초 반영: ${localRemainingSeconds}초');
+          debugPrint('⏳ [실시간 싱크 전개] 디스크 캐시 검증 완료 -> 현재 잔여 시간 반영: ${localRemainingSeconds}초');
           _currentSeconds = localRemainingSeconds;
           elapsedSeconds = _totalSettingSeconds - _currentSeconds;
 
@@ -221,11 +225,25 @@ class TimerService with ChangeNotifier {
 
       int calculatedCurrent = _totalSettingSeconds - (activeSession.totalReadMinutes * 60);
 
+      // 🚨 계산된 잔여시간이 0 이하이면 즉시 완료 후 리턴
+      if (calculatedCurrent <= 0) {
+        await _apiService.completeTimer(activeSession.sessionId);
+        await _clearAll();
+        return;
+      }
+
       final bool isServiceRunning = await FlutterForegroundTask.isRunningService;
       if (isServiceRunning) {
         _currentSeconds = await FlutterForegroundTask.getData<int>(key: 'currentSeconds') ?? calculatedCurrent;
       } else {
         _currentSeconds = calculatedCurrent;
+      }
+
+      // 복구 후에도 currentSeconds가 0 이하이면 완주 처리
+      if (_currentSeconds <= 0) {
+        await _apiService.completeTimer(activeSession.sessionId);
+        await _clearAll();
+        return;
       }
 
       elapsedSeconds = _totalSettingSeconds - _currentSeconds;
@@ -264,6 +282,7 @@ class TimerService with ChangeNotifier {
         notifyListeners();
       } else {
         _stopLocalTimer();
+        _currentSeconds = 0;
         _isRunning = false;
         _isStopping = true;
         notifyListeners();
