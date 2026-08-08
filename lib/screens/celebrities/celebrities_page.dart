@@ -107,7 +107,6 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
               );
             },
           ),
-          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.person_outline, color: Colors.black),
             onPressed: () {
