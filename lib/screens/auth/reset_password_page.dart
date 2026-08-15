@@ -201,8 +201,6 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       final response = await ApiClient.dio.patch(
         '/auth/password',
         data: {
-          // 재설정(비번 분실) 플로우라 현재 비밀번호는 없음.
-          'currentPassword': '',
           'newPassword': _pwController.text,
           'confirmPassword': _pwConfirmController.text,
         },
