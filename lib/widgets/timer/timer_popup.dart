@@ -57,15 +57,24 @@ class TimerPopup extends StatelessWidget {
               ),
             ],
 
+            if (description != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                description!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF79747E),
+                  height: 1.4,
+                ),
+              ),
+            ],
+
             if (highlights != null && highlights!.isNotEmpty) ...[
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: highlights!.map((e) {
@@ -75,6 +84,7 @@ class TimerPopup extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          if (e.isLabelVisible)
                           Text(
                             "${e.label} : ",
                             style: TextStyle(
@@ -95,19 +105,6 @@ class TimerPopup extends StatelessWidget {
                       ),
                     );
                   }).toList(),
-                ),
-              ),
-            ],
-
-            if (description != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                description!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF79747E),
-                  height: 1.4,
                 ),
               ),
             ],
@@ -181,8 +178,9 @@ class TimerPopup extends StatelessWidget {
 }
 
 class HighlightText {
-  final String label;
+  final String? label;
   final String value;
+  final bool isLabelVisible;
 
-  HighlightText({required this.label, required this.value});
+  HighlightText({required this.label, required this.value,this.isLabelVisible=true});
 }

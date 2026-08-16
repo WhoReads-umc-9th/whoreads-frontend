@@ -1,5 +1,11 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+
 import 'package:whoreads/screens/routine_setting.dart';
 import 'package:whoreads/services/auth_service.dart';
 import 'package:whoreads/widgets/timer/timer_popup.dart';
@@ -59,17 +65,12 @@ class _ProfilePageState extends State<ProfilePage> {
       }
       routineSettings = settings?['routine_settings'] ?? [];
 
-      // 1. 내 정보 파싱
       if (results[0].statusCode == 200) {
         userInfo = AntiquityUserInfo(results[0].data['result']);
       }
-
-      // 2. 팔로우 목록 파싱
       if (results[1].statusCode == 200) {
         follows = results[1].data['result'] ?? [];
       }
-
-      // 3. 독서 DNA 파싱
       if (results[2].statusCode == 200) {
         dnaResult = results[2].data['result'] ?? {};
       }
@@ -110,7 +111,75 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  /// 회원 탈퇴 Confirm 팝업 노출 및 처리
+  /// 이메일 문의하기 로직
+  Future<void> _sendContactEmail() async {
+    final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    final PackageInfo packageInfo = await PackageInfo.fromPlatform();
+
+    String osVersion = '';
+    String deviceModel = '';
+
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        osVersion = 'Android ${androidInfo.version.release} (SDK ${androidInfo.version.sdkInt})';
+        deviceModel = '${androidInfo.manufacturer} ${androidInfo.model}';
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        osVersion = 'iOS ${iosInfo.systemVersion}';
+        deviceModel = iosInfo.utsname.machine;
+      }
+    } catch (e) {
+      debugPrint('Device Info Error: $e');
+    }
+
+    final String appVersion = packageInfo.version;
+    const String recipientEmail = 'whoreads9th01@gmail.com';
+    const String emailSubject = '[Whoreads 문의사항]';
+
+    final String emailBody = '''
+OS: $osVersion
+App Version: $appVersion
+Device: $deviceModel
+
+====================
+문의 내용을 아래에 작성해 주세요.
+
+''';
+
+    final Email email = Email(
+      recipients: [recipientEmail],
+      subject: emailSubject,
+      body: emailBody,
+      isHTML: false
+    );
+
+    try {
+      await FlutterEmailSender.send(email);
+    } catch (e) {
+      debugPrint(e.toString());
+      _showEmailErrorDialog();
+    }
+  }
+  /// 메일 앱 연결 불가 안내 팝업
+  void _showEmailErrorDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => TimerPopup(
+        title: '알림',
+        description: '기본 메일앱 사용이 불가하여\n앱에서 바로 메일을 전송할 수 없습니다.\n\n아래 명시된 이메일로 연락주시면\n빠른 시일내에 답변드리도록 하겠습니다.\n\n감사합니다:)',
+        highlights: [
+          HighlightText(label:'메일',value:  'whoreads9th01@gmail.com',isLabelVisible:false)
+        ],
+        singleButton: true,
+        rightButtonText: '확인',
+        onRightPressed: () => Navigator.maybePop(dialogContext),
+      ),
+    );
+  }
+
+  /// 회원 탈퇴 Confirm 팝업
   void _showDeleteAccountDialog() {
     showDialog(
       context: context,
@@ -128,7 +197,6 @@ class _ProfilePageState extends State<ProfilePage> {
             final bool isDeleted = await _authService.deleteAccount();
 
             if (isDeleted && mounted) {
-              // 동일한 TimerPopup 디자인으로 탈퇴 완료 안내 팝업 노출
               showDialog(
                 context: context,
                 barrierDismissible: false,
@@ -147,7 +215,7 @@ class _ProfilePageState extends State<ProfilePage> {
               );
             }
           } catch (e) {
-            debugPrint("회원 탈퇴 오류: $e");
+            debugPrint('회원 탈퇴 오류: $e');
           }
         },
       ),
@@ -213,7 +281,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 24),
 
-            /// 2. 팔로우 목록 & 서재 업데이트 알림 카드
+            /// 2. 팔로우 목록 카드
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,12 +294,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       );
                     },
                     child: Row(
-                      children: [
-                        const Icon(Icons.group_add_outlined, color: Colors.black54, size: 20),
-                        const SizedBox(width: 8),
-                        const Text('팔로우 목록', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                        const Spacer(),
-                        const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                      children: const [
+                        Icon(Icons.group_add_outlined, color: Colors.black54, size: 20),
+                        SizedBox(width: 8),
+                        Text('팔로우 목록', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
+                        Spacer(),
+                        Icon(Icons.chevron_right, color: Colors.grey, size: 20),
                       ],
                     ),
                   ),
@@ -309,12 +377,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: [
-                        const Icon(Icons.auto_awesome_mosaic_outlined, color: Colors.black54, size: 20),
-                        const SizedBox(width: 8),
-                        const Text('독서 DNA', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                        const Spacer(),
-                        const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                      children: const [
+                        Icon(Icons.auto_awesome_mosaic_outlined, color: Colors.black54, size: 20),
+                        SizedBox(width: 8),
+                        Text('독서 DNA', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
+                        Spacer(),
+                        Icon(Icons.chevron_right, color: Colors.grey, size: 20),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -362,7 +430,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ],
                   ),
-
                   routineSettings.isEmpty
                       ? const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -399,7 +466,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           children: [
                             Text(formattedTime, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
                             const Spacer(),
-
                             isEveryday
                                 ? const Text('매일', style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500))
                                 : RichText(
@@ -446,7 +512,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
 
-            /// 5. 계정 관리 카드 (회원 탈퇴 포함)
+            /// 5. 계정 관리 카드
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,6 +535,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     },
                   ),
                   _buildNavRow(
+                    '문의 하기',
+                    onTap: _sendContactEmail, // 기존 탈퇴 팝업 연결에서 메일 전송 로직으로 수정
+                  ),
+                  _buildNavRow(
                     '회원 탈퇴',
                     onTap: _showDeleteAccountDialog,
                   ),
@@ -485,14 +555,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
                   }
                 },
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Row(
-                      children: [
-                        const Text('로그아웃', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                      ],
-                    ),
+                child: Row(
+                  children: const [
+                    Text('로그아웃', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
                   ],
                 ),
               ),

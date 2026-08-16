@@ -75,6 +75,11 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- 2. 메일 앱 인텐트 (분리 완료) -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
         <!-- 카카오톡 설치 여부 확인 및 카카오톡으로 로그인 -->
         <package android:name="com.kakao.talk"/>
     </queries>
