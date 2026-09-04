@@ -140,7 +140,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     final email = _email;
     final code = _codeController.text.trim();
 
-    if (email == null || code.length < 4 || isLoading) return;
+    if (email == null || code.length < 6 || isLoading) return;
 
     setState(() => isLoading = true);
 
@@ -402,7 +402,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   decoration: const InputDecoration(
                     isDense: true,
                     counterText: '',
-                    hintText: '4자리 숫자 입력',
+                    hintText: '6자리 숫자 입력',
                     hintStyle: TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
                     border: UnderlineInputBorder(),
                   ),
@@ -420,7 +420,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: (_codeController.text.length >= 4 && !isLoading) ? _verifyCode : null,
+              onPressed: (_codeController.text.length >= 6 && !isLoading) ? _verifyCode : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 disabledBackgroundColor: const Color(0xFFE5E7EB),
@@ -430,7 +430,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 '확인',
                 style: TextStyle(
                   fontSize: 16,
-                  color: _codeController.text.length >= 4 ? Colors.white : const Color(0xFF9CA3AF),
+                  color: _codeController.text.length >= 6 ? Colors.white : const Color(0xFF9CA3AF),
                 ),
               ),
             ),

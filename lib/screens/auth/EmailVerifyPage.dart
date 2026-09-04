@@ -379,8 +379,12 @@ class _EmailVerifyPageState extends State<EmailVerifyPage> {
                       controller: _codeController,
                       focusNode: _codeFocusNode,
                       keyboardType: TextInputType.number,
+                      maxLength: 6,
                       onChanged: (_) => setState(() {}),
                       decoration: const InputDecoration(
+                        counterText: '',
+                        hintText: '6자리 숫자 입력',
+                        hintStyle: TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
                         border: UnderlineInputBorder(),
                       ),
                     ),
@@ -403,7 +407,7 @@ class _EmailVerifyPageState extends State<EmailVerifyPage> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _codeController.text.length >= 4 && !isLoading
+                  onPressed: _codeController.text.length >= 6 && !isLoading
                       ? _verifyCode
                       : null,
                   style: ElevatedButton.styleFrom(

@@ -124,7 +124,7 @@ class _FindAccountPageState extends State<FindAccountPage> {
     final email = _email;
     final code = _codeController.text.trim();
 
-    if (email == null || code.length < 4 || isLoading) return;
+    if (email == null || code.length < 6 || isLoading) return;
 
     setState(() => isLoading = true);
 
@@ -445,7 +445,7 @@ class _FindAccountPageState extends State<FindAccountPage> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: (_codeController.text.length >= 4 && !isLoading)
+              onPressed: (_codeController.text.length >= 6 && !isLoading)
                   ? _verifyCode
                   : null,
               style: ElevatedButton.styleFrom(
@@ -459,7 +459,7 @@ class _FindAccountPageState extends State<FindAccountPage> {
                 '확인',
                 style: TextStyle(
                   fontSize: 16,
-                  color: _codeController.text.length >= 4
+                  color: _codeController.text.length >= 6
                       ? Colors.white
                       : const Color(0xFF9CA3AF),
                 ),
