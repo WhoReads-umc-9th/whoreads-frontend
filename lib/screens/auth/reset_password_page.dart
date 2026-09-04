@@ -26,6 +26,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   bool isVerified = false; // 인증 완료 → 새 비밀번호 화면 전환
   bool isLoading = false;
 
+  bool isCustomDomain = false; // '직접입력' 선택 여부
+  String? selectedDomain;
+
   Timer? _timer;
   int remainSeconds = 170; // 2:50
 
@@ -36,10 +39,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     'kakao.com',
     'daum.net',
     'nate.com',
+    '직접입력',
   ];
 
   final TextEditingController _emailIdController = TextEditingController();
-  final TextEditingController _emailDomainController = TextEditingController();
+  final TextEditingController _domainController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _pwController = TextEditingController();
   final TextEditingController _pwConfirmController = TextEditingController();
@@ -71,8 +75,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   String? get _email {
     final id = _emailIdController.text.trim();
-    final domain = _emailDomainController.text.trim();
-    if (id.isEmpty || domain.isEmpty) return null;
+    final domain = isCustomDomain ? _domainController.text.trim() : selectedDomain;
+    if (id.isEmpty || domain == null || domain.isEmpty) return null;
     return '$id@$domain';
   }
 
@@ -89,7 +93,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   void dispose() {
     _timer?.cancel();
     _emailIdController.dispose();
-    _emailDomainController.dispose();
+    _domainController.dispose();
     _codeController.dispose();
     _pwController.dispose();
     _pwConfirmController.dispose();
@@ -320,41 +324,95 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             ),
             Expanded(
               flex: 4,
-              child: TextField(
-                controller: _emailDomainController,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: '직접 입력',
-                  hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                  enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                  focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black)),
-                  // 자주 쓰는 도메인 빠른 선택 (선택 시 입력칸에 채워짐)
-                  suffixIcon: PopupMenuButton<String>(
-                    offset: const Offset(0, 40),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    elevation: 4,
-                    color: Colors.white,
-                    icon: const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.grey),
-                    onSelected: (String value) {
-                      setState(() {
-                        _emailDomainController.text = value;
-                      });
-                    },
-                    itemBuilder: (BuildContext context) {
-                      return _domainList.map((String choice) {
-                        return PopupMenuItem<String>(
-                          value: choice,
-                          height: 40,
-                          child: Text(choice, style: const TextStyle(fontSize: 14)),
+              child: isCustomDomain
+                  ? Stack(
+                      alignment: Alignment.centerRight,
+                      children: [
+                        TextField(
+                          controller: _domainController,
+                          onChanged: (_) => setState(() {}),
+                          style: const TextStyle(fontSize: 14, color: Colors.black, height: 1.2),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.fromLTRB(0, 0, 30, 8),
+                            hintText: '직접입력',
+                            hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
+                            border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 4,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                isCustomDomain = false;
+                                selectedDomain = null;
+                                _domainController.clear();
+                              });
+                            },
+                            child: const Icon(Icons.close, size: 18, color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    )
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        return PopupMenuButton<String>(
+                          constraints: BoxConstraints.tightFor(width: constraints.maxWidth),
+                          offset: const Offset(0, 40),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 4,
+                          color: Colors.white,
+                          onSelected: (String value) {
+                            if (value == '직접입력') {
+                              setState(() {
+                                isCustomDomain = true;
+                                selectedDomain = null;
+                              });
+                            } else {
+                              setState(() {
+                                selectedDomain = value;
+                                isCustomDomain = false;
+                              });
+                            }
+                          },
+                          itemBuilder: (BuildContext context) {
+                            return _domainList.map((String choice) {
+                              return PopupMenuItem<String>(
+                                value: choice,
+                                height: 40,
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: Text(choice, style: const TextStyle(fontSize: 14)),
+                                ),
+                              );
+                            }).toList();
+                          },
+                          child: Container(
+                            height: 36,
+                            decoration: const BoxDecoration(
+                              border: Border(bottom: BorderSide(color: Colors.grey)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  selectedDomain ?? '선택',
+                                  style: TextStyle(
+                                    color: selectedDomain == null ? Colors.grey : Colors.black,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.grey),
+                              ],
+                            ),
+                          ),
                         );
-                      }).toList();
-                    },
-                  ),
-                ),
-              ),
+                      },
+                    ),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
