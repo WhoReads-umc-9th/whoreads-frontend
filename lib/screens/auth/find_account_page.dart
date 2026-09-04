@@ -25,7 +25,6 @@ class _FindAccountPageState extends State<FindAccountPage> {
   bool isVerified = false; // 인증 완료(결과 화면) 여부
   bool isLoading = false;
 
-  String? selectedDomain;
   String? sentEmail; // 아이디를 발송한 이메일 (결과 화면 표시용)
 
   Timer? _timer;
@@ -41,6 +40,7 @@ class _FindAccountPageState extends State<FindAccountPage> {
   ];
 
   final TextEditingController _emailIdController = TextEditingController();
+  final TextEditingController _emailDomainController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
 
   final FocusNode _codeFocusNode = FocusNode();
@@ -67,8 +67,8 @@ class _FindAccountPageState extends State<FindAccountPage> {
 
   String? get _email {
     final id = _emailIdController.text.trim();
-    final domain = selectedDomain;
-    if (id.isEmpty || domain == null || domain.isEmpty) return null;
+    final domain = _emailDomainController.text.trim();
+    if (id.isEmpty || domain.isEmpty) return null;
     return '$id@$domain';
   }
 
@@ -76,6 +76,7 @@ class _FindAccountPageState extends State<FindAccountPage> {
   void dispose() {
     _timer?.cancel();
     _emailIdController.dispose();
+    _emailDomainController.dispose();
     _codeController.dispose();
     _codeFocusNode.dispose();
     super.dispose();
@@ -325,56 +326,40 @@ class _FindAccountPageState extends State<FindAccountPage> {
             ),
             Expanded(
               flex: 4,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return PopupMenuButton<String>(
-                    constraints:
-                        BoxConstraints.tightFor(width: constraints.maxWidth),
+              child: TextField(
+                controller: _emailDomainController,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: '직접 입력',
+                  hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 14),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  border: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                  enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                  focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black)),
+                  // 자주 쓰는 도메인 빠른 선택 (선택 시 입력칸에 채워짐)
+                  suffixIcon: PopupMenuButton<String>(
                     offset: const Offset(0, 40),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     elevation: 4,
                     color: Colors.white,
+                    icon: const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.grey),
                     onSelected: (String value) {
-                      setState(() => selectedDomain = value);
+                      setState(() {
+                        _emailDomainController.text = value;
+                      });
                     },
                     itemBuilder: (BuildContext context) {
                       return _domainList.map((String choice) {
                         return PopupMenuItem<String>(
                           value: choice,
                           height: 40,
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: Text(choice,
-                                style: const TextStyle(fontSize: 14)),
-                          ),
+                          child: Text(choice, style: const TextStyle(fontSize: 14)),
                         );
                       }).toList();
                     },
-                    child: Container(
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: Colors.grey)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            selectedDomain ?? '선택',
-                            style: TextStyle(
-                              color: selectedDomain == null
-                                  ? Colors.grey
-                                  : Colors.black,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const Icon(Icons.keyboard_arrow_down,
-                              size: 20, color: Colors.grey),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 8),
