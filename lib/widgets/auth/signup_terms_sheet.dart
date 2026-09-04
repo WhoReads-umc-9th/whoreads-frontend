@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SignupTermsSheet extends StatefulWidget {
   final VoidCallback onAgreed;
@@ -22,6 +23,21 @@ class _SignupTermsSheetState extends State<SignupTermsSheet> {
   bool marketing = false; // (선택) 이벤트/혜택 수신
 
   bool get requiredOk => age14 && terms && privacy;
+
+  // 약관/개인정보 처리방침 노션 페이지 링크
+  static const String _termsUrl = 'https://www.notion.so/3a8427c6192e806489a8f5c72799f376';
+  static const String _privacyUrl = 'https://www.notion.so/3a8427c6192e8068a905c521c0877420';
+  static const String _marketingUrl = 'https://www.notion.so/3a8427c6192e8034a481e8a423dfe3be';
+
+  Future<void> _openLink(String url) async {
+    final uri = Uri.parse(url);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('페이지를 열 수 없습니다.')),
+      );
+    }
+  }
 
   void _syncAllFromItems() {
     final nextAll = age14 && terms && privacy && privacyOpt && marketing;
@@ -110,33 +126,25 @@ class _SignupTermsSheetState extends State<SignupTermsSheet> {
                 value: terms,
                 label: '(필수) 서비스 이용약관',
                 onChanged: (v) => _toggleItem('terms', v),
-                onTapDetail: () {
-                  // TODO: 약관 상세 페이지/다이얼로그
-                },
+                onTapDetail: () => _openLink(_termsUrl),
               ),
               _AgreeRow(
                 value: privacy,
                 label: '(필수) 개인정보 수집 및 이용에 대한 안내',
                 onChanged: (v) => _toggleItem('privacy', v),
-                onTapDetail: () {
-                  // TODO: 개인정보(필수) 상세
-                },
+                onTapDetail: () => _openLink(_privacyUrl),
               ),
               _AgreeRow(
                 value: privacyOpt,
                 label: '(선택) 개인정보 수집 및 이용에 대한 안내',
                 onChanged: (v) => _toggleItem('privacyOpt', v),
-                onTapDetail: () {
-                  // TODO: 개인정보(선택) 상세
-                },
+                onTapDetail: () => _openLink(_privacyUrl),
               ),
               _AgreeRow(
                 value: marketing,
                 label: '(선택) 이벤트 등 맞춤 혜택/정보 수신',
                 onChanged: (v) => _toggleItem('marketing', v),
-                onTapDetail: () {
-                  // TODO: 마케팅 수신 상세
-                },
+                onTapDetail: () => _openLink(_marketingUrl),
               ),
 
               const SizedBox(height: 16),
