@@ -22,11 +22,15 @@ class _TopicsPageState extends State<TopicsPage> {
 
   String selectedCategory = '전체';
   bool isDropdownOpen = false;
-  bool isLoading = false;
 
-  List<dynamic> rawTopicsData = [];
+  bool isBooksLoading = false;
+  bool isBannersLoading = false;
+
+  Map<String, List<dynamic>> books = {};
+  List<dynamic> allBooks = [];
+  List<dynamic> selectBooks = [];
+
   List<dynamic> banners = [];
-  List<dynamic> books = [];
 
   final Map<String, String?> categoryMap = {
     '전체': null,
@@ -45,58 +49,69 @@ class _TopicsPageState extends State<TopicsPage> {
   void initState() {
     super.initState();
     _fetchTopicsData();
+    _buildBannersFromApi();
   }
 
   Future<void> _fetchTopicsData() async {
-    setState(() => isLoading = true);
+    setState(() => isBooksLoading = true);
 
     try {
-      final categoryTag = categoryMap[selectedCategory];
-      final response = await ApiClient.dio.get(
-        '/topics',
-        queryParameters: categoryTag == null ? null : {'category': categoryTag},
-      );
+      final response = await ApiClient.dio.get('/books');
 
       if (response.statusCode == 200) {
         final dynamic decoded = response.data is String
             ? jsonDecode(response.data as String)
             : response.data;
 
-        List<dynamic> topicList = [];
-
+        List<dynamic> result = [];
         if (decoded is List) {
-          topicList = decoded;
+          result = decoded;
         } else if (decoded is Map && decoded['result'] is List) {
-          topicList = decoded['result'];
+          result = decoded['result'];
+        } else if (decoded is Map && decoded['data'] is List) {
+          result = decoded['data'];
         }
 
-        rawTopicsData = topicList;
+        allBooks = result;
 
-        await _buildBannersFromApi();
-
-        List<dynamic> newBooks = [];
-        if (topicList.isNotEmpty) {
-          for (var item in topicList) {
-            if (item is Map && item['books'] is List) {
-              newBooks.addAll(item['books']);
+        Map<String, List<dynamic>> newBooks = {};
+        if (result.isNotEmpty) {
+          for (var item in result) {
+            if (item is Map) {
+              final genre = item['genre'] as String?;
+              if (genre != null && genre.isNotEmpty) {
+                newBooks.putIfAbsent(genre, () => []).add(item);
+              }
             }
           }
         }
 
-        setState(() {
-          books = newBooks;
-        });
+        if (mounted) {
+          setState(() {
+            books = newBooks;
+            if (selectedCategory == '전체') {
+              selectBooks = allBooks;
+            } else {
+              final key = categoryMap[selectedCategory];
+              selectBooks = key != null ? (books[key] ?? []) : [];
+            }
+          });
+        }
       } else {
         debugPrint('API Error: ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('Network/Parsing Error: $e');
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isBooksLoading = false);
+      }
     }
   }
 
   Future<void> _buildBannersFromApi() async {
+    setState(() => isBannersLoading = true);
+
     List<dynamic> generatedBanners = [];
 
     for (int i = 0; i < 6; i++) {
@@ -109,7 +124,7 @@ class _TopicsPageState extends State<TopicsPage> {
       try {
         final response = await ApiClient.dio.get(
           '/books/themes/$theme',
-          queryParameters: {'limit': 20},
+          queryParameters: {'limit': 3},
         );
 
         if (response.statusCode == 200) {
@@ -117,19 +132,12 @@ class _TopicsPageState extends State<TopicsPage> {
               ? jsonDecode(response.data as String)
               : response.data;
 
-          List<dynamic> themeBooks = [];
-          if (decoded is List) {
-            themeBooks = decoded;
-          } else if (decoded is Map && decoded['result'] is List) {
-            themeBooks = decoded['result'];
-          }
-
+          List<dynamic> themeBooks = decoded is List ? decoded : [];
           actualCount = themeBooks.length;
 
           for (var b in themeBooks) {
             if (b is Map && b['cover_url'] != null && (b['cover_url'] as String).isNotEmpty) {
               previewImages.add(b['cover_url'] as String);
-              if (previewImages.length >= 3) break;
             }
           }
         }
@@ -150,6 +158,7 @@ class _TopicsPageState extends State<TopicsPage> {
     if (mounted) {
       setState(() {
         banners = generatedBanners;
+        isBannersLoading = false;
       });
     }
   }
@@ -206,16 +215,20 @@ class _TopicsPageState extends State<TopicsPage> {
   void onCategorySelected(String category) {
     setState(() {
       selectedCategory = category;
+      if (category == '전체') {
+        selectBooks = allBooks;
+      } else {
+        final key = categoryMap[category];
+        selectBooks = key != null ? (books[key] ?? []) : [];
+      }
       isDropdownOpen = false;
     });
-    _fetchTopicsData();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
@@ -246,245 +259,260 @@ class _TopicsPageState extends State<TopicsPage> {
           const SizedBox(width: 16),
         ],
       ),
-
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            controller: _scrollController,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    "이런 주제 어때요?",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+      body: SizedBox(
+        height: double.infinity,
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      "이런 주제 어때요?",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-
-                SizedBox(
-                  height: 150,
-                  child: PageView(
-                    controller: PageController(viewportFraction: 0.7),
-                    padEnds: false,
-                    children: banners.map((banner) {
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => TopicBannerPage(
-                                theme: banner['theme'],
-                                title: banner['title'],
-                                description: banner['description'],
-                              ),
-                            ),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 12),
-                          child: _TopicBannerCard(banner: banner),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFB9566),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        child: Text(
-                          selectedCategory,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                  const SizedBox(height: 12),
+                  // 배너 영역: 독립적인 로딩 상태(isBannersLoading) 적용
+                  SizedBox(
+                    height: 150,
+                    child: isBannersLoading && banners.isEmpty
+                        ? const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFFFF6A00),
                         ),
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() => isDropdownOpen = !isDropdownOpen);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                isDropdownOpen ? '접기' : '카테고리',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.black87,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                isDropdownOpen
-                                    ? Icons.keyboard_arrow_up
-                                    : Icons.keyboard_arrow_down,
-                                size: 18,
-                                color: Colors.black54,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                if (isLoading)
-                  const SizedBox(
-                    height: 200,
-                    child: Center(child: CircularProgressIndicator(color: Color(0xFFFF6A00))),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      shrinkWrap: true,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 24,
-                        childAspectRatio: 0.48,
-                      ),
-                      itemCount: books.length,
-                      itemBuilder: (context, index) {
-                        final book = books[index];
+                    )
+                        : PageView(
+                      controller: PageController(viewportFraction: 0.7),
+                      padEnds: false,
+                      children: banners.map((banner) {
                         return GestureDetector(
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => BookDetailPage(
-                                  bookId: book['id'] ?? book['book_id'],
+                                builder: (_) => TopicBannerPage(
+                                  theme: banner['theme'],
+                                  title: banner['title'],
+                                  description: banner['description'],
                                 ),
                               ),
-                            ).then((_) {
-                              _fetchTopicsData();
-                            });
-                          },
-                          child: _TopicBookCard(book: book),
-                        );
-                      },
-                    ),
-                  ),
-
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
-
-          if (isDropdownOpen)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Stack(
-                children: [
-                  GestureDetector(
-                    onTap: () => setState(() => isDropdownOpen = false),
-                    child: Container(color: Colors.transparent),
-                  ),
-                  Positioned(
-                    top: 270,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      constraints: const BoxConstraints(maxHeight: 300),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final itemWidth = (constraints.maxWidth - (8 * 3)) / 4;
-                            return Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: categoryKeys.map((category) {
-                                final isSelected = category == selectedCategory;
-                                return GestureDetector(
-                                  onTap: () => onCategorySelected(category),
-                                  child: Container(
-                                    width: itemWidth,
-                                    padding: const EdgeInsets.symmetric(vertical: 6),
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? const Color(0xFFFB9566)
-                                            : const Color(0xFFE5E7EB),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      category,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: isSelected
-                                            ? const Color(0xFFFB9566)
-                                            : Colors.black87,
-                                        fontWeight:
-                                        isSelected ? FontWeight.bold : FontWeight.normal,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
                             );
                           },
-                        ),
-                      ),
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 12),
+                            child: _TopicBannerCard(banner: banner),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFB9566),
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: Text(
+                            selectedCategory,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() => isDropdownOpen = !isDropdownOpen);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  isDropdownOpen ? '접기' : '카테고리',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  isDropdownOpen
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
+                                  size: 18,
+                                  color: Colors.black54,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // 도서 목록 영역: 독립적인 로딩 상태(isBooksLoading) 적용
+                  if (isBooksLoading && selectBooks.isEmpty)
+                    const SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: CircularProgressIndicator(color: Color(0xFFFF6A00)),
+                      ),
+                    )
+                  else if (selectBooks.isEmpty)
+                    const SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: Text(
+                          '표시할 도서 정보가 없습니다.',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        addAutomaticKeepAlives: false,
+                        addRepaintBoundaries: false,
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 24,
+                          childAspectRatio: 0.48,
+                        ),
+                        itemCount: selectBooks.length,
+                        itemBuilder: (context, index) {
+                          dynamic book = selectBooks[index];
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BookDetailPage(
+                                    bookId: book['id'] ?? book['book_id'],
+                                  ),
+                                ),
+                              ).then((_) {
+                                _fetchTopicsData();
+                              });
+                            },
+                            child: _TopicBookCard(book: book),
+                          );
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
-        ],
+            if (isDropdownOpen)
+              Positioned.fill(
+                child: Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: () => setState(() => isDropdownOpen = false),
+                      child: Container(color: Colors.transparent),
+                    ),
+                    Positioned(
+                      top: 270,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        constraints: const BoxConstraints(maxHeight: 300),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final itemWidth = (constraints.maxWidth - (8 * 3)) / 4;
+                              return Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: categoryKeys.map((category) {
+                                  final isSelected = category == selectedCategory;
+                                  return GestureDetector(
+                                    onTap: () => onCategorySelected(category),
+                                    child: Container(
+                                      width: itemWidth,
+                                      padding: const EdgeInsets.symmetric(vertical: 6),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? const Color(0xFFFB9566)
+                                              : const Color(0xFFE5E7EB),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        category,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isSelected
+                                              ? const Color(0xFFFB9566)
+                                              : Colors.black87,
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
-
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 2,
         selectedItemColor: const Color(0xFFF84E00),
@@ -593,6 +621,8 @@ class _TopicBannerCard extends StatelessWidget {
                                 ? Image.network(
                               imgUrl,
                               fit: BoxFit.cover,
+                              cacheWidth: 60,
+                              cacheHeight: 60,
                               errorBuilder: (_, __, ___) => const Icon(
                                 Icons.book,
                                 size: 16,
@@ -667,6 +697,8 @@ class _TopicBookCard extends StatelessWidget {
                   ? Image.network(
                 coverUrl,
                 fit: BoxFit.cover,
+                cacheWidth: 300,
+                cacheHeight: 450,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey[200],
                   child: const Center(
@@ -684,7 +716,6 @@ class _TopicBookCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-
         Text(
           title,
           maxLines: 1,
@@ -697,7 +728,6 @@ class _TopicBookCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-
         Align(
           alignment: Alignment.topCenter,
           child: Container(

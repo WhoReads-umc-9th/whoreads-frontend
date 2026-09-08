@@ -189,9 +189,9 @@ class _CelebrityDetailPageState extends State<CelebrityDetailPage> {
             /// ================= 책 리스트 =================
             ListView.builder(
               itemCount: books.length,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemBuilder: (context, index) {
+shrinkWrap: true,
+physics: const NeverScrollableScrollPhysics(),
+itemBuilder: (context, index) {
                 final book = books[index];
                 return _BookItem(
                   book: book,
@@ -249,7 +249,7 @@ class _BookItem extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  book['author'],
+                  book['author_name'],
                   style: const TextStyle(color: Colors.grey),
                 ),
               ],
