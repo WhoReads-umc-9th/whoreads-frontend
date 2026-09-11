@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:whoreads/screens/my_library/my_library_page.dart';
+import 'signup_profile_page.dart';
 
 import '../../core/network/api_client.dart';
 import '../../widgets/auth/common_dialog.dart';
@@ -137,10 +137,10 @@ class _SignupPageState extends State<SignupPage> {
     final id = _idCtrl.text.trim();
     final pw = _pwCtrl.text;
 
-    Navigator.pushReplacement(
+    Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MyLibraryPage(
+        builder: (_) => SignupProfilePage.email(
           email: widget.email,
           loginId: id,
           password: pw,

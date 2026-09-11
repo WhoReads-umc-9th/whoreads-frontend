@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../auth/signup_profile_page.dart';
 import 'package:flutter/services.dart';
 import 'package:whoreads/screens/auth/EmailVerifyPage.dart';
 
@@ -120,12 +121,19 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         );
         break;
       case KakaoLoginStatus.needsSignup:
-        // 신규 회원 → 닉네임/성별/연령 입력 화면(메인 위 다이얼로그)으로
+        final registrationToken = result.registrationToken;
+        if (registrationToken == null || registrationToken.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('가입 정보가 없습니다. 카카오 로그인을 다시 시도해주세요.')),
+          );
+          return;
+        }
+        // 신규 회원 → 닉네임/성별/연령 입력 후 가입 완료
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => MyLibraryPage(
-              kakaoRegistrationToken: result.registrationToken,
-              kakaoNickname: result.nickname,
+            builder: (_) => SignupProfilePage.kakao(
+              registrationToken: registrationToken,
+              initialNickname: result.nickname,
             ),
           ),
         );

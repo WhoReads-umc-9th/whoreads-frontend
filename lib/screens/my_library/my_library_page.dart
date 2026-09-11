@@ -6,8 +6,6 @@ import 'package:whoreads/screens/timer/timer_default_screen.dart';
 import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/auth/token_storage.dart';
 import '../../core/network/api_client.dart';
-import '../auth/SignupOverlayDialog.dart';
-import '../auth/KakaoSignupDialog.dart';
 import '../celebrities/celebrities_page.dart';
 import '../dna_test/dnaTestDialog.dart';
 import '../users/profile.dart';
@@ -18,22 +16,7 @@ import 'widgets/dna_card.dart';
 import 'widgets/reading_summary_card.dart';
 
 class MyLibraryPage extends StatefulWidget {
-  final String? email;
-  final String? loginId;
-  final String? password;
-
-  /// 카카오 신규 회원가입 시 추가 정보 입력 다이얼로그를 띄우기 위한 값
-  final String? kakaoRegistrationToken;
-  final String? kakaoNickname;
-
-  const MyLibraryPage({
-    super.key,
-    this.email,
-    this.loginId,
-    this.password,
-    this.kakaoRegistrationToken,
-    this.kakaoNickname,
-  });
+  const MyLibraryPage({super.key});
 
   @override
   State<MyLibraryPage> createState() => _MyLibraryPageState();
@@ -45,72 +28,11 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
   bool isLoading = true;
   bool hasDnaResult = false;
 
-  int _refreshKey = 0;
-
   @override
   void initState() {
     super.initState();
 
     _initialize();
-
-    if (widget.email != null &&
-        widget.loginId != null &&
-        widget.password != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showSignupDialog();
-      });
-    } else if (widget.kakaoRegistrationToken != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showKakaoSignupDialog();
-      });
-    }
-  }
-
-  Future<void> _showKakaoSignupDialog() async {
-    final resultNickname = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.5),
-      builder: (_) {
-        return KakaoSignupDialog(
-          registrationToken: widget.kakaoRegistrationToken!,
-          initialNickname: widget.kakaoNickname,
-        );
-      },
-    );
-
-    if (resultNickname != null && resultNickname.isNotEmpty) {
-      await _initialize();
-
-      setState(() {
-        nickname = resultNickname;
-        _refreshKey++;
-      });
-    }
-  }
-
-  Future<void> _showSignupDialog() async {
-    final resultNickname = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.5),
-      builder: (_) {
-        return SignupOverlayDialog(
-          email: widget.email!,
-          loginId: widget.loginId!,
-          password: widget.password!,
-        );
-      },
-    );
-
-    if (resultNickname != null && resultNickname.isNotEmpty) {
-      await _initialize();
-
-      setState(() {
-        nickname = resultNickname;
-        _refreshKey++;
-      });
-    }
   }
 
   void _showDnaTestDialog() {
@@ -307,7 +229,6 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
             /// TabBarView
             Expanded(
               child: TabBarView(
-                key: ValueKey(_refreshKey),
                 children: [
                   SavedTab(),
                   ReadingTab(books: const []),
