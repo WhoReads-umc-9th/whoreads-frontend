@@ -15,6 +15,7 @@ import '../celebrities/celebrities_book_page.dart';
 import '../dna_test/dnaTestDialog.dart';
 import 'account_profile_page.dart';
 import 'follow_list_page.dart';
+import 'terms_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -537,6 +538,13 @@ Device: $deviceModel
                   _buildNavRow(
                     '문의 하기',
                     onTap: _sendContactEmail, // 기존 탈퇴 팝업 연결에서 메일 전송 로직으로 수정
+                  ),
+                  _buildNavRow(
+                    '이용약관 / 개인정보수집 / 정보수신',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TermsPage()),
+                    ),
                   ),
                   _buildNavRow(
                     '회원 탈퇴',
