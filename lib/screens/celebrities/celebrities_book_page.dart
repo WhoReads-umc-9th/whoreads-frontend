@@ -62,7 +62,7 @@ class CelebrityBook {
       bookId: asInt(bookNode?['id'] ?? bookNode?['book_id'] ?? json['book_id']) ?? 0,
       title: bookNode?['title'] ?? json['book_title'] ?? '제목 없음',
       coverUrl: bookNode?['cover_url'] ?? json['book_cover'] ?? '',
-      author: bookNode?['author_name'] ?? bookNode?['author'] ?? json['author'] ?? '저자 미상',
+      author: json['book_author'] ?? bookNode?['book_author'] ?? json['author'] ?? '저자 미상',
     );
   }
 }

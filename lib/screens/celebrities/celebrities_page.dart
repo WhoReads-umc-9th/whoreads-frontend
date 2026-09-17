@@ -24,8 +24,10 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
   List<dynamic> celebrities = [];
   bool isLoading = false;
 
-  final Map<String, String?> categoryMap = {
-    '전체': null, '학자': 'SCHOLAR', '스포츠선수': 'ATHLETE', '과학관장': 'SCIENCE_DIRECTOR',
+
+
+  Map<String, String?> categoryMap = {
+    '전체': null, '학자': 'SCHOLAR', '스포츠선수': 'ATHLETE', '과학관장': 'PHYSICIST',
     '가수': 'SINGER', '아나운서': 'ANNOUNCER', '개그맨': 'COMEDIAN',
     '영화감독': 'MOVIE_DIRECTOR', '번역가': 'TRANSLATOR', '프로파일러': 'PROFILER', '정치인': 'POLITICIAN',
     '강사': 'INSTRUCTOR', '배우': 'ACTOR', '뮤지컬배우': 'MUSICAL_ACTOR',
@@ -39,7 +41,53 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
   @override
   void initState() {
     super.initState();
+    fetchCelebritiesCategories();
     fetchCelebrities();
+  }
+
+  Future<void> fetchCelebritiesCategories() async {
+    setState(() => isLoading = true);
+    final tag = categoryMap[selectedCategory];
+
+    try {
+      final response = await ApiClient.dio.get(
+        '/celebrities/categories',
+        queryParameters: tag == null ? null : {'tag': tag},
+      );
+
+      debugPrint('STATUS CODE: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final decoded = response.data is String
+            ? jsonDecode(response.data as String)
+            : response.data;
+        final List<dynamic> items;
+        if (decoded is List) {
+          items = decoded;
+        } else if (decoded is Map<String, dynamic> && decoded['result'] is List) {
+          items = decoded['result'] as List<dynamic>;
+        } else {
+          items = [];
+        }
+
+        Map<String, String?> newCategoryMap = {};
+
+        for (var it in items)
+          {
+            newCategoryMap.putIfAbsent(it['name'], () => it['code']);
+          }
+
+        setState(() {
+          categoryMap = newCategoryMap;
+        });
+      } else {
+        debugPrint('API 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('네트워크 에러: $e');
+    }
+
+    setState(() => isLoading = false);
   }
 
   Future<void> fetchCelebrities() async {
