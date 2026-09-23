@@ -9,6 +9,7 @@ class CelebrityDetail {
   final int id;
   final String name;
   final String imageUrl;
+  final String imageCopyright;
   final String shortBio;
   final List<String> jobTags;
   final bool isFollowing; // 🌟 [추가됨] 팔로우 상태 파싱용
@@ -17,6 +18,7 @@ class CelebrityDetail {
     required this.id,
     required this.name,
     required this.imageUrl,
+    required this.imageCopyright,
     required this.shortBio,
     required this.jobTags,
     this.isFollowing = false,
@@ -27,6 +29,7 @@ class CelebrityDetail {
       id: json['id'] ?? 0,
       name: json['name'] ?? '이름 없음',
       imageUrl: json['image_url'] ?? '',
+      imageCopyright: json['image_copyright']?.toString() ?? '',
       shortBio: json['short_bio'] ?? '',
       jobTags: List<String>.from(json['job_tags'] ?? []),
       // 서버에서 팔로우 여부를 내려준다면 파싱, 없으면 기본값 false
@@ -337,22 +340,11 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
             Center(
               child: Column(
                 children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      image: celebrityProfile!.imageUrl.isNotEmpty
-                          ? DecorationImage(
-                        image: NetworkImage(celebrityProfile!.imageUrl),
-                        fit: BoxFit.cover,
-                      )
-                          : null,
-                      color: Colors.grey[200],
-                    ),
-                    child: celebrityProfile!.imageUrl.isEmpty
-                        ? const Icon(Icons.person, size: 50, color: Colors.grey)
-                        : null,
+                  _CelebrityProfileImage(
+                    imageUrl: celebrityProfile!.imageUrl,
+                    imageCopyright: celebrityProfile!.imageCopyright,
+                    size: 100,
+                    borderRadius: 16,
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -514,6 +506,91 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CelebrityProfileImage extends StatelessWidget {
+  final String imageUrl;
+  final String imageCopyright;
+  final double size;
+  final double borderRadius;
+
+  const _CelebrityProfileImage({
+    required this.imageUrl,
+    required this.imageCopyright,
+    required this.size,
+    required this.borderRadius,
+  });
+
+  void _showCopyright(BuildContext context) {
+    final copyright = imageCopyright.trim().isEmpty
+        ? '저작권 정보가 없습니다.'
+        : imageCopyright.trim();
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Text(copyright),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: imageUrl.isNotEmpty
+                ? Image.network(
+                    imageUrl,
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Image.asset(
+                      'assets/images/person.png',
+                      width: size,
+                      height: size,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : Image.asset(
+                    'assets/images/person.png',
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                  ),
+          ),
+          Positioned(
+            right: 4,
+            bottom: 4,
+            child: GestureDetector(
+              onTap: () => _showCopyright(context),
+              child: const Icon(
+                Icons.info_outline,
+                size: 20,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    color: Colors.black54,
+                    blurRadius: 2,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
