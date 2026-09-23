@@ -397,18 +397,64 @@ class _CelebrityCard extends StatelessWidget {
         children: [
           AspectRatio(
             aspectRatio: 3 / 4,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                celeb['image_url']?.toString() ?? '',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.person, color: Colors.grey),
-                  );
-                },
-              ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: (celeb['image_url']?.toString() ?? '').isNotEmpty
+                        ? Image.network(
+                            celeb['image_url'].toString(),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Image.asset(
+                              'assets/images/person.png',
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Image.asset(
+                            'assets/images/person.png',
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                ),
+                Positioned(
+                  right: 4,
+                  bottom: 4,
+                  child: GestureDetector(
+                    onTap: () {
+                      final copyright =
+                          celeb['image_copyright']?.toString().trim() ?? '';
+                      showDialog<void>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          content: Text(
+                            copyright.isEmpty
+                                ? '저작권 정보가 없습니다.'
+                                : copyright,
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('확인'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    child: const Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black54,
+                          blurRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 6),
