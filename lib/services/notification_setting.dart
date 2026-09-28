@@ -2,7 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:whoreads/services/notification/notification_api_service.dart';
 
 enum Day {
-  monday, tuesday, wednesday, thursday, friday, saturday, sunday;
+  monday,
+  tuesday,
+  wednesday,
+  thursday,
+  friday,
+  saturday,
+  sunday;
+
   String get toServerParam => name.toUpperCase();
 }
 
@@ -20,8 +27,10 @@ enum NotificationSettingType {
 
   String get toServerParam => name.toUpperCase();
 }
+
 class NotificationSettingService {
-  final NotificationApiService _notificationApiService = NotificationApiService();
+  final NotificationApiService _notificationApiService =
+      NotificationApiService();
   Future<void> addRoutine({
     required TimePeriod timePeriod,
     List<Day>? days,
@@ -30,23 +39,26 @@ class NotificationSettingService {
   }) async {
     try {
       final int actualHour = _convertTo24Hour(timePeriod, hour ?? 0);
-      final String formattedTime = '${actualHour.toString().padLeft(2, '0')}:${(minutes ?? 0).toString().padLeft(2, '0')}';
-      final List<String>? daysParam = days?.map((day) => day.toServerParam).toList();
+      final String formattedTime =
+          '${actualHour.toString().padLeft(2, '0')}:${(minutes ?? 0).toString().padLeft(2, '0')}';
+      final List<String>? daysParam = days
+          ?.map((day) => day.toServerParam)
+          .toList();
 
-      _notificationApiService.addNotificationSetting(
-          notificationType: NotificationSettingType.routine.toServerParam,
-          days: daysParam,
-          time: formattedTime
+      await _notificationApiService.addNotificationSetting(
+        notificationType: NotificationSettingType.routine.toServerParam,
+        days: daysParam,
+        time: formattedTime,
       );
     } catch (e) {
       debugPrint('routine 추가 실패: $e');
       rethrow;
     }
   }
-  Future<Map<String,dynamic>?> getAllSettings() async {
+
+  Future<Map<String, dynamic>?> getAllSettings() async {
     try {
-      final Map<String,dynamic> response =
-      await _notificationApiService
+      final Map<String, dynamic> response = await _notificationApiService
           .getNotificationSetting();
       return response;
     } catch (e) {
@@ -54,8 +66,6 @@ class NotificationSettingService {
       return null;
     }
   }
-
-
 
   Future<void> updateSetting({
     required int settingId,
@@ -73,16 +83,22 @@ class NotificationSettingService {
       List<String>? daysParam;
 
       if (notificationType == NotificationSettingType.routine) {
-        if (rawTimeStr == null && (timePeriod == null || hour == null || minutes == null || days == null)) {
+        if (rawTimeStr == null &&
+            (timePeriod == null ||
+                hour == null ||
+                minutes == null ||
+                days == null)) {
           throw Exception("ROUTINE 타입 수정 시에는 시간, 분, 요일 데이터가 필수입니다.");
         }
         if (rawTimeStr != null && rawDayStr != null) {
-          formattedTime = rawTimeStr.length >= 5 ? rawTimeStr.substring(0, 5) : rawTimeStr;
+          formattedTime = rawTimeStr.length >= 5
+              ? rawTimeStr.substring(0, 5)
+              : rawTimeStr;
           daysParam = rawDayStr;
-        }
-        else {
+        } else {
           final int actualHour = _convertTo24Hour(timePeriod!, hour ?? 0);
-          formattedTime = '${actualHour.toString().padLeft(2, '0')}:${(minutes ?? 0).toString().padLeft(2, '0')}';
+          formattedTime =
+              '${actualHour.toString().padLeft(2, '0')}:${(minutes ?? 0).toString().padLeft(2, '0')}';
           daysParam = days?.map((day) => day.toServerParam).toList();
         }
       }
@@ -94,7 +110,9 @@ class NotificationSettingService {
         days: daysParam,
         notificationSettingId: settingId,
       );
-      debugPrint('${notificationType.name} 수정 성공 (ID: $settingId, 활성화: $isEnabled)');
+      debugPrint(
+        '${notificationType.name} 수정 성공 (ID: $settingId, 활성화: $isEnabled)',
+      );
     } catch (e) {
       debugPrint('${notificationType.name} 수정 실패: $e');
       rethrow;
@@ -103,8 +121,8 @@ class NotificationSettingService {
 
   Future<void> addFollowSetting() async {
     try {
-      _notificationApiService.addNotificationSetting(
-          notificationType: NotificationSettingType.follow.toServerParam,
+      await _notificationApiService.addNotificationSetting(
+        notificationType: NotificationSettingType.follow.toServerParam,
       );
     } catch (e) {
       debugPrint('routine 추가 실패: $e');
@@ -123,10 +141,12 @@ class NotificationSettingService {
 
   Future<void> deleteSetting({required int settingId}) async {
     try {
-      _notificationApiService.deleteNotificationSetting(
-          notificationSettingId: settingId);
+      await _notificationApiService.deleteNotificationSetting(
+        notificationSettingId: settingId,
+      );
     } catch (e) {
       debugPrint("삭제 실패 : $e");
+      rethrow;
     }
   }
 }

@@ -89,6 +89,12 @@ class ApiClient {
 
   static Dio get dio => _dio;
 
+  static Future<Response<T>> checked<T>(Future<Response<T>> request) async {
+    final response = await request;
+    requireSuccess(response);
+    return response;
+  }
+
   static void requireSuccess(Response response) {
     final status = response.statusCode ?? 0;
     if (status < 200 ||

@@ -12,11 +12,18 @@ class RoutineSettingPage extends StatefulWidget {
 }
 
 class _RoutineSettingPageState extends State<RoutineSettingPage> {
-  final NotificationSettingService _settingService = NotificationSettingService();
+  final NotificationSettingService _settingService =
+      NotificationSettingService();
 
   final List<String> _ampmList = ['오전', '오후'];
-  final List<String> _hourList = List.generate(12, (i) => (i + 1).toString().padLeft(2, '0'));
-  final List<String> _minuteList = List.generate(60, (i) => i.toString().padLeft(2, '0'));
+  final List<String> _hourList = List.generate(
+    12,
+    (i) => (i + 1).toString().padLeft(2, '0'),
+  );
+  final List<String> _minuteList = List.generate(
+    60,
+    (i) => i.toString().padLeft(2, '0'),
+  );
 
   int _selectedAmpmIndex = 0;
   int _selectedHourIndex = 8;
@@ -27,7 +34,15 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
   late FixedExtentScrollController _minuteController;
 
   final List<String> _daysKor = ['일', '월', '화', '수', '목', '금', '토'];
-  final List<String> _daysEng = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+  final List<String> _daysEng = [
+    'SUNDAY',
+    'MONDAY',
+    'TUESDAY',
+    'WEDNESDAY',
+    'THURSDAY',
+    'FRIDAY',
+    'SATURDAY',
+  ];
   final List<bool> _selectedDays = List.generate(7, (_) => false);
 
   int _initAmpmIndex = 0;
@@ -41,7 +56,8 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
   bool get _isDataChanged {
     if (!_isEditMode) return true;
 
-    final bool isTimeChanged = _selectedAmpmIndex != _initAmpmIndex ||
+    final bool isTimeChanged =
+        _selectedAmpmIndex != _initAmpmIndex ||
         _selectedHourIndex != _initHourIndex ||
         _selectedMinuteIndex != _initMinuteIndex;
 
@@ -66,9 +82,15 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
     super.initState();
     _initializeData();
 
-    _ampmController = FixedExtentScrollController(initialItem: _selectedAmpmIndex);
-    _hourController = FixedExtentScrollController(initialItem: _selectedHourIndex);
-    _minuteController = FixedExtentScrollController(initialItem: _selectedMinuteIndex);
+    _ampmController = FixedExtentScrollController(
+      initialItem: _selectedAmpmIndex,
+    );
+    _hourController = FixedExtentScrollController(
+      initialItem: _selectedHourIndex,
+    );
+    _minuteController = FixedExtentScrollController(
+      initialItem: _selectedMinuteIndex,
+    );
   }
 
   @override
@@ -158,18 +180,25 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
     );
   }
 
+  bool _isSaving = false;
+
   Future<void> _handleSave() async {
-    if (!_isSaveButtonEnabled) return;
+    if (!_isSaveButtonEnabled || _isSaving) return;
+    setState(() => _isSaving = true);
 
     final List<Day> selectedDaysEnum = [];
     for (int i = 0; i < 7; i++) {
       if (_selectedDays[i]) {
-        selectedDaysEnum.add(Day.values.firstWhere((e) => e.toServerParam == _daysEng[i]));
+        selectedDaysEnum.add(
+          Day.values.firstWhere((e) => e.toServerParam == _daysEng[i]),
+        );
       }
     }
 
     final int targetHour = _selectedHourIndex + 1;
-    final TimePeriod targetPeriod = _selectedAmpmIndex == 0 ? TimePeriod.am : TimePeriod.pm;
+    final TimePeriod targetPeriod = _selectedAmpmIndex == 0
+        ? TimePeriod.am
+        : TimePeriod.pm;
 
     try {
       if (_isEditMode) {
@@ -192,7 +221,13 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
       }
       if (mounted) Navigator.maybePop(context);
     } catch (e) {
-      debugPrint("저장 오류: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("저장하지 못했습니다. 다시 시도해주세요.")));
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -205,7 +240,11 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+            size: 20,
+          ),
           onPressed: () {
             if (!_hasSelectedAnyDay) {
               _showExitWarningDialog();
@@ -216,7 +255,11 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
         ),
         title: Text(
           _isEditMode ? '독서 루틴 알림' : '알림 추가',
-          style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         centerTitle: true,
         actions: [
@@ -242,7 +285,10 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
                     height: 48,
                     margin: const EdgeInsets.symmetric(horizontal: 24),
                     decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFFFF5722), width: 1.5),
+                      border: Border.all(
+                        color: const Color(0xFFFF5722),
+                        width: 1.5,
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
@@ -250,10 +296,41 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: Row(
                       children: [
-                        Expanded(child: _buildPickerWheel(controller: _ampmController, items: _ampmList, selectedIndex: _selectedAmpmIndex, onChanged: (index) => setState(() => _selectedAmpmIndex = index))),
-                        Expanded(child: _buildPickerWheel(controller: _hourController, items: _hourList, selectedIndex: _selectedHourIndex, onChanged: (index) => setState(() => _selectedHourIndex = index))),
-                        const Text(':', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black)),
-                        Expanded(child: _buildPickerWheel(controller: _minuteController, items: _minuteList, selectedIndex: _selectedMinuteIndex, onChanged: (index) => setState(() => _selectedMinuteIndex = index))),
+                        Expanded(
+                          child: _buildPickerWheel(
+                            controller: _ampmController,
+                            items: _ampmList,
+                            selectedIndex: _selectedAmpmIndex,
+                            onChanged: (index) =>
+                                setState(() => _selectedAmpmIndex = index),
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildPickerWheel(
+                            controller: _hourController,
+                            items: _hourList,
+                            selectedIndex: _selectedHourIndex,
+                            onChanged: (index) =>
+                                setState(() => _selectedHourIndex = index),
+                          ),
+                        ),
+                        const Text(
+                          ':',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildPickerWheel(
+                            controller: _minuteController,
+                            items: _minuteList,
+                            selectedIndex: _selectedMinuteIndex,
+                            onChanged: (index) =>
+                                setState(() => _selectedMinuteIndex = index),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -272,7 +349,10 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
 
                   Color buttonColor = Colors.white;
                   Color textColor = const Color(0xFF9CA3AF);
-                  Border border = Border.all(color: const Color(0xFFE5E7EB), width: 1.0);
+                  Border border = Border.all(
+                    color: const Color(0xFFE5E7EB),
+                    width: 1.0,
+                  );
 
                   if (isSelected) {
                     buttonColor = const Color(0xFFFF5722);
@@ -281,7 +361,9 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
                   }
 
                   return InkWell(
-                    onTap: () => setState(() => _selectedDays[index] = !_selectedDays[index]),
+                    onTap: () => setState(
+                      () => _selectedDays[index] = !_selectedDays[index],
+                    ),
                     borderRadius: BorderRadius.circular(100),
                     child: Container(
                       width: 40,
@@ -295,9 +377,9 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
                       child: Text(
                         dayStr,
                         style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500, // 미선택도 정렬감 있게 500 세팅
-                            color: textColor
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500, // 미선택도 정렬감 있게 500 세팅
+                          color: textColor,
                         ),
                       ),
                     ),
@@ -315,13 +397,19 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
                   width: double.infinity,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: _isSaveButtonEnabled ? const Color(0xFF1A1A1A) : const Color(0xFFD1D5DB),
+                    color: _isSaveButtonEnabled
+                        ? const Color(0xFF1A1A1A)
+                        : const Color(0xFFD1D5DB),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
                   child: const Text(
                     '완료',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -332,7 +420,12 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
     );
   }
 
-  Widget _buildPickerWheel({required FixedExtentScrollController controller, required List<String> items, required int selectedIndex, required ValueChanged<int> onChanged}) {
+  Widget _buildPickerWheel({
+    required FixedExtentScrollController controller,
+    required List<String> items,
+    required int selectedIndex,
+    required ValueChanged<int> onChanged,
+  }) {
     return ListWheelScrollView.useDelegate(
       itemExtent: 44,
       physics: const FixedExtentScrollPhysics(),
@@ -342,7 +435,16 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
         childCount: items.length,
         builder: (context, index) {
           final isTarget = (index == selectedIndex);
-          return Center(child: Text(items[index], style: TextStyle(fontSize: 22, fontWeight: isTarget ? FontWeight.bold : FontWeight.w400, color: isTarget ? Colors.black : Colors.grey.shade400)));
+          return Center(
+            child: Text(
+              items[index],
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: isTarget ? FontWeight.bold : FontWeight.w400,
+                color: isTarget ? Colors.black : Colors.grey.shade400,
+              ),
+            ),
+          );
         },
       ),
     );
