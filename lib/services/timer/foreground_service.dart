@@ -6,6 +6,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 void startCallback() {
   FlutterForegroundTask.setTaskHandler(MyTimerHandler());
 }
+
 class MyTimerHandler extends TaskHandler {
   Timer? _timer;
   int _currentSeconds = 0;
@@ -15,15 +16,16 @@ class MyTimerHandler extends TaskHandler {
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     _currentSeconds =
         await FlutterForegroundTask.getData<int>(key: 'currentSeconds') ?? 1800;
+    _isPaused =
+        !(await FlutterForegroundTask.getData<bool>(key: 'isRunning') ?? true);
     _startCountdown();
   }
 
   @override
   void onNotificationPressed() {
-    FlutterForegroundTask.sendDataToMain({
-      'type': 'notification_pressed',
-    });
+    FlutterForegroundTask.sendDataToMain({'type': 'notification_pressed'});
   }
+
   void _startCountdown() {
     _timer?.cancel();
 
@@ -71,6 +73,11 @@ class MyTimerHandler extends TaskHandler {
   void onReceiveData(Object data) {
     if (data is Map) {
       switch (data['type']) {
+        case 'sync':
+          _currentSeconds = data['currentSeconds'] as int;
+          _isPaused = !(data['isRunning'] as bool);
+          _startCountdown();
+          break;
         case 'pause':
           _pause();
           break;

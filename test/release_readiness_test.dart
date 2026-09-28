@@ -171,6 +171,7 @@ void main() {
           await prefs.setString(
             'timer_session',
             jsonEncode({
+              'sessionId': 7,
               'remainingMinutes': 10,
               'totalReadMinutes': 0,
               'status': 'PAUSED',
@@ -207,6 +208,23 @@ void main() {
       },
     );
   }
+
+  test('TIMER: completion failure retains recoverable session', () async {
+    final timer = TimerService();
+    timer.sessionId = 7;
+    timer.onTimeSelected(10);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('timer_session', '{"sessionId":7}');
+    ApiClient.dio.httpClientAdapter = FakeApi((o) => jsonResponse({}, 500));
+    await timer.completeTimer();
+    expect(timer.sessionId, 7);
+    expect(prefs.containsKey('timer_session'), isTrue);
+    expect(timer.lastError, isNotNull);
+    ApiClient.dio.httpClientAdapter = FakeApi((o) => jsonResponse({}));
+    await timer.completeTimer();
+    expect(timer.sessionId, -1);
+    expect(prefs.containsKey('timer_session'), isFalse);
+  });
 
   testWidgets('DNA: retry preserves the same answer IDs', (tester) async {
     final submissions = <List<dynamic>>[];

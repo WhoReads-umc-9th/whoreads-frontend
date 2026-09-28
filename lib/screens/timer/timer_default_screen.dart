@@ -43,9 +43,11 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
 
     final type = await _service.checkRecoveryState();
 
-    if (type == TimerRecoveryType.none) return;
+    if (!mounted || type == TimerRecoveryType.none) return;
 
-    setState(() { _isPopupShowing = true; });
+    setState(() {
+      _isPopupShowing = true;
+    });
 
     String title = "";
     String? description;
@@ -68,7 +70,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
         isSingle = true;
         onRight = () async {
           await _service.handleExitAction();
-          _closePopup();
+          if (_service.lastError == null) _closePopup();
         };
       case TimerRecoveryType.pausedWithLeft:
         title = "문제가 발생하여 타이머가 중단되었습니다.\n이전 독서를 이어할까요?";
@@ -80,11 +82,11 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
         ];
         onLeft = () async {
           await _service.handleExitAction();
-          _closePopup();
+          if (_service.lastError == null) _closePopup();
         };
         onRight = () async {
           await _service.handleResumeAction();
-          _closePopup();
+          if (_service.lastError == null) _closePopup();
         };
         break;
 
@@ -98,11 +100,11 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
         ];
         onLeft = () async {
           await _service.handleExitAction();
-          _closePopup();
+          if (_service.lastError == null) _closePopup();
         };
         onRight = () async {
           await _service.handleReflectAction();
-          _closePopup();
+          if (_service.lastError == null) _closePopup();
         };
         break;
 
@@ -111,12 +113,10 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
         description = "2시간 이상 중단되면 이전 독서를 이어할 수 없습니다.\n새로운 독서를 시작해볼까요?";
         rightText = "확인";
         isSingle = true;
-        highlights = [
-          HighlightText(label: "기록", value: recordStr),
-        ];
+        highlights = [HighlightText(label: "기록", value: recordStr)];
         onRight = () async {
           await _service.handleExitAction();
-          _closePopup();
+          if (_service.lastError == null) _closePopup();
         };
         break;
       default:
@@ -139,10 +139,13 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
       ),
     );
   }
+
   void _closePopup() {
     if (mounted) {
       Navigator.of(context).pop();
-      setState(() { _isPopupShowing = false; });
+      setState(() {
+        _isPopupShowing = false;
+      });
     }
   }
 
@@ -164,6 +167,14 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
                   _buildTimerDisplay(),
                   const SizedBox(height: 40),
                   _buildControlButtons(),
+                  if (_service.lastError != null)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        _service.lastError!,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                 ],
               );
             },
@@ -252,20 +263,19 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
     required VoidCallback onTap,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: _service.isBusy ? null : onTap,
       child: Container(
         width: 80,
         height: 80,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: color,
-        ),
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
               color: textColor,
-              fontWeight: textColor == Colors.white ? FontWeight.bold : FontWeight.w500,
+              fontWeight: textColor == Colors.white
+                  ? FontWeight.bold
+                  : FontWeight.w500,
               fontSize: 16,
             ),
           ),
@@ -286,7 +296,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const MyLibraryPage()),
-          )
+          ),
         },
       ),
       actions: [
@@ -295,7 +305,9 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const TimerStatisticsPage()),
+              MaterialPageRoute(
+                builder: (context) => const TimerStatisticsPage(),
+              ),
             );
           },
         ),

@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/reading_session_model.dart';
 
-
 class TimerLocalStorage {
   TimerLocalStorage._();
 
@@ -12,11 +11,17 @@ class TimerLocalStorage {
 
   static const _key = 'timer_session';
 
-  Future<void> save(ActiveReadingSession session) async {
+  Future<void> save(
+    ActiveReadingSession session, {
+    int? remainingSeconds,
+    int? totalSeconds,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
 
     final data = {
       'sessionId': session.sessionId,
+      if (remainingSeconds != null) 'remainingSeconds': remainingSeconds,
+      if (totalSeconds != null) 'totalSeconds': totalSeconds,
       'status': session.status,
       'totalReadMinutes': session.totalReadMinutes,
       'remainingMinutes': session.remainingMinutes,
@@ -28,6 +33,7 @@ class TimerLocalStorage {
 
     await prefs.setString(_key, jsonEncode(data));
   }
+
   Future<ActiveReadingSession?> load() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -51,6 +57,7 @@ class TimerLocalStorage {
       return null;
     }
   }
+
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key);

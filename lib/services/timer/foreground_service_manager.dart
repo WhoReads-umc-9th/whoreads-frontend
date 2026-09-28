@@ -28,9 +28,16 @@ class ForegroundServiceManager {
     );
   }
 
-  Future<void> start({required int currentSeconds, required bool isRunning}) async {
-    await FlutterForegroundTask.saveData(key: 'currentSeconds', value: currentSeconds);
+  Future<void> start({
+    required int currentSeconds,
+    required bool isRunning,
+  }) async {
+    await FlutterForegroundTask.saveData(
+      key: 'currentSeconds',
+      value: currentSeconds,
+    );
 
+    await FlutterForegroundTask.saveData(key: 'isRunning', value: isRunning);
     List<NotificationButton> buttons = [];
     if (isRunning) {
       buttons = [
@@ -49,7 +56,11 @@ class ForegroundServiceManager {
         : '타이머가 중지되었습니다. ${_formatTime(currentSeconds)}';
 
     if (await FlutterForegroundTask.isRunningService) {
-      debugPrint('🔍 [ForegroundServiceManager] 이미 서비스 동작 중 -> updateService 실행');
+      FlutterForegroundTask.sendDataToTask({
+        'type': 'sync',
+        'currentSeconds': currentSeconds,
+        'isRunning': isRunning,
+      });
       await FlutterForegroundTask.updateService(
         notificationTitle: '독서 타이머',
         notificationText: bodyText,

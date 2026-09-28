@@ -14,7 +14,7 @@ enum TimerRecoveryType {
   pausedWithLeft,
   pausedNoLeft,
   forceTerminated,
-  timerCompleted
+  timerCompleted,
 }
 
 class TimerService with ChangeNotifier {
@@ -30,6 +30,7 @@ class TimerService with ChangeNotifier {
 
   Timer? _heartbeatTimer;
   Timer? _localCountDownTimer;
+  DateTime? _deadline;
 
   int _totalSettingSeconds = 0;
   int _currentSeconds = 0;
@@ -58,138 +59,108 @@ class TimerService with ChangeNotifier {
 
   /// 💡 복구 상태 체크 마스터 엔진
   Future<TimerRecoveryType> checkRecoveryState() async {
-    if (_isCheckingRecovery) {
-      debugPrint('⚠️ [checkRecoveryState] 이미 마감/복구 연산이 진행 중이므로 중복 요청을 바이패스합니다.');
-      return TimerRecoveryType.none;
-    }
-
+    if (_isCheckingRecovery || _isBusy) return TimerRecoveryType.none;
     _isCheckingRecovery = true;
-
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString('timer_session');
-
+    _lastError = null;
     try {
-      final activeSession = await _apiService.getActiveSession();
-
-      if (activeSession == null) {
+      final prefs = await SharedPreferences.getInstance();
+      final active = await _apiService.getActiveSession();
+      if (active == null) {
         await _clearAll();
-        _isCheckingRecovery = false;
         return TimerRecoveryType.none;
       }
-
-      sessionId = activeSession.sessionId;
-
-      if (activeSession.status == 'IN_PROGRESS' ||
-          activeSession.status == 'RUNNING' ||
-          activeSession.status == 'PAUSED') {
-
-        int localRemainingSeconds = _currentSeconds;
-
-        if (jsonString != null) {
-          final localData = jsonDecode(jsonString);
-          int localTotalMinutes = (localData['totalReadMinutes'] ?? 0) + (localData['remainingMinutes'] ?? 0);
-          if (localTotalMinutes > 0) {
-            _totalSettingSeconds = localTotalMinutes * 60;
+      sessionId = active.sessionId;
+      _totalSettingSeconds =
+          (active.totalReadMinutes + active.remainingMinutes) * 60;
+      _currentSeconds = active.remainingMinutes * 60;
+      _pausedSecondsFromServer = active.idleMinutes;
+      final running =
+          active.status == 'RUNNING' || active.status == 'IN_PROGRESS';
+      final saved = prefs.getString('timer_session');
+      if (saved != null) {
+        try {
+          final data = jsonDecode(saved);
+          if (data['sessionId'] == sessionId) {
+            _totalSettingSeconds = data['totalSeconds'] ?? _totalSettingSeconds;
+            _currentSeconds =
+                data['remainingSeconds'] ??
+                (data['remainingMinutes'] ?? active.remainingMinutes) * 60;
+            final savedAt = DateTime.tryParse(data['savedAt'] ?? '');
+            // Pauses never consume time. Ignore a cache from another session.
+            if (running && data['status'] != 'PAUSED' && savedAt != null) {
+              final elapsed = DateTime.now().difference(savedAt).inSeconds;
+              if (elapsed > 0) _currentSeconds -= elapsed;
+            }
           }
-
-          final String? savedAtStr = localData['savedAt'];
-          if (savedAtStr != null) {
-            final savedAt = DateTime.parse(savedAtStr);
-            final int elapsedOutsideSeconds = DateTime.now().difference(savedAt).inSeconds;
-
-            // 저장된 시각 기준 실제 경과시간 차감
-            localRemainingSeconds = ((localData['remainingMinutes'] ?? 0) * 60) - elapsedOutsideSeconds;
-          } else if (localRemainingSeconds <= 0) {
-            localRemainingSeconds = (localData['remainingMinutes'] ?? 0) * 60;
-          }
-        }
-
-        bool isServerZero = activeSession.remainingMinutes <= 0;
-        bool isLocalZero = localRemainingSeconds <= 0;
-
-        if ((activeSession.status == 'IN_PROGRESS' || activeSession.status == 'RUNNING') && (isServerZero || isLocalZero)) {
-          debugPrint('🏁 [타이머 만료 선처리] 서버/로컬 시간 계산 결과 0초 이하 감지 ➔ 타이머 완료 확정 진행');
-
-          await _apiService.completeTimer(sessionId);
-
-          _currentSeconds = 0;
-          elapsedSeconds = _totalSettingSeconds;
-          _isRunning = false;
-          _isStopping = true;
-
-          await _clearLocalSessionOnly(prefs);
-          await _serviceManager.stop();
-          _stopHeartbeat();
-          _stopLocalTimer();
-
-          notifyListeners();
-          _isCheckingRecovery = false;
-          return TimerRecoveryType.timerCompleted;
-        }
-        else if (localRemainingSeconds <= 0) {
-          debugPrint('⏳ [백업 마감선 작동] 메모리/디스크 잔여 시간 소실 확인 ➔ 타이머 즉시 마감');
-          _currentSeconds = 0;
-          elapsedSeconds = _totalSettingSeconds;
-          _isRunning = false;
-          _isStopping = true;
-          await completeTimer();
-          _isCheckingRecovery = false;
-          return TimerRecoveryType.timerCompleted;
-        }
-        else {
-          debugPrint('⏳ [실시간 싱크 전개] 디스크 캐시 검증 완료 -> 현재 잔여 시간 반영: ${localRemainingSeconds}초');
-          _currentSeconds = localRemainingSeconds;
-          elapsedSeconds = _totalSettingSeconds - _currentSeconds;
-
-          if (activeSession.status == 'PAUSED') {
-            _isRunning = false;
-            _isStopping = true;
-            _stopLocalTimer();
-          } else {
-            _isRunning = true;
-            _isStopping = false;
-            _startLocalTimer();
-          }
-
-          await TimerLocalStorage.instance.save(activeSession);
-          _isCheckingRecovery = false;
-          return TimerRecoveryType.none;
+        } catch (_) {
+          // Corrupt/missing cache falls back to the server, not zero seconds.
         }
       }
-
-      _pausedSecondsFromServer = activeSession.idleMinutes;
-      int serverTotalMinutes = activeSession.totalReadMinutes + activeSession.remainingMinutes;
-      _totalSettingSeconds = serverTotalMinutes * 60;
-      elapsedSeconds = activeSession.totalReadMinutes * 60;
-
-      _isRunning = false;
-      _isStopping = true;
-      _stopLocalTimer();
-      await _serviceManager.stop();
-      _stopHeartbeat();
-
-      if (_pausedSecondsFromServer > 120) {
-        _isCheckingRecovery = false;
-        return TimerRecoveryType.forceTerminated;
-      }
-
-      int remainSeconds = _totalSettingSeconds - elapsedSeconds;
-      if (remainSeconds > 0) {
-        _currentSeconds = remainSeconds;
-        _isCheckingRecovery = false;
-        return TimerRecoveryType.pausedWithLeft;
-      } else {
-        _currentSeconds = 0;
+      _currentSeconds = _currentSeconds.clamp(0, _totalSettingSeconds);
+      elapsedSeconds = _totalSettingSeconds - _currentSeconds;
+      if (_currentSeconds <= 0 && running) {
+        await _apiService.completeTimer(sessionId);
+        _isRunning = false;
+        _isStopping = true;
         await _clearLocalSessionOnly(prefs);
-        _isCheckingRecovery = false;
+        await _serviceManager.stop();
+        _stopHeartbeat();
+        _stopLocalTimer();
+        notifyListeners();
         return TimerRecoveryType.timerCompleted;
       }
+      _isRunning = running;
+      _isStopping = !running;
+      if (running) {
+        _startLocalTimer();
+        _startHeartbeat();
+      } else {
+        _stopLocalTimer();
+        _stopHeartbeat();
+      }
+      await _saveCurrentSession();
+      notifyListeners();
+      if (active.status == 'PAUSED' || running) return TimerRecoveryType.none;
+      if (active.idleMinutes > 120) return TimerRecoveryType.forceTerminated;
+      return _currentSeconds > 0
+          ? TimerRecoveryType.pausedWithLeft
+          : TimerRecoveryType.pausedNoLeft;
     } catch (e) {
-      debugPrint('CheckRecoveryState 도중 예외 발생: $e');
-      _isCheckingRecovery = false;
+      _reportFailure();
       return TimerRecoveryType.none;
+    } finally {
+      _isCheckingRecovery = false;
     }
   }
+
+  bool _isBusy = false;
+  bool get isBusy => _isBusy;
+  String? _lastError;
+  String? get lastError => _lastError;
+
+  void _reportFailure() {
+    _lastError = '타이머를 저장하지 못했습니다. 연결을 확인하고 다시 시도해주세요.';
+    notifyListeners();
+  }
+
+  Future<void> _saveCurrentSession() async {
+    if (sessionId < 0) return;
+    await TimerLocalStorage.instance.save(
+      ActiveReadingSession(
+        sessionId: sessionId,
+        status: _isRunning ? 'RUNNING' : 'PAUSED',
+        totalReadMinutes: elapsedSeconds ~/ 60,
+        remainingMinutes: (_currentSeconds / 60).ceil(),
+        idleMinutes: 0,
+        focusBlockEnabled: false,
+        whiteNoiseEnabled: false,
+      ),
+      remainingSeconds: _currentSeconds,
+      totalSeconds: _totalSettingSeconds,
+    );
+  }
+
+  Future<void> discardLocalSession() => _clearAll();
 
   /// 💡 복구 화면 연산 오케스트레이터
   Future<void> restore() async {
@@ -211,7 +182,8 @@ class TimerService with ChangeNotifier {
       }
 
       sessionId = activeSession.sessionId;
-      int originalTotalMinutes = activeSession.totalReadMinutes + activeSession.remainingMinutes;
+      int originalTotalMinutes =
+          activeSession.totalReadMinutes + activeSession.remainingMinutes;
       _totalSettingSeconds = originalTotalMinutes * 60;
 
       if (_totalSettingSeconds <= 0) {
@@ -220,10 +192,13 @@ class TimerService with ChangeNotifier {
         return;
       }
 
-      bool targetRunning = activeSession.status == 'IN_PROGRESS' || activeSession.status == 'RUNNING';
+      bool targetRunning =
+          activeSession.status == 'IN_PROGRESS' ||
+          activeSession.status == 'RUNNING';
       _isStopping = activeSession.status == 'PAUSED';
 
-      int calculatedCurrent = _totalSettingSeconds - (activeSession.totalReadMinutes * 60);
+      int calculatedCurrent =
+          _totalSettingSeconds - (activeSession.totalReadMinutes * 60);
 
       // 🚨 계산된 잔여시간이 0 이하이면 즉시 완료 후 리턴
       if (calculatedCurrent <= 0) {
@@ -232,9 +207,12 @@ class TimerService with ChangeNotifier {
         return;
       }
 
-      final bool isServiceRunning = await FlutterForegroundTask.isRunningService;
+      final bool isServiceRunning =
+          await FlutterForegroundTask.isRunningService;
       if (isServiceRunning) {
-        _currentSeconds = await FlutterForegroundTask.getData<int>(key: 'currentSeconds') ?? calculatedCurrent;
+        _currentSeconds =
+            await FlutterForegroundTask.getData<int>(key: 'currentSeconds') ??
+            calculatedCurrent;
       } else {
         _currentSeconds = calculatedCurrent;
       }
@@ -249,18 +227,21 @@ class TimerService with ChangeNotifier {
       elapsedSeconds = _totalSettingSeconds - _currentSeconds;
       _isRunning = targetRunning;
 
-      await TimerLocalStorage.instance.save(activeSession);
+      await _saveCurrentSession();
 
       if (_isRunning) {
         _startLocalTimer();
         if (!isServiceRunning) {
-          await _serviceManager.start(currentSeconds: _currentSeconds, isRunning: true);
+          await _serviceManager.start(
+            currentSeconds: _currentSeconds,
+            isRunning: true,
+          );
+          await _saveCurrentSession();
         }
         _startHeartbeat();
       }
     } catch (e) {
-      debugPrint('TimerService restore 실패: $e');
-      await _clearAll();
+      _reportFailure();
     } finally {
       _isRestoring = false;
       notifyListeners();
@@ -270,14 +251,20 @@ class TimerService with ChangeNotifier {
   /// 💡 포그라운드 카운트다운 루퍼
   void _startLocalTimer() {
     _stopLocalTimer();
-    _localCountDownTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+    _deadline = DateTime.now().add(Duration(seconds: _currentSeconds));
+    _localCountDownTimer = Timer.periodic(const Duration(seconds: 1), (
+      timer,
+    ) async {
       if (!_isRunning) {
         _stopLocalTimer();
         return;
       }
 
       if (_currentSeconds > 0) {
-        _currentSeconds--;
+        _currentSeconds =
+            ((_deadline!.difference(DateTime.now()).inMilliseconds) / 1000)
+                .ceil()
+                .clamp(0, _totalSettingSeconds);
         elapsedSeconds = _totalSettingSeconds - _currentSeconds;
         notifyListeners();
       } else {
@@ -297,88 +284,131 @@ class TimerService with ChangeNotifier {
   }
 
   Future<void> startTimer() async {
-    if (_totalSettingSeconds <= 0 || _totalSettingSeconds > 7200) return;
-    if (_isRunning) return;
-
-    await checkOverlayPermission();
-
+    if (_isBusy) return;
+    _isBusy = true;
+    _lastError = null;
+    notifyListeners();
     try {
-      final int targetMinutes = _totalSettingSeconds ~/ 60;
+      if (_totalSettingSeconds <= 0 || _totalSettingSeconds > 7200) return;
+      if (_isRunning) return;
 
-      await _apiService.setReadingSessionTime(totalMinutes: targetMinutes);
-      final int responseSessionId = await _apiService.startTimer(totalMinutes: targetMinutes);
-      sessionId = responseSessionId;
+      try {
+        await checkOverlayPermission();
+        final int targetMinutes = _totalSettingSeconds ~/ 60;
 
-      _currentSeconds = _totalSettingSeconds;
-      _isRunning = true;
-      _isStopping = false;
+        await _apiService.setReadingSessionTime(totalMinutes: targetMinutes);
+        final int responseSessionId = await _apiService.startTimer(
+          totalMinutes: targetMinutes,
+        );
+        sessionId = responseSessionId;
 
-      final settingsResult = await _apiService.getReadingSessionSettings();
-      bool serverFocusBlock = settingsResult?['focus_block_enabled'] ?? false;
-      bool serverWhiteNoise = settingsResult?['white_noise_enabled'] ?? false;
+        _currentSeconds = _totalSettingSeconds;
+        _isRunning = true;
+        _isStopping = false;
 
-      await _serviceManager.start(currentSeconds: _currentSeconds, isRunning: true);
+        final settingsResult = await _apiService.getReadingSessionSettings();
+        bool serverFocusBlock = settingsResult?['focus_block_enabled'] ?? false;
+        bool serverWhiteNoise = settingsResult?['white_noise_enabled'] ?? false;
 
-      await TimerLocalStorage.instance.save(ActiveReadingSession(
-        sessionId: sessionId,
-        status: 'RUNNING',
-        totalReadMinutes: 0,
-        remainingMinutes: targetMinutes,
-        idleMinutes: 0,
-        focusBlockEnabled: serverFocusBlock,
-        whiteNoiseEnabled: serverWhiteNoise,
-      ));
+        await _serviceManager.start(
+          currentSeconds: _currentSeconds,
+          isRunning: true,
+        );
+        await _saveCurrentSession();
 
-      _startLocalTimer();
-      _startHeartbeat();
+        await TimerLocalStorage.instance.save(
+          ActiveReadingSession(
+            sessionId: sessionId,
+            status: 'RUNNING',
+            totalReadMinutes: 0,
+            remainingMinutes: targetMinutes,
+            idleMinutes: 0,
+            focusBlockEnabled: serverFocusBlock,
+            whiteNoiseEnabled: serverWhiteNoise,
+          ),
+          remainingSeconds: _currentSeconds,
+          totalSeconds: _totalSettingSeconds,
+        );
+
+        _startLocalTimer();
+        _startHeartbeat();
+        notifyListeners();
+      } catch (e) {
+        _reportFailure();
+      }
+    } finally {
+      _isBusy = false;
       notifyListeners();
-    } catch (e) {
-      debugPrint('TimerService startTimer 실패: $e');
     }
   }
 
   Future<void> handleResumeAction() async {
-    if (sessionId == -1) return;
+    if (_isBusy) return;
+    _isBusy = true;
+    _lastError = null;
+    notifyListeners();
     try {
-      await _apiService.recoverTimer(sessionId);
-      _isRunning = true;
-      _isStopping = false;
+      if (sessionId == -1) return;
+      try {
+        await _apiService.recoverTimer(sessionId);
+        _isRunning = true;
+        _isStopping = false;
 
-      final settingsResult = await _apiService.getReadingSessionSettings();
-      bool serverFocusBlock = settingsResult?['focus_block_enabled'] ?? false;
-      bool serverWhiteNoise = settingsResult?['white_noise_enabled'] ?? false;
+        final settingsResult = await _apiService.getReadingSessionSettings();
+        bool serverFocusBlock = settingsResult?['focus_block_enabled'] ?? false;
+        bool serverWhiteNoise = settingsResult?['white_noise_enabled'] ?? false;
 
-      await TimerLocalStorage.instance.save(ActiveReadingSession(
-        sessionId: sessionId,
-        status: 'RUNNING',
-        totalReadMinutes: elapsedSeconds ~/ 60,
-        remainingMinutes: _currentSeconds ~/ 60,
-        idleMinutes: 0,
-        focusBlockEnabled: serverFocusBlock,
-        whiteNoiseEnabled: serverWhiteNoise,
-      ));
+        await TimerLocalStorage.instance.save(
+          ActiveReadingSession(
+            sessionId: sessionId,
+            status: 'RUNNING',
+            totalReadMinutes: elapsedSeconds ~/ 60,
+            remainingMinutes: _currentSeconds ~/ 60,
+            idleMinutes: 0,
+            focusBlockEnabled: serverFocusBlock,
+            whiteNoiseEnabled: serverWhiteNoise,
+          ),
+          remainingSeconds: _currentSeconds,
+          totalSeconds: _totalSettingSeconds,
+        );
 
-      await _serviceManager.start(currentSeconds: _currentSeconds, isRunning: true);
+        await _serviceManager.start(
+          currentSeconds: _currentSeconds,
+          isRunning: true,
+        );
+        await _saveCurrentSession();
 
-      _startLocalTimer();
-      _startHeartbeat();
+        _startLocalTimer();
+        _startHeartbeat();
+        notifyListeners();
+      } catch (e) {
+        _reportFailure();
+      }
+    } finally {
+      _isBusy = false;
       notifyListeners();
-    } catch (e) {
-      debugPrint('이어하기 API 처리 실패: $e');
     }
   }
 
   Future<void> handleReflectAction() async {
-    if (sessionId == -1) {
-      await _clearAll();
-      return;
-    }
+    if (_isBusy) return;
+    _isBusy = true;
+    _lastError = null;
+    notifyListeners();
     try {
-      await _apiService.reflectTimer(sessionId);
-    } catch (e) {
-      debugPrint('TimerService reflectTimer 실패: $e');
+      if (sessionId == -1) {
+        await _clearAll();
+        return;
+      }
+      try {
+        await _apiService.reflectTimer(sessionId);
+        await _clearAll();
+      } catch (e) {
+        _reportFailure();
+      }
     } finally {
-      await _clearAll();
+      _isBusy = false;
+      notifyListeners();
     }
   }
 
@@ -387,48 +417,82 @@ class TimerService with ChangeNotifier {
   }
 
   Future<void> pauseTimer() async {
-    if (!_isRunning || sessionId == -1) return;
+    if (_isBusy) return;
+    _isBusy = true;
+    _lastError = null;
+    notifyListeners();
     try {
-      _isRunning = false;
-      _isStopping = true;
-      _stopLocalTimer();
-      await _apiService.pauseTimer(sessionId);
-      await _serviceManager.start(currentSeconds: _currentSeconds, isRunning: false);
+      if (!_isRunning || sessionId == -1) return;
+      try {
+        await _apiService.pauseTimer(sessionId);
+        _isRunning = false;
+        _isStopping = true;
+        _stopLocalTimer();
+        await _serviceManager.start(
+          currentSeconds: _currentSeconds,
+          isRunning: false,
+        );
+        await _saveCurrentSession();
 
-      _stopHeartbeat();
+        _stopHeartbeat();
+        notifyListeners();
+      } catch (e) {
+        _reportFailure();
+      }
+    } finally {
+      _isBusy = false;
       notifyListeners();
-    } catch (e) {
-      debugPrint('TimerService pauseTimer 실패: $e');
     }
   }
 
   Future<void> resumeTimer() async {
-    if (_isRunning || sessionId == -1) return;
+    if (_isBusy) return;
+    _isBusy = true;
+    _lastError = null;
+    notifyListeners();
     try {
-      await _apiService.resumeTimer(sessionId);
-      _isRunning = true;
-      _isStopping = false;
-      await _serviceManager.start(currentSeconds: _currentSeconds, isRunning: true);
+      if (_isRunning || sessionId == -1) return;
+      try {
+        await _apiService.resumeTimer(sessionId);
+        _isRunning = true;
+        _isStopping = false;
+        await _serviceManager.start(
+          currentSeconds: _currentSeconds,
+          isRunning: true,
+        );
+        await _saveCurrentSession();
 
-      _startLocalTimer();
-      _startHeartbeat();
+        _startLocalTimer();
+        _startHeartbeat();
+        notifyListeners();
+      } catch (e) {
+        _reportFailure();
+      }
+    } finally {
+      _isBusy = false;
       notifyListeners();
-    } catch (e) {
-      debugPrint('TimerService resumeTimer 실패: $e');
     }
   }
 
   Future<void> completeTimer() async {
-    if (sessionId == -1) {
-      await _clearAll();
-      return;
-    }
+    if (_isBusy) return;
+    _isBusy = true;
+    _lastError = null;
+    notifyListeners();
     try {
-      await _apiService.completeTimer(sessionId);
-    } catch (e) {
-      debugPrint('TimerService completeTimer 실패: $e');
+      if (sessionId == -1) {
+        await _clearAll();
+        return;
+      }
+      try {
+        await _apiService.completeTimer(sessionId);
+        await _clearAll();
+      } catch (e) {
+        _reportFailure();
+      }
     } finally {
-      await _clearAll();
+      _isBusy = false;
+      notifyListeners();
     }
   }
 
@@ -474,6 +538,7 @@ class TimerService with ChangeNotifier {
     _stopHeartbeat();
     _totalSettingSeconds = 0;
     _currentSeconds = 0;
+    elapsedSeconds = 0;
     _isRunning = false;
     _isStopping = false;
     sessionId = -1;
@@ -491,11 +556,11 @@ class TimerService with ChangeNotifier {
   }
 
   void handleForegroundData(dynamic data) {
-    if (data is int) {
-      _currentSeconds = data;
+    if (data is int && _isRunning) {
+      _currentSeconds = data.clamp(0, _totalSettingSeconds);
+      elapsedSeconds = _totalSettingSeconds - _currentSeconds;
       notifyListeners();
-    }
-    else if (data is String) {
+    } else if (data is String) {
       switch (data) {
         case 'NOTI_BACKGROUND_COMPLETE':
           String? currentRouteName;
