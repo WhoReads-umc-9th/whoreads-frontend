@@ -33,10 +33,7 @@ class LibraryService {
       try {
         final response = await ApiClient.dio.get(
           '/me/library/list',
-          queryParameters: {
-            'status': status,
-            'size': size,
-          },
+          queryParameters: {'status': status, 'size': size},
         );
         final decoded = response.data is String
             ? jsonDecode(response.data as String)
@@ -64,26 +61,23 @@ class LibraryService {
           final bookNode = item['book'];
           int? bid;
           if (bookNode is Map) {
-            bid = bookNode['id'] as int? ?? int.tryParse('${bookNode['id']}');
+            bid = int.tryParse('${bookNode['id']}');
           }
-          bid ??= item['book_id'] as int? ?? int.tryParse('${item['book_id']}');
+          bid ??= int.tryParse('${item['book_id']}');
           if (bid != catalogBookId) continue;
 
-          final int? ubid = item['user_book_id'] as int? ??
+          final int? ubid =
               int.tryParse('${item['user_book_id']}') ??
-              item['id'] as int? ??
               int.tryParse('${item['id']}');
           if (ubid == null) continue;
 
           final String rs =
               (item['reading_status'] ?? status)?.toString() ?? status;
 
-          final int? readingPage =
-              item['reading_page'] as int? ?? int.tryParse('${item['reading_page']}');
+          final int? readingPage = int.tryParse('${item['reading_page']}');
           int? totalPage;
           if (bookNode is Map) {
-            totalPage =
-                bookNode['total_page'] as int? ?? int.tryParse('${bookNode['total_page']}');
+            totalPage = int.tryParse('${bookNode['total_page']}');
           }
           return CatalogBookLibrarySnapshot(
             userBookId: ubid,
@@ -113,10 +107,7 @@ class LibraryService {
         try {
           final response = await ApiClient.dio.get(
             '/me/library/list',
-            queryParameters: {
-              'status': status,
-              'size': sizePerStatus,
-            },
+            queryParameters: {'status': status, 'size': sizePerStatus},
           );
           final decoded = response.data is String
               ? jsonDecode(response.data as String)
@@ -144,12 +135,11 @@ class LibraryService {
             final bookNode = item['book'];
             int? bid;
             if (bookNode is Map) {
-              bid = bookNode['id'] as int? ?? int.tryParse('${bookNode['id']}');
+              bid = int.tryParse('${bookNode['id']}');
             }
-            bid ??= item['book_id'] as int? ?? int.tryParse('${item['book_id']}');
-            final int? ubid = item['user_book_id'] as int? ??
+            bid ??= int.tryParse('${item['book_id']}');
+            final int? ubid =
                 int.tryParse('${item['user_book_id']}') ??
-                item['id'] as int? ??
                 int.tryParse('${item['id']}');
             if (bid != null && ubid != null) {
               map[bid] = ubid;
@@ -164,34 +154,25 @@ class LibraryService {
   }
 
   static Future<List<LibraryBookModel>> fetchBooks({
-    required String status, // WISH / READING / COMPLETE
-    int size = 10,
+    required String status,
+    int size = 20,
   }) async {
-    try {
-      final response = await ApiClient.dio.get(
+    final response = await ApiClient.checked(
+      ApiClient.dio.get(
         '/me/library/list',
-        queryParameters: {
-          'status': status,
-          'size': size,
-        },
-      );
-
-      final decoded = response.data is String
-          ? jsonDecode(response.data as String)
-          : response.data;
-
-      if (response.statusCode == 200 && decoded['is_success'] == true) {
-        final List books = decoded['result']['books'];
-        return books.map((e) => LibraryBookModel.fromJson(e)).toList();
-      }
-    } on DioException catch (e) {
-      // 네트워크/SSL/401 등 예외가 있어도 리스트 탭이 죽지 않도록 빈 배열 반환
-      // ignore: avoid_print
-      print('LibraryService.fetchBooks failed: ${e.message}');
-    } catch (_) {
-      // 실패 시 빈 배열
+        queryParameters: {'status': status, 'size': size},
+      ),
+    );
+    final decoded = response.data is String
+        ? jsonDecode(response.data as String)
+        : response.data;
+    if (decoded is! Map ||
+        decoded['is_success'] != true ||
+        decoded['result'] is! Map ||
+        decoded['result']['books'] is! List) {
+      throw const FormatException('Invalid library response');
     }
-
-    return [];
+    final books = decoded['result']['books'] as List;
+    return books.map((e) => LibraryBookModel.fromJson(e)).toList();
   }
 }

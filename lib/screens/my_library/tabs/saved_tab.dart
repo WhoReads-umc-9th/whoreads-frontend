@@ -6,7 +6,6 @@ import '../../books/BookDetailPage.dart';
 import '../../celebrities/celebrities_page.dart';
 
 class SavedTab extends StatefulWidget {
-
   const SavedTab({super.key});
 
   @override
@@ -16,6 +15,10 @@ class SavedTab extends StatefulWidget {
 class _SavedTabState extends State<SavedTab> {
   List<LibraryBookModel> books = [];
   bool isLoading = true;
+  String? _error;
+  int _requestedSize = 20;
+  bool _hasMore = false;
+  bool _requestInFlight = false;
 
   @override
   void initState() {
@@ -24,20 +27,46 @@ class _SavedTabState extends State<SavedTab> {
   }
 
   Future<void> _load() async {
-    final result = await LibraryService.fetchBooks(
-      status: "WISH",
-    );
-
+    if (!mounted || _requestInFlight) return;
+    _requestInFlight = true;
     setState(() {
-      books = result;
-      isLoading = false;
+      isLoading = true;
+      _error = null;
     });
+    try {
+      final result = await LibraryService.fetchBooks(
+        status: 'WISH',
+        size: _requestedSize,
+      );
+      if (!mounted) return;
+      setState(() {
+        books = result;
+        _hasMore = result.length >= _requestedSize;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _error = '서재를 불러오지 못했습니다. 다시 시도해주세요.');
+    } finally {
+      _requestInFlight = false;
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_error!, textAlign: TextAlign.center),
+            TextButton(onPressed: _load, child: const Text('다시 시도')),
+          ],
+        ),
+      );
     }
 
     if (books.isEmpty) {
@@ -63,31 +92,32 @@ class _SavedTabState extends State<SavedTab> {
               ),
             ),
             const SizedBox(height: 24), // 텍스트와 버튼 사이 간격
-
             // [추천 책 보러 가기 버튼]
             ElevatedButton(
               onPressed: () {
                 // 버튼 클릭 시 '인물(CelebritiesPage)' 페이지로 이동
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const CelebritiesPage()),
+                  MaterialPageRoute(
+                    builder: (context) => const CelebritiesPage(),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE88A60), // 사진 속 주황색 (테라코타)
                 foregroundColor: Colors.white, // 글자색 흰색
                 elevation: 0, // 그림자 없애기 (사진처럼 플랫하게)
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12), // 둥근 모서리
                 ),
               ),
               child: const Text(
                 "추천 책 보러 가기",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -96,8 +126,17 @@ class _SavedTabState extends State<SavedTab> {
     }
 
     return ListView.builder(
-      itemCount: books.length,
+      itemCount: books.length + (_hasMore ? 1 : 0),
       itemBuilder: (_, index) {
+        if (index == books.length) {
+          return TextButton(
+            onPressed: () {
+              _requestedSize += 20;
+              _load();
+            },
+            child: const Text('더 보기'),
+          );
+        }
         final book = books[index];
 
         return BookListItem(
@@ -107,9 +146,7 @@ class _SavedTabState extends State<SavedTab> {
             await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => BookDetailPage(
-                  bookId: book.id,
-                ),
+                builder: (_) => BookDetailPage(bookId: book.id),
               ),
             );
             _load();
@@ -117,6 +154,5 @@ class _SavedTabState extends State<SavedTab> {
         );
       },
     );
-
   }
 }
