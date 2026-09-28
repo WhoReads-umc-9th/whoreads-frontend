@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:dio/dio.dart';
 import '../models/library_book_model.dart';
 import '../core/network/api_client.dart';
 
@@ -22,76 +21,72 @@ class CatalogBookLibrarySnapshot {
   });
 }
 
+class LibraryPageResult {
+  const LibraryPageResult(this.books, this.hasNext, this.nextCursor);
+  final List<LibraryBookModel> books;
+  final bool hasNext;
+  final Object? nextCursor;
+}
+
 class LibraryService {
-  /// 담아둠/읽는 중/다 읽음 탭 목록에서 해당 카탈로그 책이 있는지 검색합니다.
+  static int? _int(dynamic value) => int.tryParse('$value');
+
+  static Stream<Map<String, dynamic>> _rows(String status, int size) async* {
+    Object? cursor;
+    final seen = <Object>{};
+    while (true) {
+      final response = await ApiClient.checked(
+        ApiClient.dio.get(
+          '/me/library/list',
+          queryParameters: {
+            'status': status,
+            'size': size,
+            if (cursor != null) 'cursor': cursor,
+          },
+        ),
+      );
+      final decoded = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
+      if (decoded is! Map || decoded['is_success'] == false) {
+        throw const FormatException('Invalid library response');
+      }
+      final result = decoded['result'];
+      final items = result is List
+          ? result
+          : result?['books'] ?? result?['content'];
+      if (items is! List) throw const FormatException('Invalid library books');
+      for (final item in items) {
+        if (item is Map) yield Map<String, dynamic>.from(item);
+      }
+      if (result is! Map || result['has_next'] != true) return;
+      final next = result['next_cursor'];
+      if (next == null || items.isEmpty || !seen.add(next)) {
+        throw const FormatException('Invalid library pagination cursor');
+      }
+      cursor = next;
+    }
+  }
+
   static Future<CatalogBookLibrarySnapshot?> lookupCatalogBookInLibrary(
     int catalogBookId, {
     int size = 200,
   }) async {
-    const statuses = ['WISH', 'READING', 'COMPLETE'];
-    for (final status in statuses) {
-      try {
-        final response = await ApiClient.dio.get(
-          '/me/library/list',
-          queryParameters: {'status': status, 'size': size},
+    for (final status in ['WISH', 'READING', 'COMPLETE']) {
+      await for (final item in _rows(status, size)) {
+        final book = item['book'] is Map ? item['book'] as Map : const {};
+        if ((_int(book['id']) ?? _int(item['book_id'])) != catalogBookId)
+          continue;
+        final id = _int(item['user_book_id']) ?? _int(item['id']);
+        if (id == null) continue;
+        return CatalogBookLibrarySnapshot(
+          userBookId: id,
+          readingStatus: (item['reading_status'] ?? status).toString(),
+          readingPage: _int(item['reading_page']),
+          totalPage: _int(book['total_page']),
+          startedAt: item['started_at']?.toString(),
+          completedAt: item['completed_at']?.toString(),
         );
-        final decoded = response.data is String
-            ? jsonDecode(response.data as String)
-            : response.data;
-        if (response.statusCode != 200 || decoded is! Map) {
-          continue;
-        }
-        if (decoded['is_success'] == false) {
-          continue;
-        }
-        final resultData = decoded['result'];
-        List<dynamic> items = [];
-        if (resultData is List) {
-          items = resultData;
-        } else if (resultData is Map) {
-          if (resultData['books'] != null) {
-            items = List<dynamic>.from(resultData['books'] as List);
-          } else if (resultData['content'] != null) {
-            items = List<dynamic>.from(resultData['content'] as List);
-          }
-        }
-        for (final raw in items) {
-          if (raw is! Map) continue;
-          final item = Map<String, dynamic>.from(raw);
-          final bookNode = item['book'];
-          int? bid;
-          if (bookNode is Map) {
-            bid = int.tryParse('${bookNode['id']}');
-          }
-          bid ??= int.tryParse('${item['book_id']}');
-          if (bid != catalogBookId) continue;
-
-          final int? ubid =
-              int.tryParse('${item['user_book_id']}') ??
-              int.tryParse('${item['id']}');
-          if (ubid == null) continue;
-
-          final String rs =
-              (item['reading_status'] ?? status)?.toString() ?? status;
-
-          final int? readingPage = int.tryParse('${item['reading_page']}');
-          int? totalPage;
-          if (bookNode is Map) {
-            totalPage = int.tryParse('${bookNode['total_page']}');
-          }
-          return CatalogBookLibrarySnapshot(
-            userBookId: ubid,
-            readingStatus: rs,
-            readingPage: readingPage,
-            totalPage: totalPage,
-            startedAt: item['started_at']?.toString(),
-            completedAt: item['completed_at']?.toString(),
-          );
-        }
-      } on DioException catch (_) {
-        continue;
-      } catch (_) {
-        continue;
       }
     }
     return null;
@@ -100,67 +95,31 @@ class LibraryService {
   static Future<Map<int, int>> fetchAddedBookIdsByUserBookIds({
     int sizePerStatus = 200,
   }) async {
-    final map = <int, int>{};
-    const statuses = ['WISH', 'READING', 'COMPLETE'];
-    await Future.wait(
-      statuses.map((status) async {
-        try {
-          final response = await ApiClient.dio.get(
-            '/me/library/list',
-            queryParameters: {'status': status, 'size': sizePerStatus},
-          );
-          final decoded = response.data is String
-              ? jsonDecode(response.data as String)
-              : response.data;
-          if (response.statusCode != 200 || decoded is! Map) {
-            return;
-          }
-          if (decoded['is_success'] == false) {
-            return;
-          }
-          final resultData = decoded['result'];
-          List<dynamic> items = [];
-          if (resultData is List) {
-            items = resultData;
-          } else if (resultData is Map) {
-            if (resultData['books'] != null) {
-              items = List<dynamic>.from(resultData['books'] as List);
-            } else if (resultData['content'] != null) {
-              items = List<dynamic>.from(resultData['content'] as List);
-            }
-          }
-          for (final raw in items) {
-            if (raw is! Map) continue;
-            final item = Map<String, dynamic>.from(raw);
-            final bookNode = item['book'];
-            int? bid;
-            if (bookNode is Map) {
-              bid = int.tryParse('${bookNode['id']}');
-            }
-            bid ??= int.tryParse('${item['book_id']}');
-            final int? ubid =
-                int.tryParse('${item['user_book_id']}') ??
-                int.tryParse('${item['id']}');
-            if (bid != null && ubid != null) {
-              map[bid] = ubid;
-            }
-          }
-        } catch (_) {
-          // skip
-        }
-      }),
-    );
-    return map;
+    final result = <int, int>{};
+    for (final status in ['WISH', 'READING', 'COMPLETE']) {
+      await for (final item in _rows(status, sizePerStatus)) {
+        final book = item['book'] is Map ? item['book'] as Map : const {};
+        final bookId = _int(book['id']) ?? _int(item['book_id']);
+        final userBookId = _int(item['user_book_id']) ?? _int(item['id']);
+        if (bookId != null && userBookId != null) result[bookId] = userBookId;
+      }
+    }
+    return result;
   }
 
-  static Future<List<LibraryBookModel>> fetchBooks({
+  static Future<LibraryPageResult> fetchPage({
     required String status,
     int size = 20,
+    Object? cursor,
   }) async {
     final response = await ApiClient.checked(
       ApiClient.dio.get(
         '/me/library/list',
-        queryParameters: {'status': status, 'size': size},
+        queryParameters: {
+          'status': status,
+          'size': size,
+          if (cursor != null) 'cursor': cursor,
+        },
       ),
     );
     final decoded = response.data is String
@@ -172,7 +131,22 @@ class LibraryService {
         decoded['result']['books'] is! List) {
       throw const FormatException('Invalid library response');
     }
-    final books = decoded['result']['books'] as List;
-    return books.map((e) => LibraryBookModel.fromJson(e)).toList();
+    final result = decoded['result'] as Map;
+    final items = (result['books'] as List)
+        .map((e) => LibraryBookModel.fromJson(e))
+        .toList();
+    final next = result['next_cursor'];
+    if (result['has_next'] == true &&
+        (next == null || next == cursor || items.isEmpty)) {
+      throw const FormatException('Invalid library pagination cursor');
+    }
+    return LibraryPageResult(items, result['has_next'] == true, next);
+  }
+
+  static Future<List<LibraryBookModel>> fetchBooks({
+    required String status,
+    int size = 20,
+  }) async {
+    return (await fetchPage(status: status, size: size)).books;
   }
 }

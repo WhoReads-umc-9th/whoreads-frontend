@@ -15,7 +15,8 @@ class _FinishedTabState extends State<FinishedTab> {
   List<LibraryBookModel> books = [];
   bool isLoading = true;
   String? _error;
-  int _requestedSize = 20;
+  Object? _cursor;
+  bool _retryAppend = false;
   bool _hasMore = false;
   bool _requestInFlight = false;
 
@@ -25,22 +26,32 @@ class _FinishedTabState extends State<FinishedTab> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool append = false}) async {
     if (!mounted || _requestInFlight) return;
     _requestInFlight = true;
+    _retryAppend = append;
     setState(() {
       isLoading = true;
       _error = null;
     });
     try {
-      final result = await LibraryService.fetchBooks(
+      final result = await LibraryService.fetchPage(
         status: 'COMPLETE',
-        size: _requestedSize,
+        size: 20,
+        cursor: append ? _cursor : null,
       );
       if (!mounted) return;
       setState(() {
-        books = result;
-        _hasMore = result.length >= _requestedSize;
+        books = append
+            ? [
+                ...books,
+                ...result.books.where(
+                  (book) => !books.any((old) => old.id == book.id),
+                ),
+              ]
+            : result.books;
+        _cursor = result.nextCursor;
+        _hasMore = result.hasNext;
       });
     } catch (_) {
       if (mounted) setState(() => _error = '서재를 불러오지 못했습니다. 다시 시도해주세요.');
@@ -62,7 +73,10 @@ class _FinishedTabState extends State<FinishedTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(_error!, textAlign: TextAlign.center),
-            TextButton(onPressed: _load, child: const Text('다시 시도')),
+            TextButton(
+              onPressed: () => _load(append: _retryAppend),
+              child: const Text('다시 시도'),
+            ),
           ],
         ),
       );
@@ -78,8 +92,7 @@ class _FinishedTabState extends State<FinishedTab> {
         if (index == books.length) {
           return TextButton(
             onPressed: () {
-              _requestedSize += 20;
-              _load();
+              _load(append: true);
             },
             child: const Text('더 보기'),
           );

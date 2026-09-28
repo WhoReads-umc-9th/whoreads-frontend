@@ -20,9 +20,10 @@ class TimerApiService {
 
   Future<ActiveReadingSession?> getActiveSession() async {
     try {
-      final response = await ApiClient.checked(
-        ApiClient.dio.get('/reading-sessions/incomplete'),
-      );
+      final response = await ApiClient.dio.get('/reading-sessions/incomplete');
+      // The live API uses 404 when this member has no unfinished session.
+      if (response.statusCode == 404) return null;
+      ApiClient.requireSuccess(response);
       final data = response.data;
       if (data == null || data['result'] == null) {
         return null;

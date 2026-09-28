@@ -9,6 +9,8 @@ import 'package:whoreads/screens/books/BookDetailPage.dart';
 import 'package:whoreads/screens/celebrities/celebrities_page.dart';
 import 'package:whoreads/screens/celebrities/celebrities_book_page.dart';
 import 'package:whoreads/models/library_book_model.dart';
+import 'package:whoreads/services/library_service.dart';
+import 'package:whoreads/services/timer/timer_api_service.dart';
 import 'release_readiness_test.dart' show FakeApi, jsonResponse;
 
 void main() {
@@ -114,5 +116,35 @@ void main() {
       });
       expect(book.progress, page < 0 ? 0 : 1);
     }
+  });
+  test('Library lookup follows server cursor and parses string IDs', () async {
+    final cursors = <Object?>[];
+    ApiClient.dio.httpClientAdapter = FakeApi((o) {
+      final cursor = o.queryParameters['cursor'];
+      cursors.add(cursor);
+      return jsonResponse({
+        'is_success': true,
+        'result': {
+          'books': [
+            {
+              'user_book_id': cursor == null ? '10' : '11',
+              'book': {'id': cursor == null ? '1' : '2', 'total_page': '100'},
+            },
+          ],
+          'has_next': cursor == null,
+          'next_cursor': cursor == null ? 10 : null,
+        },
+      });
+    });
+    final found = await LibraryService.lookupCatalogBookInLibrary(2, size: 1);
+    expect(found?.userBookId, 11);
+    expect(found?.totalPage, 100);
+    expect(cursors, [null, 10]);
+  });
+  test('No active timer 404 is not a server failure', () async {
+    ApiClient.dio.httpClientAdapter = FakeApi(
+      (o) => jsonResponse({'is_success': false}, 404),
+    );
+    expect(await TimerApiService().getActiveSession(), isNull);
   });
 }
