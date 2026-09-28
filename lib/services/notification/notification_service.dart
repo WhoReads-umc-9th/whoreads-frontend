@@ -83,12 +83,22 @@ class NotificationService {
         return mapItem;
       }).toList();
 
-      // 3. 기존 리스트에 합치기
-      _notifications.addAll(processedItems);
-
-      // 4. 다음 페이징 정보 저장
-      _nextCursor = result['next_cursor'];
-      _hasNext = result['has_next'] ?? false;
+      // 이 API는 next_cursor 없이 contents와 has_next만 반환할 수 있다.
+      // cursor는 마지막 알림 ID이며, 같은 페이지를 반복해서 추가하면 안 된다.
+      final hasNext = result['has_next'] == true && processedItems.isNotEmpty;
+      final cursorValue =
+          result['next_cursor'] ??
+          (processedItems.isEmpty ? null : processedItems.last['id']);
+      final nextCursor = int.tryParse('$cursorValue');
+      if (hasNext && (nextCursor == null || nextCursor == _nextCursor)) {
+        throw const FormatException('Invalid notification pagination cursor');
+      }
+      final ids = _notifications.map((item) => '${item['id']}').toSet();
+      _notifications.addAll(
+        processedItems.where((item) => ids.add('${item['id']}')),
+      );
+      _nextCursor = nextCursor;
+      _hasNext = hasNext;
     } catch (e) {
       debugPrint("알림 페이징 에러: $e");
       rethrow;
