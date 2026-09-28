@@ -1,0 +1,112 @@
+00:00 +0: loading /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/notification_paging_test.dart
+00:00 +0: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +0: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: AUTH: offline logout clears local credentials
+서버 로그아웃 요청 실패
+00:00 +1: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +2: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +2: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: HTTP 500 completion must report failure
+completeTimer 실패: DioException [bad response]: This exception was thrown because the response has a status code of 500 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 500 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+00:00 +3: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +4: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +5: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +6: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +7: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +7: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+getActiveSession 성공: {result: {session_id: 7, status: PAUSED, remaining_minutes: 10, total_read_minutes: 0, idle_minutes: 20, focus_block_enabled: false, white_noise_enabled: false}}
+ActiveReadingSession.fromJson 성공: {session_id: 7, status: PAUSED, remaining_minutes: 10, total_read_minutes: 0, idle_minutes: 20, focus_block_enabled: false, white_noise_enabled: false}
+00:00 +8: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +8: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/notification_paging_test.dart: Repeated notification cursor fails without appending duplicates
+알림 페이징 에러: FormatException: Invalid notification pagination cursor
+00:00 +9: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +10: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+✅ 서버 정상: {is_success: true}
+00:01 +11: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:01 +12: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:02 +13: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:03 +14: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:03 +15: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:03 +16: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:04 +17: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:04 +18: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:04 +18: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/library_errors_test.dart: celebrities ignores delayed responses after leaving
+네트워크 에러: DioException [bad response]: This exception was thrown because the response has a status code of 503 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 503 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+네트워크 에러: DioException [unknown]: null
+Error: Bad state: Stream has already been listened to.
+00:04 +19: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:04 +19: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/library_errors_test.dart: celebrity ignores delayed responses after leaving
+팔로우 상태 조회 에러: DioException [unknown]: null
+Error: Bad state: Stream has already been listened to.
+Error: DioException [bad response]: This exception was thrown because the response has a status code of 503 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 503 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+00:04 +20: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:04 +21: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:04 +22: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:04 +23: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:04 +24: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+00:05 +25: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: missing cache must not complete active session
+getActiveSession 성공: {result: {session_id: 7, status: RUNNING, remaining_minutes: 10, total_read_minutes: 0, idle_minutes: 20, focus_block_enabled: false, white_noise_enabled: false}}
+ActiveReadingSession.fromJson 성공: {session_id: 7, status: RUNNING, remaining_minutes: 10, total_read_minutes: 0, idle_minutes: 20, focus_block_enabled: false, white_noise_enabled: false}
+00:10 +26: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: completion failure retains recoverable session
+completeTimer 실패: DioException [bad response]: This exception was thrown because the response has a status code of 500 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 500 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+00:10 +27: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: DNA: retry preserves the same answer IDs
+00:11 +28: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TOPICS: server errors must not trigger an unbounded retry loop
+Books Network/Parsing Error: DioException [bad response]: This exception was thrown because the response has a status code of 503 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 503 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+#0      DioMixin.fetch (package:dio/src/dio_mixin.dart:523:7)
+<asynchronous suspension>
+#1      _TopicsPageState._fetchTopicsData (package:whoreads/screens/topics/topics_page.dart:177:24)
+<asynchronous suspension>
+#2      _TopicsPageState._initializeBooks (package:whoreads/screens/topics/topics_page.dart:84:10)
+<asynchronous suspension>
+Banner fetch error for theme TOP_20: DioException [bad response]: This exception was thrown because the response has a status code of 503 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 503 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+Banner fetch error for theme SOCIETY: DioException [bad response]: This exception was thrown because the response has a status code of 503 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 503 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+Banner fetch error for theme HUMAN_UNDERSTANDING: DioException [bad response]: This exception was thrown because the response has a status code of 503 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 503 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+Banner fetch error for theme MINDSET: DioException [bad response]: This exception was thrown because the response has a status code of 503 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 503 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+Banner fetch error for theme LIFE_DIRECTION: DioException [bad response]: This exception was thrown because the response has a status code of 503 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 503 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+Banner fetch error for theme TURNING_POINT: DioException [bad response]: This exception was thrown because the response has a status code of 503 and RequestOptions.validateStatus was configured to throw for this status code.
+The status code of 503 has the following meaning: "Server error - the server failed to fulfil an apparently valid request"
+Read more about status codes at https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+In order to resolve this exception you typically have either to verify and fix your request code or you have to fix the server code.
+
+00:11 +29: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: LAYOUT: auth and profile render at 320px
+00:11 +30: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: LAYOUT: auth and profile render at 393px
+00:11 +31: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: (tearDownAll)
+00:11 +31: All tests passed!

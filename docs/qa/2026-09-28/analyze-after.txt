@@ -1,0 +1,47 @@
+Analyzing whoreads...                                           
+
+   info • The file name 'EmailVerifyPage.dart' isn't a lower_case_with_underscores identifier • lib/screens/auth/EmailVerifyPage.dart:1:1 • file_names
+   info • The file name 'KakaoSignupDialog.dart' isn't a lower_case_with_underscores identifier • lib/screens/auth/KakaoSignupDialog.dart:1:1 • file_names
+   info • The file name 'SignupOverlayDialog.dart' isn't a lower_case_with_underscores identifier • lib/screens/auth/SignupOverlayDialog.dart:1:1 • file_names
+   info • The import of 'package:flutter/cupertino.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' • lib/screens/auth/SignupOverlayDialog.dart:2:8 • unnecessary_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/auth/login_page.dart:124:34 • deprecated_member_use
+   info • Unnecessary 'const' keyword • lib/screens/auth/signup_page.dart:200:48 • unnecessary_const
+   info • The file name 'BookDetailPage.dart' isn't a lower_case_with_underscores identifier • lib/screens/books/BookDetailPage.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/books/BookDetailPage.dart:794:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/celebrities/celebrities_book_page.dart:504:57 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/celebrities/celebrities_book_page.dart:516:59 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/celebrities/celebrities_book_page.dart:516:63 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/celebrities/celebrities_page.dart:311:43 • deprecated_member_use
+   info • The file name 'DnaResultPage.dart' isn't a lower_case_with_underscores identifier • lib/screens/dna_test/DnaResultPage.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/dna_test/DnaResultPage.dart:121:61 • deprecated_member_use
+   info • The file name 'dnaTestDialog.dart' isn't a lower_case_with_underscores identifier • lib/screens/dna_test/dnaTestDialog.dart:1:1 • file_names
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/my_library/my_library_page.dart:46:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/my_library/widgets/book_list_item.dart:71:43 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/my_library/widgets/dna_card.dart:17:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/onboarding/onboarding_flow_screen.dart:96:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/onboarding/onboarding_flow_screen.dart:157:34 • deprecated_member_use
+   info • The private field _initDays could be 'final' • lib/screens/routine_setting.dart:51:14 • prefer_final_fields
+   info • Unnecessary 'this.' qualifier • lib/screens/routine_setting.dart:174:17 • unnecessary_this
+   info • Unnecessary 'this.' qualifier • lib/screens/routine_setting.dart:222:11 • unnecessary_this
+   info • Unnecessary 'this.' qualifier • lib/screens/routine_setting.dart:222:44 • unnecessary_this
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/topics/topic_banner_page.dart:165:55 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/topics/topic_banner_page.dart:176:51 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/topics/topic_banner_page.dart:176:55 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/topics/topics_page.dart:778:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/topics/topics_page.dart:935:33 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/topics/topics_page.dart:1022:55 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/topics/topics_page.dart:1022:59 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/topics/topics_page.dart:1113:39 • deprecated_member_use
+   info • The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/cupertino.dart' • lib/screens/users/profile.dart:3:8 • unnecessary_import
+   info • The variable name 'AntiquityUserInfo' isn't a lowerCamelCase identifier • lib/screens/users/profile.dart:90:24 • non_constant_identifier_names
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeTrackColor instead. This feature was deprecated after v3.24.0-0.2.pre • lib/screens/users/profile.dart:351:25 • deprecated_member_use
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeTrackColor instead. This feature was deprecated after v3.24.0-0.2.pre • lib/screens/users/profile.dart:491:31 • deprecated_member_use
+   info • Unnecessary braces in a string interpolation • lib/services/timer/statistics_service.dart:41:29 • unnecessary_brace_in_string_interps
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/auth/common_dialog.dart:12:32 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/widgets/auth/email_input.dart:170:17 • deprecated_member_use
+   info • The file name 'QuoteCard.dart' isn't a lower_case_with_underscores identifier • lib/widgets/book/QuoteCard.dart:1:1 • file_names
+   info • Parameter 'key' could be a super parameter • lib/widgets/book/QuoteCard.dart:12:9 • use_super_parameters
+   info • Unnecessary use of multiple underscores • lib/widgets/book/QuoteCard.dart:35:41 • unnecessary_underscores
+   info • Unnecessary use of 'toList' in a spread • lib/widgets/timer/stats_card.dart:95:16 • unnecessary_to_list_in_spreads
+
+43 issues found. (ran in 4.4s)
