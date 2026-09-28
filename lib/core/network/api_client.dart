@@ -4,7 +4,19 @@ import '../auth/token_storage.dart';
 import '../router/app_router.dart';
 
 class ApiClient {
-  static String baseUrl = '${dotenv.env['BASE_URL']}/api';
+  static String baseUrl = _resolveBaseUrl();
+
+  static String _resolveBaseUrl() {
+    const override = String.fromEnvironment('API_BASE_URL');
+    final configured = override.isNotEmpty
+        ? override
+        : (dotenv.isInitialized ? dotenv.env['BASE_URL'] : null);
+    final origin = (configured ?? 'https://api.whoreads.kro.kr')
+        .trim()
+        .replaceFirst(RegExp(r'/+$'), '');
+    return origin.endsWith('/api') ? origin : '$origin/api';
+  }
+
   static Future<bool>? _refreshInFlight;
   static const _retried = 'authRetried';
   static final Dio _refreshDio = Dio(
