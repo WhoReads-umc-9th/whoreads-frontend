@@ -1,0 +1,235 @@
+00:00 +0: loading /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart
+00:00 +0: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+00:00 +0: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+Request: GET /protected
+*** Request ***
+uri: http://127.0.0.1:TEST_PORT/api/protected
+method: GET
+responseType: ResponseType.json
+followRedirects: true
+persistentConnection: true
+connectTimeout: 0:00:08.000000
+sendTimeout: null
+receiveTimeout: 0:00:05.000000
+receiveDataWhenStatusError: true
+extra: {}
+headers:
+ Content-Type: application/json
+ Accept: application/json
+ Authorization: Bearer expired-test
+data:
+null
+
+토큰 재발급 성공
+Request: GET /protected
+*** Request ***
+uri: http://127.0.0.1:TEST_PORT/api/protected
+method: GET
+responseType: ResponseType.json
+followRedirects: true
+persistentConnection: true
+connectTimeout: 0:00:08.000000
+sendTimeout: null
+receiveTimeout: 0:00:05.000000
+receiveDataWhenStatusError: true
+extra: {}
+headers:
+ Content-Type: application/json
+ Accept: application/json
+ Authorization: Bearer fresh-test
+data:
+null
+
+00:00 +0: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/widget_test.dart: First launch without tokens reaches onboarding
+최초 확인된 토큰 존재 여부: false, null,null
+====================
+TOKEN = null
+====================
+✅ 서버 정상: {is_success: true}
+00:00 +1: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:01 +1: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: AUTH: offline logout clears local credentials
+로그아웃 실패
+00:01 +1 -1: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:01 +1 -1: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: AUTH: offline logout clears local credentials [E]
+  Expected: empty
+    Actual: {'access_token': 'test-access', 'refresh_token': 'test-refresh'}
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/release_readiness_test.dart 95:5               main.<fn>
+  
+00:01 +2 -1: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:01 +2 -2: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:01 +2 -2: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: HTTP 500 completion must report failure [E]
+  Expected: throws anything
+    Actual: <Instance of 'Future<void>'>
+     Which: emitted <null>
+  
+  package:matcher                                    expectLater
+  package:flutter_test/src/widget_tester.dart 507:8  expectLater
+  test/release_readiness_test.dart 109:11            main.<fn>
+  
+00:01 +2 -3: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:01 +2 -3: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: NOTIFICATIONS: HTTP 500 read-all must report failure [E]
+  Expected: throws anything
+    Actual: <Instance of 'Future<void>'>
+     Which: emitted <null>
+  
+  package:matcher                                    expectLater
+  package:flutter_test/src/widget_tester.dart 507:8  expectLater
+  test/release_readiness_test.dart 116:11            main.<fn>
+  
+00:01 +2 -4: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:01 +2 -4: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: ROUTINE: save must await server acknowledgement [E]
+  Expected: false
+    Actual: <true>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/release_readiness_test.dart 139:5              main.<fn>
+  
+00:01 +2 -5: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:01 +2 -5: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: LIBRARY: server failure must not become an empty library [E]
+  Expected: throws anything
+    Actual: <Instance of 'Future<List<LibraryBookModel>>'>
+     Which: emitted []
+  
+  package:matcher                                    expectLater
+  package:flutter_test/src/widget_tester.dart 507:8  expectLater
+  test/release_readiness_test.dart 146:11            main.<fn>
+  
+00:01 +3 -5: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:01 +3 -5: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse
+getActiveSession 성공: {result: {session_id: 7, status: PAUSED, remaining_minutes: 10, total_read_minutes: 0, idle_minutes: 20, focus_block_enabled: false, white_noise_enabled: false}}
+ActiveReadingSession.fromJson 성공: {session_id: 7, status: PAUSED, remaining_minutes: 10, total_read_minutes: 0, idle_minutes: 20, focus_block_enabled: false, white_noise_enabled: false}
+⏳ [백업 마감선 작동] 메모리/디스크 잔여 시간 소실 확인 ➔ 타이머 즉시 마감
+00:01 +3 -6: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:01 +3 -6: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: paused time must not elapse [E]
+  Expected: false
+    Actual: <true>
+  remaining_minutes=10; result=TimerRecoveryType.timerCompleted
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/release_readiness_test.dart 202:9              main.<fn>
+  
+00:01 +3 -6: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: missing cache must not complete active session
+getActiveSession 성공: {result: {session_id: 7, status: RUNNING, remaining_minutes: 10, total_read_minutes: 0, idle_minutes: 20, focus_block_enabled: false, white_noise_enabled: false}}
+ActiveReadingSession.fromJson 성공: {session_id: 7, status: RUNNING, remaining_minutes: 10, total_read_minutes: 0, idle_minutes: 20, focus_block_enabled: false, white_noise_enabled: false}
+🏁 [타이머 만료 선처리] 서버/로컬 시간 계산 결과 0초 이하 감지 ➔ 타이머 완료 확정 진행
+00:01 +3 -7: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:01 +3 -7: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TIMER: missing cache must not complete active session [E]
+  Expected: false
+    Actual: <true>
+  remaining_minutes=10; result=TimerRecoveryType.timerCompleted
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/release_readiness_test.dart 202:9              main.<fn>
+  
+00:02 +3 -7: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:02 +3 -7: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: DNA: retry preserves the same answer IDs
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: [20, 30, 40, 50]
+  Actual: [20, 30, 40, 50, 50]
+   Which: at location [4] is [20, 30, 40, 50, 50] which longer than expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart:246:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart line 246
+The test description was:
+  DNA: retry preserves the same answer IDs
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +3 -8: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:02 +3 -8: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: DNA: retry preserves the same answer IDs [E]
+  Test failed. See exception logs above.
+  The test description was: DNA: retry preserves the same answer IDs
+  
+00:02 +3 -8: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TOPICS: server errors must not trigger an unbounded retry loop
+Books API Error: 503
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+Books API Error: 503
+[전체] 0/20권 확보
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: a value less than or equal to <3>
+  Actual: <21>
+   Which: is not a value less than or equal to <3>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart:265:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart line 265
+The test description was:
+  TOPICS: server errors must not trigger an unbounded retry loop
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +3 -9: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:02 +3 -9: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/release_readiness_test.dart: TOPICS: server errors must not trigger an unbounded retry loop [E]
+  Test failed. See exception logs above.
+  The test description was: TOPICS: server errors must not trigger an unbounded retry loop
+  
+00:03 +4 -9: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:03 +5 -9: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:03 +6 -9: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:03 +7 -9: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh
+00:03 +7 -10: /Volumes/AI-Workspace/Mac-mini/Users/haram/coding/flutter/whoreads/test/token_refresh_release_test.dart: AUTH: expired token request completes after successful refresh [E]
+  Request stalled after successful refresh. Observed paths: [/api/protected, /api/auth/refresh, /api/protected]; new token saved: true
+  package:matcher                            fail
+  test/token_refresh_release_test.dart 66:9  main.<fn>
+  
+00:03 +7 -10: Some tests failed.
