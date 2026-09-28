@@ -103,9 +103,10 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   Widget _buildBody() {
-    if (_initialLoading)
+    if (_initialLoading) {
       return const Center(child: CircularProgressIndicator());
-    if (_error != null)
+    }
+    if (_error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -115,6 +116,7 @@ class _NotificationPageState extends State<NotificationPage> {
           ],
         ),
       );
+    }
     final list = _notificationService.notifications;
 
     return RefreshIndicator(
@@ -177,10 +179,11 @@ class _NotificationPageState extends State<NotificationPage> {
           }
           if (mounted) setState(() {});
         } catch (_) {
-          if (mounted)
+          if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('알림 처리에 실패했습니다. 다시 시도해주세요.')),
             );
+          }
         }
       },
     );

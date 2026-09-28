@@ -20,10 +20,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
   String? _loadError;
 
   void _showFailure(String message) {
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   // 파싱할 데이터 변수들

@@ -37,8 +37,9 @@ class FcmService {
   );
 
   static NotificationDestination? destinationFor(Map<String, dynamic> data) {
-    if (data['type'] == 'ROUTINE')
+    if (data['type'] == 'ROUTINE') {
       return const NotificationDestination('/library');
+    }
     dynamic link = data['link'] ?? data;
     if (link is String) {
       try {
@@ -49,8 +50,9 @@ class FcmService {
     }
     if (data['type'] == 'FOLLOW' && link is Map) {
       final id = int.tryParse('${link['celebrity_id']}');
-      if (id != null && id > 0)
+      if (id != null && id > 0) {
         return NotificationDestination('/celebrity/book', id);
+      }
     }
     return null;
   }
@@ -140,8 +142,9 @@ class FcmService {
     if (id != null && id.isNotEmpty) {
       try {
         await _notificationService.markAsRead(id);
-        if (data['type'] == 'ROUTINE')
+        if (data['type'] == 'ROUTINE') {
           await _notificationService.removeNotification(id);
+        }
       } catch (_) {
         debugPrint('알림 읽음 처리 실패');
       }

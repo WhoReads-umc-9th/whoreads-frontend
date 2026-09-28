@@ -231,7 +231,6 @@ class _AgreeRow extends StatelessWidget {
   final VoidCallback? onTapDetail;
 
   const _AgreeRow({
-    super.key,
     required this.value,
     required this.label,
     required this.onChanged,
@@ -296,7 +295,6 @@ class _CircleCheck extends StatelessWidget {
   final double size; // 아이콘 크기
 
   const _CircleCheck({
-    super.key,
     required this.value,
     required this.onTap,
     required this.size,

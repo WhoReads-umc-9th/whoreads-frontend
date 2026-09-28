@@ -49,13 +49,15 @@ class ApiClient {
               try {
                 if (!options.path.startsWith('/auth/')) {
                   final token = await TokenStorage.getAccessToken();
-                  if (token != null)
+                  if (token != null) {
                     options.headers['Authorization'] = 'Bearer $token';
+                  }
                 } else if (options.path == '/auth/logout' ||
                     options.path == '/auth/delete') {
                   final token = await TokenStorage.getAccessToken();
-                  if (token != null)
+                  if (token != null) {
                     options.headers['Authorization'] = 'Bearer $token';
+                  }
                 }
                 handler.next(options);
               } catch (e) {

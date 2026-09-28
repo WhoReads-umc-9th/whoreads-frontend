@@ -75,8 +75,9 @@ class LibraryService {
     for (final status in ['WISH', 'READING', 'COMPLETE']) {
       await for (final item in _rows(status, size)) {
         final book = item['book'] is Map ? item['book'] as Map : const {};
-        if ((_int(book['id']) ?? _int(item['book_id'])) != catalogBookId)
+        if ((_int(book['id']) ?? _int(item['book_id'])) != catalogBookId) {
           continue;
+        }
         final id = _int(item['user_book_id']) ?? _int(item['id']);
         if (id == null) continue;
         return CatalogBookLibrarySnapshot(

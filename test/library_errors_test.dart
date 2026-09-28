@@ -77,7 +77,7 @@ void main() {
     var writes = 0;
     ApiClient.dio.httpClientAdapter = FakeApi((o) {
       if (o.method == 'PATCH') writes++;
-      if (o.path.contains('/detail'))
+      if (o.path.contains('/detail')) {
         return jsonResponse({
           'result': {
             'title': 'QA book',
@@ -91,6 +91,7 @@ void main() {
             },
           },
         });
+      }
       return jsonResponse({
         'is_success': true,
         'result': {'books': []},
