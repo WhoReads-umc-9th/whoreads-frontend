@@ -1,3 +1,4 @@
+import '../../services/notification/fcm_service.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
@@ -33,6 +34,9 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
     super.initState();
 
     _initialize();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) FcmService.authenticatedNavigatorReady();
+    });
   }
 
   void _showDnaTestDialog() {
@@ -50,6 +54,7 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
     final token = await TokenStorage.getAccessToken();
 
     if (token == null) {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -58,29 +63,27 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
 
     accessToken = token;
 
-    await Future.wait([
-      _checkDnaResult(),
-      _fetchMyInfo(),
-    ]);
+    await Future.wait([_checkDnaResult(), _fetchMyInfo()]);
   }
 
   Future<void> _checkDnaResult() async {
     try {
-      final response = await ApiClient.dio.get(
-        '/dna/results',
-      );
+      final response = await ApiClient.dio.get('/dna/results');
 
       if (response.statusCode == 200) {
+        if (!mounted) return;
         setState(() {
           hasDnaResult = true;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           hasDnaResult = false;
         });
       }
     } catch (e) {
       debugPrint('DNA 결과 조회 에러: $e');
+      if (!mounted) return;
       setState(() {
         hasDnaResult = false;
       });
@@ -89,9 +92,7 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
 
   Future<void> _fetchMyInfo() async {
     try {
-      final response = await ApiClient.dio.get(
-        '/members/me',
-      );
+      final response = await ApiClient.dio.get('/members/me');
 
       if (response.statusCode == 200) {
         final data = response.data is String
@@ -99,17 +100,20 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
             : response.data;
         final result = data['result'];
 
+        if (!mounted) return;
         setState(() {
           nickname = result['nickname'];
           isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           isLoading = false;
         });
       }
     } catch (e) {
       debugPrint('내 정보 조회 에러: $e');
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -127,11 +131,7 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
     }
 
     if (accessToken == null) {
-      return const Scaffold(
-        body: Center(
-          child: Text('토큰이 없습니다. 다시 로그인해주세요.'),
-        ),
-      );
+      return const Scaffold(body: Center(child: Text('토큰이 없습니다. 다시 로그인해주세요.')));
     }
 
     return DefaultTabController(
@@ -144,10 +144,7 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
           automaticallyImplyLeading: false,
           backgroundColor: Colors.white,
           elevation: 0,
-          title: SvgPicture.asset(
-            'assets/images/logo.svg',
-            height: 18,
-          ),
+          title: SvgPicture.asset('assets/images/logo.svg', height: 18),
           actions: [
             IconButton(
               icon: const Icon(Icons.timer_outlined, color: Colors.black),
@@ -195,9 +192,7 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
                     debugPrint("DNA Card Clicked!");
                     _showDnaTestDialog();
                   },
-                  child: const AbsorbPointer(
-                    child: DnaCard(),
-                  ),
+                  child: const AbsorbPointer(child: DnaCard()),
                 ),
               ),
               const SizedBox(height: 16),
@@ -251,28 +246,17 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
                   builder: (context) => const CelebritiesPage(),
                 ),
               );
-            }else if (index == 2) {
+            } else if (index == 2) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const TopicsPage(),
-                ),
+                MaterialPageRoute(builder: (context) => const TopicsPage()),
               );
             }
           },
           items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people),
-              label: '인물',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.menu_book),
-              label: '내 서재',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.topic),
-              label: '주제',
-            ),
+            BottomNavigationBarItem(icon: Icon(Icons.people), label: '인물'),
+            BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: '내 서재'),
+            BottomNavigationBarItem(icon: Icon(Icons.topic), label: '주제'),
           ],
         ),
       ),

@@ -1,3 +1,4 @@
+import '../services/notification/fcm_service.dart';
 // lib/screens/notification_page.dart
 
 import 'package:flutter/material.dart';
@@ -24,18 +25,40 @@ class _NotificationPageState extends State<NotificationPage> {
     _scrollController.addListener(_onScroll);
   }
 
+  String? _error;
+  bool _initialLoading = true;
+
   Future<void> _loadData() async {
-    await _notificationService.refresh();
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {
+      _error = null;
+      _initialLoading = true;
+    });
+    try {
+      await _notificationService.refresh();
+    } catch (_) {
+      _error = '알림을 불러오지 못했습니다.';
+    } finally {
+      if (mounted) setState(() => _initialLoading = false);
+    }
+  }
+
+  Future<void> _fetchMore() async {
+    try {
+      await _notificationService.fetchMore();
+    } catch (_) {
+      _error = '알림을 불러오지 못했습니다.';
+    } finally {
+      if (mounted) setState(() {});
+    }
   }
 
   void _onScroll() {
+    if (_error != null || !_scrollController.hasClients) return;
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       if (!_notificationService.isLoading && _notificationService.hasNext) {
-        _notificationService.fetchMore().then((_) {
-          if (mounted) setState(() {});
-        });
+        _fetchMore();
       }
     }
   }
@@ -80,6 +103,18 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   Widget _buildBody() {
+    if (_initialLoading)
+      return const Center(child: CircularProgressIndicator());
+    if (_error != null)
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_error!),
+            TextButton(onPressed: _loadData, child: const Text('다시 시도')),
+          ],
+        ),
+      );
     final list = _notificationService.notifications;
 
     return RefreshIndicator(
@@ -117,25 +152,35 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget _buildNotificationItem(dynamic item) {
     return NotificationWidget(
       type: NotificationType.fromString(item['type']),
-      body: item['title'] + item['body'] ?? '',
+      body: '${item['title'] ?? ''}${item['body'] ?? ''}',
       time: item['time'] ?? '',
       isRead: item['is_read'] ?? false,
       onTap: () async {
-        // 읽음 처리
-
-        if (item['is_read'] == false) {
-          await _notificationService.markAsRead(item['id'].toString());
+        try {
+          if (item['is_read'] == false) {
+            await _notificationService.markAsRead(item['id'].toString());
+          }
+          if (!mounted) return;
+          final destination = FcmService.destinationFor(
+            Map<String, dynamic>.from(item),
+          );
+          if (destination != null) {
+            AppRouter.navigateTo(
+              destination.route,
+              arguments: destination.arguments,
+            );
+          }
+          if (item['type'] == 'ROUTINE') {
+            await _notificationService.removeNotification(
+              item['id'].toString(),
+            );
+          }
           if (mounted) setState(() {});
-        }
-
-        debugPrint("딥링크 데이터 : ${item.toString()}");
-        // 딥링크 이동 로직
-        _handleDeepLink(item['type'], item['link'] ?? {});
-
-        if (item['type'] == 'ROUTINE') {
-          _notificationService.removeNotification(item['id'].toString());
-          await _notificationService.refresh();
-          if (mounted) setState(() {});
+        } catch (_) {
+          if (mounted)
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('알림 처리에 실패했습니다. 다시 시도해주세요.')),
+            );
         }
       },
     );
@@ -151,17 +196,5 @@ class _NotificationPageState extends State<NotificationPage> {
         ),
       ),
     );
-  }
-
-  void _handleDeepLink(String type, dynamic linkData) {
-    final String? celebrityId = linkData['celebrity_id']?.toString();
-
-    debugPrint("딥링크 데이터: type=$type, celebrityId=$celebrityId");
-
-    if (type == 'ROUTINE') {
-      AppRouter.navigateTo('/library');
-    } else if (type == 'FOLLOW' && celebrityId != null) {
-      AppRouter.navigateTo('/celebrity/book', arguments: celebrityId);
-    }
   }
 }

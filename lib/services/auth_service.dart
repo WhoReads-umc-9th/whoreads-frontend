@@ -1,3 +1,5 @@
+import 'notification/fcm_service.dart';
+import 'timer/timer_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:whoreads/core/auth/token_storage.dart';
 import 'package:whoreads/core/network/api_client.dart';
@@ -10,6 +12,10 @@ class AuthService {
       debugPrint("서버 로그아웃 요청 실패");
     } finally {
       await TokenStorage.clear();
+      try {
+        await TimerService().discardLocalSession();
+      } catch (_) {}
+      await FcmService.clearSession();
     }
   }
 
@@ -32,6 +38,10 @@ class AuthService {
       final response = await ApiClient.dio.patch("/auth/delete");
       if (response.statusCode == 200 || response.statusCode == 204) {
         await TokenStorage.clear();
+        try {
+          await TimerService().discardLocalSession();
+        } catch (_) {}
+        await FcmService.clearSession();
         return true;
       }
       return false;

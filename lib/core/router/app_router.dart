@@ -8,7 +8,7 @@ import 'package:whoreads/services/auth_service.dart';
 class AppRouter {
   AppRouter._internal();
   static final GlobalKey<NavigatorState> navigatorKey =
-  GlobalKey<NavigatorState>();
+      GlobalKey<NavigatorState>();
 
   static Future<dynamic>? navigateTo(String routeName, {Object? arguments}) {
     return navigatorKey.currentState?.pushNamed(
@@ -18,12 +18,12 @@ class AppRouter {
   }
 
   static Future<dynamic>? navigateAndRemoveUntil(
-      String routeName, {
-        Object? arguments,
-      }) {
+    String routeName, {
+    Object? arguments,
+  }) {
     return navigatorKey.currentState?.pushNamedAndRemoveUntil(
       routeName,
-          (route) => false,
+      (route) => false,
       arguments: arguments,
     );
   }
@@ -32,6 +32,7 @@ class AppRouter {
     switch (settings.name) {
       case '/':
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => FutureBuilder<bool>(
             future: AuthService().getLoggedIn(),
             builder: (context, snapshot) {
@@ -44,7 +45,9 @@ class AppRouter {
               if (snapshot.hasData) {
                 final bool isLoggedIn = snapshot.data ?? false;
 
-                return isLoggedIn ? const MyLibraryPage() : const SplashScreen();
+                return isLoggedIn
+                    ? const MyLibraryPage()
+                    : const SplashScreen();
               }
 
               return const Scaffold(
@@ -62,14 +65,21 @@ class AppRouter {
             ? args
             : int.tryParse(args.toString()) ?? 0;
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => CelebritiesBookPage(celebrityId: celebId),
         );
 
       case '/timer':
-        return MaterialPageRoute(builder: (_) => const TimerPage());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const TimerPage(),
+        );
 
       case '/library':
-        return MaterialPageRoute(builder: (_) => const MyLibraryPage());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const MyLibraryPage(),
+        );
 
       default:
         return _errorRoute(settings.name);
@@ -78,6 +88,7 @@ class AppRouter {
 
   static Route<dynamic> _errorRoute(String? name) {
     return MaterialPageRoute(
+      settings: RouteSettings(name: name),
       builder: (_) =>
           Scaffold(body: Center(child: Text('No route defined for $name'))),
     );

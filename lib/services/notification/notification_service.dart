@@ -104,7 +104,7 @@ class NotificationService {
     try {
       await _apiService.readNotification(id);
       // 로컬 상태 즉시 업데이트 (사용자 경험 개선)
-      final index = _notifications.indexWhere((n) => n['id'] == id);
+      final index = _notifications.indexWhere((n) => n['id'].toString() == id);
       if (index != -1) {
         _notifications[index]['is_read'] = true;
       }
@@ -131,10 +131,10 @@ class NotificationService {
   Future<void> removeNotification(String id) async {
     try {
       await _apiService.deleteNotification(id);
-      _notifications.removeWhere((n) => n['id'] == id);
+      _notifications.removeWhere((n) => n['id'].toString() == id);
       // }
     } catch (e) {
-      return;
+      rethrow;
     }
   }
 }
