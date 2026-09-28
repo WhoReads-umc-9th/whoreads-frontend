@@ -24,7 +24,11 @@ class _DnaTestPageState extends State<DnaTestPage> {
   List<int> selectedOptionIds = [];
 
   final List<String> _trackCodes = [
-    'COMFORT', 'HABIT', 'CAREER', 'INSIGHT', 'FOCUS'
+    'COMFORT',
+    'HABIT',
+    'CAREER',
+    'INSIGHT',
+    'FOCUS',
   ];
 
   final Color primaryOrange = const Color(0xFFFF6A00);
@@ -47,6 +51,7 @@ class _DnaTestPageState extends State<DnaTestPage> {
             : response.data;
         final result = data['result'];
 
+        if (!mounted) return;
         setState(() {
           // Q1 데이터를 리스트에 안전하게 넣기
           if (result is List) {
@@ -62,6 +67,7 @@ class _DnaTestPageState extends State<DnaTestPage> {
         throw Exception('Q1 로드 실패: ${response.statusCode}');
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
         errorMessage = "질문 로드 중 오류가 발생했습니다.\n$e";
@@ -88,9 +94,12 @@ class _DnaTestPageState extends State<DnaTestPage> {
         // result 안에 questions 리스트가 있는지 확인
         final questionsList = resultData['questions'];
 
+        if (!mounted) return;
         setState(() {
           if (questionsList is List) {
-            questions.addAll(questionsList.map((e) => DnaQuestion.fromJson(e)).toList());
+            questions.addAll(
+              questionsList.map((e) => DnaQuestion.fromJson(e)).toList(),
+            );
           }
 
           _selectedOption = null;
@@ -101,6 +110,7 @@ class _DnaTestPageState extends State<DnaTestPage> {
         throw Exception('트랙 질문 로드 실패: ${response.statusCode}');
       }
     } catch (e) {
+      if (!mounted) return;
       _showError('다음 질문 로드 실패: $e');
       setState(() => isNextLoading = false);
     }
@@ -109,15 +119,13 @@ class _DnaTestPageState extends State<DnaTestPage> {
   // [API 3] 결과 제출
   Future<void> _submitResult() async {
     setState(() => isNextLoading = true);
-    if (_selectedOption != null) {
-      selectedOptionIds.add(_selectedOption!.id);
-    }
+    final answers = [
+      ...selectedOptionIds,
+      if (_selectedOption != null) _selectedOption!.id,
+    ];
 
     try {
-      final body = {
-        "track_code": trackCode,
-        "selected_option_ids": selectedOptionIds,
-      };
+      final body = {"track_code": trackCode, "selected_option_ids": answers};
 
       final response = await ApiClient.dio.post('/dna/results', data: body);
 
@@ -130,12 +138,15 @@ class _DnaTestPageState extends State<DnaTestPage> {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => DnaResultPage(result: resultData)),
+          MaterialPageRoute(
+            builder: (context) => DnaResultPage(result: resultData),
+          ),
         );
       } else {
         throw Exception('결과 제출 실패: ${response.statusCode}');
       }
     } catch (e) {
+      if (!mounted) return;
       _showError('결과 분석 중 오류가 발생했습니다.');
       setState(() => isNextLoading = false);
     }
@@ -161,16 +172,14 @@ class _DnaTestPageState extends State<DnaTestPage> {
       } else {
         _showError("트랙 정보를 찾을 수 없습니다.");
       }
-    }
-    else if (currentIndex < questions.length - 1) {
+    } else if (currentIndex < questions.length - 1) {
       // Q2~Q4 처리
       selectedOptionIds.add(_selectedOption!.id);
       setState(() {
         _selectedOption = null;
         currentIndex++;
       });
-    }
-    else {
+    } else {
       // Q5 처리
       _submitResult();
     }
@@ -185,7 +194,9 @@ class _DnaTestPageState extends State<DnaTestPage> {
     if (isLoading) {
       return const Scaffold(
         backgroundColor: Colors.white,
-        body: Center(child: CircularProgressIndicator(color: Color(0xFFFF6A00))),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF6A00)),
+        ),
       );
     }
 
@@ -224,10 +235,14 @@ class _DnaTestPageState extends State<DnaTestPage> {
             child: Center(
               child: Text(
                 '$displayStep/5', // 수정된 step 표시 로직 적용
-                style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          )
+          ),
         ],
       ),
       body: SafeArea(
@@ -243,13 +258,22 @@ class _DnaTestPageState extends State<DnaTestPage> {
                     // 질문 번호
                     Text(
                       'Q$displayStep.', // 수정된 step 표시 로직 적용
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryOrange),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: primaryOrange,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     // 질문 내용
                     Text(
                       currentQuestion.content,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, height: 1.4, color: Colors.black),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                        color: Colors.black,
+                      ),
                     ),
                     const SizedBox(height: 40),
 
@@ -258,7 +282,8 @@ class _DnaTestPageState extends State<DnaTestPage> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: currentQuestion.options.length,
-                      separatorBuilder: (ctx, idx) => const SizedBox(height: 12),
+                      separatorBuilder: (ctx, idx) =>
+                          const SizedBox(height: 12),
                       itemBuilder: (ctx, idx) {
                         final option = currentQuestion.options[idx];
                         final isSelected = _selectedOption?.id == option.id;
@@ -270,7 +295,10 @@ class _DnaTestPageState extends State<DnaTestPage> {
                             });
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 16,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
@@ -282,7 +310,9 @@ class _DnaTestPageState extends State<DnaTestPage> {
                             child: Row(
                               children: [
                                 Icon(
-                                  isSelected ? Icons.check_circle : Icons.check_circle_outline,
+                                  isSelected
+                                      ? Icons.check_circle
+                                      : Icons.check_circle_outline,
                                   color: isSelected ? primaryOrange : greyColor,
                                   size: 24,
                                 ),
@@ -292,7 +322,9 @@ class _DnaTestPageState extends State<DnaTestPage> {
                                     option.content,
                                     style: TextStyle(
                                       fontSize: 16,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                       color: Colors.black,
                                     ),
                                   ),
@@ -316,16 +348,34 @@ class _DnaTestPageState extends State<DnaTestPage> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: (isButtonEnabled && !isNextLoading) ? _onNextPressed : null,
+                  onPressed: (isButtonEnabled && !isNextLoading)
+                      ? _onNextPressed
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1C1C22),
                     disabledBackgroundColor: const Color(0xFFDDDDDD),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 0,
                   ),
                   child: isNextLoading
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('다음', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          '다음',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),
