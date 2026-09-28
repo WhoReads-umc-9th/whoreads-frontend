@@ -36,6 +36,7 @@ class _TopicsPageState extends State<TopicsPage> {
 
   int currentPage = 0;
   bool hasNext = true;
+  String? _booksError;
 
   Map<String, List<dynamic>> books = {};
   List<dynamic> allBooks = [];
@@ -80,7 +81,7 @@ class _TopicsPageState extends State<TopicsPage> {
 
   Future<void> _initializeBooks() async {
     // 최초 page=0, size=20
-    await _fetchTopicsData(reset: true);
+    if (!await _fetchTopicsData(reset: true)) return;
 
     // 전체에서도 최소 20개 확보
     await _ensureMinimumBooks();
@@ -95,30 +96,25 @@ class _TopicsPageState extends State<TopicsPage> {
       return;
     }
 
-    if (isBooksLoading ||
-        isLoadingMore ||
-        !hasNext) {
+    if (isBooksLoading || isLoadingMore || !hasNext) {
       return;
     }
 
     final position = _scrollController.position;
 
     // 바닥 300px 전에 다음 페이지
-    if (position.pixels >=
-        position.maxScrollExtent - 300) {
+    if (position.pixels >= position.maxScrollExtent - 300) {
       _loadMore();
     }
   }
 
   Future<void> _loadMore() async {
-    if (isBooksLoading ||
-        isLoadingMore ||
-        !hasNext) {
+    if (isBooksLoading || isLoadingMore || !hasNext) {
       return;
     }
 
     // 다음 서버 페이지 20개 조회
-    await _fetchTopicsData();
+    if (!await _fetchTopicsData()) return;
 
     // 만약 현재 선택된 장르가 여전히 20개 미만이면
     // 20개가 될 때까지 필요한 페이지 추가 조회
@@ -130,14 +126,12 @@ class _TopicsPageState extends State<TopicsPage> {
   // =========================================================
 
   Future<void> _ensureMinimumBooks() async {
-    while (mounted &&
-        selectBooks.length < minimumVisibleBooks &&
-        hasNext) {
-      await _fetchTopicsData();
+    while (mounted && selectBooks.length < minimumVisibleBooks && hasNext) {
+      if (!await _fetchTopicsData()) break;
 
       debugPrint(
         '[$selectedCategory] '
-            '${selectBooks.length}/$minimumVisibleBooks권 확보',
+        '${selectBooks.length}/$minimumVisibleBooks권 확보',
       );
     }
   }
@@ -146,14 +140,13 @@ class _TopicsPageState extends State<TopicsPage> {
   // 책 페이지 조회
   // =========================================================
 
-  Future<void> _fetchTopicsData({
-    bool reset = false,
-  }) async {
+  Future<bool> _fetchTopicsData({bool reset = false}) async {
     if (isBooksLoading || isLoadingMore) {
-      return;
+      return false;
     }
 
     if (reset) {
+      _booksError = null;
       currentPage = 0;
       hasNext = true;
 
@@ -168,7 +161,7 @@ class _TopicsPageState extends State<TopicsPage> {
       }
     } else {
       if (!hasNext) {
-        return;
+        return false;
       }
 
       if (mounted) {
@@ -183,38 +176,25 @@ class _TopicsPageState extends State<TopicsPage> {
 
       final response = await ApiClient.dio.get(
         '/books',
-        queryParameters: {
-          'page': requestPage,
-          'size': pageSize,
-        },
+        queryParameters: {'page': requestPage, 'size': pageSize},
       );
 
       if (response.statusCode != 200) {
-        debugPrint(
-          'Books API Error: ${response.statusCode}',
-        );
-        return;
+        throw const FormatException('Invalid books response');
       }
 
-      final dynamic decoded =
-      response.data is String
+      final dynamic decoded = response.data is String
           ? jsonDecode(response.data as String)
           : response.data;
 
       if (decoded is! Map) {
-        debugPrint(
-          'Invalid Books Response: $decoded',
-        );
-        return;
+        throw const FormatException('Invalid books response');
       }
 
       final dynamic content = decoded['content'];
 
       if (content is! List) {
-        debugPrint(
-          'Books content is not List: $decoded',
-        );
-        return;
+        throw const FormatException('Invalid books response');
       }
 
       // =====================================================
@@ -232,12 +212,7 @@ class _TopicsPageState extends State<TopicsPage> {
           final genre = item['genre'] as String?;
 
           if (genre != null && genre.isNotEmpty) {
-            books
-                .putIfAbsent(
-              genre,
-                  () => [],
-            )
-                .add(item);
+            books.putIfAbsent(genre, () => []).add(item);
           }
         }
       }
@@ -246,23 +221,21 @@ class _TopicsPageState extends State<TopicsPage> {
       // 서버 페이징 정보
       // =====================================================
 
-      hasNext = decoded['has_next'] == true;
+      hasNext = decoded['has_next'] == true && content.isNotEmpty;
 
       // 다음에 요청할 페이지
       currentPage = requestPage + 1;
 
       debugPrint(
         'Books page=$requestPage / '
-            'size=$pageSize / '
-            'received=${content.length} / '
-            'total=${allBooks.length} / '
-            'hasNext=$hasNext',
+        'size=$pageSize / '
+        'received=${content.length} / '
+        'total=${allBooks.length} / '
+        'hasNext=$hasNext',
       );
 
       for (final entry in books.entries) {
-        debugPrint(
-          '${entry.key}: ${entry.value.length}권',
-        );
+        debugPrint('${entry.key}: ${entry.value.length}권');
       }
 
       if (mounted) {
@@ -270,14 +243,14 @@ class _TopicsPageState extends State<TopicsPage> {
           _updateSelectedBooks();
         });
       }
+      return true;
     } catch (e, stackTrace) {
-      debugPrint(
-        'Books Network/Parsing Error: $e',
-      );
+      hasNext = false;
+      _booksError = '도서 정보를 불러오지 못했습니다. 다시 시도해주세요.';
+      debugPrint('Books Network/Parsing Error: $e');
 
-      debugPrintStack(
-        stackTrace: stackTrace,
-      );
+      debugPrintStack(stackTrace: stackTrace);
+      return false;
     } finally {
       if (mounted) {
         setState(() {
@@ -294,9 +267,7 @@ class _TopicsPageState extends State<TopicsPage> {
 
   void _updateSelectedBooks() {
     if (selectedCategory == '전체') {
-      selectBooks = List<dynamic>.from(
-        allBooks,
-      );
+      selectBooks = List<dynamic>.from(allBooks);
 
       return;
     }
@@ -308,18 +279,14 @@ class _TopicsPageState extends State<TopicsPage> {
       return;
     }
 
-    selectBooks = List<dynamic>.from(
-      books[genre] ?? [],
-    );
+    selectBooks = List<dynamic>.from(books[genre] ?? []);
   }
 
   // =========================================================
   // 카테고리 선택
   // =========================================================
 
-  Future<void> onCategorySelected(
-      String category,
-      ) async {
+  Future<void> onCategorySelected(String category) async {
     if (!mounted) {
       return;
     }
@@ -361,39 +328,28 @@ class _TopicsPageState extends State<TopicsPage> {
       try {
         final response = await ApiClient.dio.get(
           '/books/themes/$theme',
-          queryParameters: {
-            'limit': 3,
-          },
+          queryParameters: {'limit': 3},
         );
 
         if (response.statusCode == 200) {
-          final decoded =
-          response.data is String
-              ? jsonDecode(
-            response.data as String,
-          )
+          final decoded = response.data is String
+              ? jsonDecode(response.data as String)
               : response.data;
 
-          List<dynamic> themeBooks =
-          decoded is List ? decoded : [];
+          List<dynamic> themeBooks = decoded is List ? decoded : [];
 
           actualCount = themeBooks.length;
 
           for (var b in themeBooks) {
             if (b is Map &&
                 b['cover_url'] != null &&
-                (b['cover_url'] as String)
-                    .isNotEmpty) {
-              previewImages.add(
-                b['cover_url'] as String,
-              );
+                (b['cover_url'] as String).isNotEmpty) {
+              previewImages.add(b['cover_url'] as String);
             }
           }
         }
       } catch (e) {
-        debugPrint(
-          'Banner fetch error for theme $theme: $e',
-        );
+        debugPrint('Banner fetch error for theme $theme: $e');
       }
 
       generatedBanners.add({
@@ -417,67 +373,55 @@ class _TopicsPageState extends State<TopicsPage> {
   Map<String, dynamic> _getBannerMeta(int index) {
     final List<Map<String, dynamic>> metaList = [
       {
-        "title":
-        "WhoReads의 유명인들이\n가장 많이 추천한 책 TOP20",
-        "subtitle":
-        "가장 많이 언급된 책은 무엇일까요?",
+        "title": "WhoReads의 유명인들이\n가장 많이 추천한 책 TOP20",
+        "subtitle": "가장 많이 언급된 책은 무엇일까요?",
         "description":
-        "WhoReads에 모인 수많은 유명인 추천 중,\n"
+            "WhoReads에 모인 수많은 유명인 추천 중,\n"
             "가장 많이 언급되고 반복해서 추천된 책 TOP 20을 선정했습니다.",
         "defaultCount": 20,
         "theme": "TOP_20",
       },
       {
-        "title":
-        "각 분야의 유명인들이\n사회를 이해하기 위해 읽은 책",
-        "subtitle":
-        "세상은 왜 이렇게 돌아갈까요?",
+        "title": "각 분야의 유명인들이\n사회를 이해하기 위해 읽은 책",
+        "subtitle": "세상은 왜 이렇게 돌아갈까요?",
         "description":
-        "복잡한 현대 사회와 역사의 흐름을 파악하기 위해\n"
+            "복잡한 현대 사회와 역사의 흐름을 파악하기 위해\n"
             "각 분야의 전문가와 유명인들이 읽었던 추천 도서입니다.",
         "defaultCount": 20,
         "theme": "SOCIETY",
       },
       {
-        "title":
-        "각 분야의 유명인들이\n인간을 이해하기 위해 읽은 책",
-        "subtitle":
-        "인간은 왜 그렇게 행동할까요?",
+        "title": "각 분야의 유명인들이\n인간을 이해하기 위해 읽은 책",
+        "subtitle": "인간은 왜 그렇게 행동할까요?",
         "description":
-        "심리학과 인문학을 통찰하여\n"
+            "심리학과 인문학을 통찰하여\n"
             "사람의 마음과 행동의 본질을 다룬 도서 목록입니다.",
         "defaultCount": 20,
         "theme": "HUMAN_UNDERSTANDING",
       },
       {
-        "title":
-        "각 분야의 유명인들의\n사고 방식을 바꾼 책",
-        "subtitle":
-        "생각하는 방식이 달라지는 순간",
+        "title": "각 분야의 유명인들의\n사고 방식을 바꾼 책",
+        "subtitle": "생각하는 방식이 달라지는 순간",
         "description":
-        "고정관념을 깨고 새로운 관점을 제시해 준\n"
+            "고정관념을 깨고 새로운 관점을 제시해 준\n"
             "명사들의 추천 서적입니다.",
         "defaultCount": 20,
         "theme": "MINDSET",
       },
       {
-        "title":
-        "각 분야의 유명인들이\n삶의 방향을 고민할 때 읽은 책",
-        "subtitle":
-        "나는 어떻게 살아야 할까?",
+        "title": "각 분야의 유명인들이\n삶의 방향을 고민할 때 읽은 책",
+        "subtitle": "나는 어떻게 살아야 할까?",
         "description":
-        "치열한 고민 끝에 삶의 이정표가 되어 준\n"
+            "치열한 고민 끝에 삶의 이정표가 되어 준\n"
             "유명인들의 인생 책 모음입니다.",
         "defaultCount": 20,
         "theme": "LIFE_DIRECTION",
       },
       {
-        "title":
-        "각 분야의 유명인들이\n인생의 전환점에서 만난 책",
-        "subtitle":
-        "인생이 바뀌는 순간, 곁에 있던 책",
+        "title": "각 분야의 유명인들이\n인생의 전환점에서 만난 책",
+        "subtitle": "인생이 바뀌는 순간, 곁에 있던 책",
         "description":
-        "커다란 터닝포인트를 맞이했을 때\n"
+            "커다란 터닝포인트를 맞이했을 때\n"
             "깊은 영감을 선사했던 추천 도서들입니다.",
         "defaultCount": 20,
         "theme": "TURNING_POINT",
@@ -502,40 +446,27 @@ class _TopicsPageState extends State<TopicsPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
 
-        title: SvgPicture.asset(
-          'assets/images/logo.svg',
-          height: 18,
-        ),
+        title: SvgPicture.asset('assets/images/logo.svg', height: 18),
 
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.notifications_none,
-              color: Colors.black,
-            ),
+            icon: const Icon(Icons.notifications_none, color: Colors.black),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                  const NotificationPage(),
+                  builder: (context) => const NotificationPage(),
                 ),
               );
             },
           ),
 
           IconButton(
-            icon: const Icon(
-              Icons.person_outline,
-              color: Colors.black,
-            ),
+            icon: const Icon(Icons.person_outline, color: Colors.black),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                  const ProfilePage(),
-                ),
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
               );
             },
           ),
@@ -553,25 +484,20 @@ class _TopicsPageState extends State<TopicsPage> {
               controller: _scrollController,
 
               child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
                   const SizedBox(height: 16),
 
                   const Padding(
-                    padding:
-                    EdgeInsets.symmetric(
-                      horizontal: 16,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 16),
 
                     child: Text(
                       "이런 주제 어때요?",
 
                       style: TextStyle(
                         fontSize: 20,
-                        fontWeight:
-                        FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                         color: Colors.black,
                       ),
                     ),
@@ -582,73 +508,50 @@ class _TopicsPageState extends State<TopicsPage> {
                   // =================================================
                   // 배너
                   // =================================================
-
                   SizedBox(
                     height: 150,
 
-                    child:
-                    isBannersLoading &&
-                        banners.isEmpty
+                    child: isBannersLoading && banners.isEmpty
                         ? const Center(
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
 
-                        child:
-                        CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(
-                            0xFFFF6A00,
-                          ),
-                        ),
-                      ),
-                    )
-                        : PageView(
-                      controller:
-                      PageController(
-                        viewportFraction:
-                        0.7,
-                      ),
-
-                      padEnds: false,
-
-                      children: banners.map(
-                            (banner) {
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      TopicBannerPage(
-                                        theme:
-                                        banner['theme'],
-                                        title:
-                                        banner['title'],
-                                        description:
-                                        banner['description'],
-                                      ),
-                                ),
-                              );
-                            },
-
-                            child: Padding(
-                              padding:
-                              const EdgeInsets.only(
-                                left: 12,
-                              ),
-
-                              child:
-                              _TopicBannerCard(
-                                banner:
-                                banner,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFFF6A00),
                               ),
                             ),
-                          );
-                        },
-                      ).toList(),
-                    ),
+                          )
+                        : PageView(
+                            controller: PageController(viewportFraction: 0.7),
+
+                            padEnds: false,
+
+                            children: banners.map((banner) {
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+
+                                    MaterialPageRoute(
+                                      builder: (_) => TopicBannerPage(
+                                        theme: banner['theme'],
+                                        title: banner['title'],
+                                        description: banner['description'],
+                                      ),
+                                    ),
+                                  );
+                                },
+
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 12),
+
+                                  child: _TopicBannerCard(banner: banner),
+                                ),
+                              );
+                            }).toList(),
+                          ),
                   ),
 
                   const SizedBox(height: 24),
@@ -656,49 +559,31 @@ class _TopicsPageState extends State<TopicsPage> {
                   // =================================================
                   // 카테고리
                   // =================================================
-
                   Padding(
-                    padding:
-                    const EdgeInsets.symmetric(
-                      horizontal: 16,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
 
                     child: Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment
-                          .spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
                       children: [
                         Container(
-                          padding:
-                          const EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 8,
                           ),
 
-                          decoration:
-                          BoxDecoration(
-                            color:
-                            const Color(
-                              0xFFFB9566,
-                            ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFB9566),
 
-                            borderRadius:
-                            BorderRadius.circular(
-                              50,
-                            ),
+                            borderRadius: BorderRadius.circular(50),
                           ),
 
                           child: Text(
                             selectedCategory,
 
-                            style:
-                            const TextStyle(
-                              color:
-                              Colors.white,
-                              fontWeight:
-                              FontWeight
-                                  .bold,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
                           ),
@@ -706,66 +591,42 @@ class _TopicsPageState extends State<TopicsPage> {
 
                         GestureDetector(
                           onTap: () {
-                            setState(
-                                  () =>
-                              isDropdownOpen =
-                              !isDropdownOpen,
-                            );
+                            setState(() => isDropdownOpen = !isDropdownOpen);
                           },
 
                           child: Container(
-                            padding:
-                            const EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 6,
                             ),
 
-                            decoration:
-                            BoxDecoration(
-                              color:
-                              const Color(
-                                0xFFF3F4F6,
-                              ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
 
-                              borderRadius:
-                              BorderRadius.circular(
-                                50,
-                              ),
+                              borderRadius: BorderRadius.circular(50),
                             ),
 
                             child: Row(
                               children: [
                                 Text(
-                                  isDropdownOpen
-                                      ? '접기'
-                                      : '카테고리',
+                                  isDropdownOpen ? '접기' : '카테고리',
 
-                                  style:
-                                  const TextStyle(
-                                    fontSize:
-                                    13,
-                                    color: Colors
-                                        .black87,
-                                    fontWeight:
-                                    FontWeight
-                                        .w500,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
 
-                                const SizedBox(
-                                  width: 4,
-                                ),
+                                const SizedBox(width: 4),
 
                                 Icon(
                                   isDropdownOpen
-                                      ? Icons
-                                      .keyboard_arrow_up
-                                      : Icons
-                                      .keyboard_arrow_down,
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
 
                                   size: 18,
-                                  color:
-                                  Colors.black54,
+                                  color: Colors.black54,
                                 ),
                               ],
                             ),
@@ -780,23 +641,27 @@ class _TopicsPageState extends State<TopicsPage> {
                   // =================================================
                   // 도서
                   // =================================================
-
-                  if (isBooksLoading &&
-                      selectBooks.isEmpty)
+                  if (_booksError != null)
+                    Column(
+                      children: [
+                        Text(_booksError!, textAlign: TextAlign.center),
+                        TextButton(
+                          onPressed: _initializeBooks,
+                          child: const Text('다시 시도'),
+                        ),
+                      ],
+                    )
+                  else if (isBooksLoading && selectBooks.isEmpty)
                     const SizedBox(
                       height: 200,
 
                       child: Center(
-                        child:
-                        CircularProgressIndicator(
-                          color: Color(
-                            0xFFFF6A00,
-                          ),
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFFF6A00),
                         ),
                       ),
                     )
-                  else if (selectBooks.isEmpty &&
-                      !hasNext)
+                  else if (selectBooks.isEmpty && !hasNext)
                     const SizedBox(
                       height: 200,
 
@@ -804,47 +669,35 @@ class _TopicsPageState extends State<TopicsPage> {
                         child: Text(
                           '표시할 도서 정보가 없습니다.',
 
-                          style: TextStyle(
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(color: Colors.grey),
                         ),
                       ),
                     )
                   else
                     Padding(
-                      padding:
-                      const EdgeInsets.symmetric(
-                        horizontal: 16,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
 
                       child: GridView.builder(
-                        physics:
-                        const NeverScrollableScrollPhysics(),
+                        physics: const NeverScrollableScrollPhysics(),
 
                         shrinkWrap: true,
 
-                        addAutomaticKeepAlives:
-                        false,
+                        addAutomaticKeepAlives: false,
 
-                        addRepaintBoundaries:
-                        false,
+                        addRepaintBoundaries: false,
 
                         gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 24,
-                          childAspectRatio:
-                          0.48,
-                        ),
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 24,
+                              childAspectRatio: 0.48,
+                            ),
 
-                        itemCount:
-                        selectBooks.length,
+                        itemCount: selectBooks.length,
 
-                        itemBuilder:
-                            (context, index) {
-                          final dynamic book =
-                          selectBooks[index];
+                        itemBuilder: (context, index) {
+                          final dynamic book = selectBooks[index];
 
                           return GestureDetector(
                             onTap: () {
@@ -852,20 +705,14 @@ class _TopicsPageState extends State<TopicsPage> {
                                 context,
 
                                 MaterialPageRoute(
-                                  builder: (_) =>
-                                      BookDetailPage(
-                                        bookId:
-                                        book['id'] ??
-                                            book['book_id'],
-                                      ),
+                                  builder: (_) => BookDetailPage(
+                                    bookId: book['id'] ?? book['book_id'],
+                                  ),
                                 ),
                               );
                             },
 
-                            child:
-                            _TopicBookCard(
-                              book: book,
-                            ),
+                            child: _TopicBookCard(book: book),
                           );
                         },
                       ),
@@ -874,25 +721,18 @@ class _TopicsPageState extends State<TopicsPage> {
                   // =================================================
                   // 추가 페이지 로딩
                   // =================================================
-
                   if (isLoadingMore)
                     const Padding(
-                      padding:
-                      EdgeInsets.symmetric(
-                        vertical: 24,
-                      ),
+                      padding: EdgeInsets.symmetric(vertical: 24),
 
                       child: Center(
                         child: SizedBox(
                           width: 24,
                           height: 24,
 
-                          child:
-                          CircularProgressIndicator(
+                          child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Color(
-                              0xFFFF6A00,
-                            ),
+                            color: Color(0xFFFF6A00),
                           ),
                         ),
                       ),
@@ -906,24 +746,16 @@ class _TopicsPageState extends State<TopicsPage> {
             // =====================================================
             // 카테고리 드롭다운
             // =====================================================
-
             if (isDropdownOpen)
               Positioned.fill(
                 child: Stack(
                   children: [
                     GestureDetector(
                       onTap: () {
-                        setState(
-                              () =>
-                          isDropdownOpen =
-                          false,
-                        );
+                        setState(() => isDropdownOpen = false);
                       },
 
-                      child: Container(
-                        color:
-                        Colors.transparent,
-                      ),
+                      child: Container(color: Colors.transparent),
                     ),
 
                     Positioned(
@@ -932,153 +764,92 @@ class _TopicsPageState extends State<TopicsPage> {
                       right: 0,
 
                       child: Container(
-                        margin:
-                        const EdgeInsets.symmetric(
-                          horizontal: 16,
-                        ),
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
 
-                        constraints:
-                        const BoxConstraints(
-                          maxHeight: 300,
-                        ),
+                        constraints: const BoxConstraints(maxHeight: 300),
 
-                        decoration:
-                        BoxDecoration(
-                          color:
-                          Colors.white,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
 
-                          borderRadius:
-                          BorderRadius.circular(
-                            16,
-                          ),
+                          borderRadius: BorderRadius.circular(16),
 
                           boxShadow: [
                             BoxShadow(
-                              color: Colors
-                                  .black
-                                  .withOpacity(
-                                0.15,
-                              ),
+                              color: Colors.black.withOpacity(0.15),
 
                               blurRadius: 10,
 
-                              offset:
-                              const Offset(
-                                0,
-                                4,
-                              ),
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
 
-                        child:
-                        SingleChildScrollView(
-                          padding:
-                          const EdgeInsets.all(
-                            16,
-                          ),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
 
-                          child:
-                          LayoutBuilder(
-                            builder:
-                                (
-                                context,
-                                constraints,
-                                ) {
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
                               final itemWidth =
-                                  (constraints.maxWidth -
-                                      (8 *
-                                          3)) /
-                                      4;
+                                  (constraints.maxWidth - (8 * 3)) / 4;
 
                               return Wrap(
-                                spacing:
-                                8,
-                                runSpacing:
-                                8,
+                                spacing: 8,
+                                runSpacing: 8,
 
-                                children: categoryKeys.map(
-                                      (
-                                      category,
-                                      ) {
-                                    final isSelected =
-                                        category ==
-                                            selectedCategory;
+                                children: categoryKeys.map((category) {
+                                  final isSelected =
+                                      category == selectedCategory;
 
-                                    return GestureDetector(
-                                      onTap: () {
-                                        onCategorySelected(
-                                          category,
-                                        );
-                                      },
+                                  return GestureDetector(
+                                    onTap: () {
+                                      onCategorySelected(category);
+                                    },
 
-                                      child: Container(
-                                        width:
-                                        itemWidth,
+                                    child: Container(
+                                      width: itemWidth,
 
-                                        padding:
-                                        const EdgeInsets.symmetric(
-                                          vertical:
-                                          6,
-                                        ),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 6,
+                                      ),
 
-                                        alignment:
-                                        Alignment.center,
+                                      alignment: Alignment.center,
 
-                                        decoration: BoxDecoration(
-                                          color:
-                                          Colors.white,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
 
-                                          borderRadius:
-                                          BorderRadius.circular(
-                                            8,
-                                          ),
+                                        borderRadius: BorderRadius.circular(8),
 
-                                          border: Border.all(
-                                            color:
-                                            isSelected
-                                                ? const Color(
-                                              0xFFFB9566,
-                                            )
-                                                : const Color(
-                                              0xFFE5E7EB,
-                                            ),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? const Color(0xFFFB9566)
+                                              : const Color(0xFFE5E7EB),
 
-                                            width:
-                                            1,
-                                          ),
-                                        ),
-
-                                        child: Text(
-                                          category,
-
-                                          style: TextStyle(
-                                            fontSize:
-                                            12,
-
-                                            color:
-                                            isSelected
-                                                ? const Color(
-                                              0xFFFB9566,
-                                            )
-                                                : Colors.black87,
-
-                                            fontWeight:
-                                            isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                          ),
-
-                                          maxLines:
-                                          1,
-
-                                          overflow:
-                                          TextOverflow.ellipsis,
+                                          width: 1,
                                         ),
                                       ),
-                                    );
-                                  },
-                                ).toList(),
+
+                                      child: Text(
+                                        category,
+
+                                        style: TextStyle(
+                                          fontSize: 12,
+
+                                          color: isSelected
+                                              ? const Color(0xFFFB9566)
+                                              : Colors.black87,
+
+                                          fontWeight: isSelected
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                        ),
+
+                                        maxLines: 1,
+
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               );
                             },
                           ),
@@ -1095,59 +866,35 @@ class _TopicsPageState extends State<TopicsPage> {
       // =========================================================
       // Bottom Navigation
       // =========================================================
-
-      bottomNavigationBar:
-      BottomNavigationBar(
+      bottomNavigationBar: BottomNavigationBar(
         currentIndex: 2,
 
-        selectedItemColor:
-        const Color(
-          0xFFF84E00,
-        ),
+        selectedItemColor: const Color(0xFFF84E00),
 
-        unselectedItemColor:
-        Colors.grey,
+        unselectedItemColor: Colors.grey,
 
         onTap: (index) {
           if (index == 0) {
             Navigator.pushReplacement(
               context,
 
-              MaterialPageRoute(
-                builder: (context) =>
-                const CelebritiesPage(),
-              ),
+              MaterialPageRoute(builder: (context) => const CelebritiesPage()),
             );
           } else if (index == 1) {
             Navigator.pushReplacement(
               context,
 
-              MaterialPageRoute(
-                builder: (context) =>
-                const MyLibraryPage(),
-              ),
+              MaterialPageRoute(builder: (context) => const MyLibraryPage()),
             );
           }
         },
 
         items: const [
-          BottomNavigationBarItem(
-            icon:
-            Icon(Icons.people),
-            label: '인물',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: '인물'),
 
-          BottomNavigationBarItem(
-            icon:
-            Icon(Icons.menu_book),
-            label: '내 서재',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: '내 서재'),
 
-          BottomNavigationBarItem(
-            icon:
-            Icon(Icons.topic),
-            label: '주제',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.topic), label: '주제'),
         ],
       ),
     );
@@ -1161,109 +908,76 @@ class _TopicsPageState extends State<TopicsPage> {
 class _TopicBannerCard extends StatelessWidget {
   final dynamic banner;
 
-  const _TopicBannerCard({
-    required this.banner,
-  });
+  const _TopicBannerCard({required this.banner});
 
   @override
   Widget build(BuildContext context) {
-    final String title =
-        banner['title'] ?? '';
+    final String title = banner['title'] ?? '';
 
-    final String subtitle =
-        banner['subtitle'] ?? '';
+    final String subtitle = banner['subtitle'] ?? '';
 
-    final int count =
-        banner['count'] ?? 0;
+    final int count = banner['count'] ?? 0;
 
-    final List<dynamic> images =
-        banner['images'] ?? [];
+    final List<dynamic> images = banner['images'] ?? [];
 
     return Container(
-      padding:
-      const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
 
       decoration: BoxDecoration(
         color: Colors.white,
 
-        borderRadius:
-        BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12),
 
-        border: Border.all(
-          color:
-          const Color(
-            0xFFFF6A00,
-          ),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFFFF6A00), width: 1),
 
         boxShadow: [
           BoxShadow(
-            color: Colors.black
-                .withOpacity(0.05),
+            color: Colors.black.withOpacity(0.05),
 
             blurRadius: 4,
 
-            offset:
-            const Offset(2, 2),
+            offset: const Offset(2, 2),
           ),
         ],
       ),
 
       child: Column(
-        crossAxisAlignment:
-        CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
 
-        mainAxisAlignment:
-        MainAxisAlignment
-            .spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
         children: [
           Column(
-            crossAxisAlignment:
-            CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
 
             children: [
               Text(
                 title,
 
-                style:
-                const TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
-                  fontWeight:
-                  FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                   height: 1.3,
-                  color:
-                  Colors.black87,
+                  color: Colors.black87,
                 ),
 
                 maxLines: 2,
 
-                overflow:
-                TextOverflow.ellipsis,
+                overflow: TextOverflow.ellipsis,
               ),
 
-              const SizedBox(
-                height: 4,
-              ),
+              const SizedBox(height: 4),
 
               Text(
                 subtitle,
 
-                style:
-                const TextStyle(
-                  fontSize: 12,
-                  color:
-                  Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),
 
           Row(
-            mainAxisAlignment:
-            MainAxisAlignment
-                .spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
             children: [
               SizedBox(
@@ -1271,88 +985,51 @@ class _TopicBannerCard extends StatelessWidget {
                 height: 30,
 
                 child: Stack(
-                  children:
-                  List.generate(
-                    images.isNotEmpty
-                        ? images
-                        .take(3)
-                        .length
-                        : 3,
+                  children: List.generate(
+                    images.isNotEmpty ? images.take(3).length : 3,
 
-                        (index) {
-                      final bool
-                      hasImage =
-                          images.length >
-                              index;
+                    (index) {
+                      final bool hasImage = images.length > index;
 
-                      final String?
-                      imgUrl =
-                      hasImage
-                          ? images[index]
-                          : null;
+                      final String? imgUrl = hasImage ? images[index] : null;
 
                       return Positioned(
-                        left:
-                        index *
-                            20.0,
+                        left: index * 20.0,
 
                         child: Container(
                           width: 30,
                           height: 30,
 
-                          decoration:
-                          BoxDecoration(
-                            shape:
-                            BoxShape.circle,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
 
-                            color: Colors
-                                .orange
-                                .shade50,
+                            color: Colors.orange.shade50,
 
-                            border: Border.all(
-                              color:
-                              Colors.white,
-                              width:
-                              2,
-                            ),
+                            border: Border.all(color: Colors.white, width: 2),
                           ),
 
                           child: ClipOval(
-                            child:
-                            imgUrl != null &&
-                                imgUrl.isNotEmpty
+                            child: imgUrl != null && imgUrl.isNotEmpty
                                 ? Image.network(
-                              imgUrl,
+                                    imgUrl,
 
-                              fit:
-                              BoxFit.cover,
+                                    fit: BoxFit.cover,
 
-                              cacheWidth:
-                              60,
+                                    cacheWidth: 60,
 
-                              cacheHeight:
-                              60,
+                                    cacheHeight: 60,
 
-                              errorBuilder:
-                                  (
-                                  _,
-                                  __,
-                                  ___,
-                                  ) => const Icon(
-                                Icons.book,
-                                size: 16,
-                                color: Color(
-                                  0xFFFF6A00,
-                                ),
-                              ),
-                            )
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.book,
+                                      size: 16,
+                                      color: Color(0xFFFF6A00),
+                                    ),
+                                  )
                                 : const Icon(
-                              Icons.book,
-                              size: 16,
-                              color: Color(
-                                0xFFFF6A00,
-                              ),
-                            ),
+                                    Icons.book,
+                                    size: 16,
+                                    color: Color(0xFFFF6A00),
+                                  ),
                           ),
                         ),
                       );
@@ -1364,12 +1041,9 @@ class _TopicBannerCard extends StatelessWidget {
               Text(
                 "$count권",
 
-                style:
-                const TextStyle(
-                  fontWeight:
-                  FontWeight.bold,
-                  color:
-                  Colors.grey,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
                 ),
               ),
             ],
@@ -1387,51 +1061,31 @@ class _TopicBannerCard extends StatelessWidget {
 class _TopicBookCard extends StatelessWidget {
   final dynamic book;
 
-  const _TopicBookCard({
-    required this.book,
-  });
+  const _TopicBookCard({required this.book});
 
-  Color _getGenreColor(
-      String genre,
-      ) {
-    if (genre.contains('사회') ||
-        genre.contains('역사')) {
-      return const Color(
-        0xFFF89B05,
-      );
+  Color _getGenreColor(String genre) {
+    if (genre.contains('사회') || genre.contains('역사')) {
+      return const Color(0xFFF89B05);
     }
 
-    if (genre.contains('자기계발') ||
-        genre.contains('심리')) {
-      return const Color(
-        0xFF0881F9,
-      );
+    if (genre.contains('자기계발') || genre.contains('심리')) {
+      return const Color(0xFF0881F9);
     }
 
     if (genre.contains('문학')) {
-      return const Color(
-        0xFFF84E00,
-      );
+      return const Color(0xFFF84E00);
     }
 
     if (genre.contains('과학')) {
-      return const Color(
-        0xFF1BA430,
-      );
+      return const Color(0xFF1BA430);
     }
 
-    if (genre.contains('경제') ||
-        genre.contains('경영')) {
-      return const Color(
-        0xFF9747FF,
-      );
+    if (genre.contains('경제') || genre.contains('경영')) {
+      return const Color(0xFF9747FF);
     }
 
-    if (genre.contains('에세이') ||
-        genre.contains('회고')) {
-      return const Color(
-        0xFFFB9566,
-      );
+    if (genre.contains('에세이') || genre.contains('회고')) {
+      return const Color(0xFFFB9566);
     }
 
     return Colors.grey;
@@ -1439,167 +1093,105 @@ class _TopicBookCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String genre =
-        book['genre'] ?? '기타';
+    final String genre = book['genre'] ?? '기타';
 
-    final String title =
-        book['title'] ?? '';
+    final String title = book['title'] ?? '';
 
-    final String coverUrl =
-        book['cover_url'] ?? '';
+    final String coverUrl = book['cover_url'] ?? '';
 
     return Column(
-      crossAxisAlignment:
-      CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
 
       children: [
         Expanded(
           child: Container(
             width: double.infinity,
 
-            decoration:
-            BoxDecoration(
+            decoration: BoxDecoration(
               boxShadow: [
                 BoxShadow(
-                  color: Colors
-                      .black
-                      .withOpacity(
-                    0.1,
-                  ),
+                  color: Colors.black.withOpacity(0.1),
 
                   blurRadius: 5,
 
-                  offset:
-                  const Offset(
-                    2,
-                    4,
-                  ),
+                  offset: const Offset(2, 4),
                 ),
               ],
             ),
 
             child: ClipRRect(
-              borderRadius:
-              BorderRadius.circular(
-                4,
-              ),
+              borderRadius: BorderRadius.circular(4),
 
-              child:
-              coverUrl.isNotEmpty
+              child: coverUrl.isNotEmpty
                   ? Image.network(
-                coverUrl,
+                      coverUrl,
 
-                fit:
-                BoxFit.cover,
+                      fit: BoxFit.cover,
 
-                cacheWidth: 300,
-                cacheHeight: 450,
+                      cacheWidth: 300,
+                      cacheHeight: 450,
 
-                errorBuilder:
-                    (
-                    context,
-                    error,
-                    stackTrace,
-                    ) => Container(
-                  color:
-                  Colors.grey[200],
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey[200],
 
-                  child:
-                  const Center(
-                    child:
-                    Icon(
-                      Icons.book,
-                      color:
-                      Colors.grey,
-                    ),
-                  ),
-                ),
-              )
+                        child: const Center(
+                          child: Icon(Icons.book, color: Colors.grey),
+                        ),
+                      ),
+                    )
                   : Container(
-                color:
-                Colors.grey[200],
+                      color: Colors.grey[200],
 
-                child:
-                const Center(
-                  child:
-                  Icon(
-                    Icons.book,
-                    color:
-                    Colors.grey,
-                  ),
-                ),
-              ),
+                      child: const Center(
+                        child: Icon(Icons.book, color: Colors.grey),
+                      ),
+                    ),
             ),
           ),
         ),
 
-        const SizedBox(
-          height: 6,
-        ),
+        const SizedBox(height: 6),
 
         Text(
           title,
 
           maxLines: 1,
 
-          overflow:
-          TextOverflow.ellipsis,
+          overflow: TextOverflow.ellipsis,
 
-          textAlign:
-          TextAlign.center,
+          textAlign: TextAlign.center,
 
-          style:
-          const TextStyle(
-            fontWeight:
-            FontWeight.bold,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
             fontSize: 13,
-            color:
-            Colors.black87,
+            color: Colors.black87,
           ),
         ),
 
-        const SizedBox(
-          height: 4,
-        ),
+        const SizedBox(height: 4),
 
         Align(
-          alignment:
-          Alignment.topCenter,
+          alignment: Alignment.topCenter,
 
           child: Container(
-            padding:
-            const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 4,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
 
-            decoration:
-            BoxDecoration(
-              color:
-              _getGenreColor(
-                genre,
-              ),
+            decoration: BoxDecoration(
+              color: _getGenreColor(genre),
 
-              borderRadius:
-              BorderRadius.circular(
-                8,
-              ),
+              borderRadius: BorderRadius.circular(8),
             ),
 
             child: FittedBox(
-              fit:
-              BoxFit.scaleDown,
+              fit: BoxFit.scaleDown,
 
               child: Text(
                 genre,
 
-                style:
-                const TextStyle(
-                  color:
-                  Colors.white,
+                style: const TextStyle(
+                  color: Colors.white,
                   fontSize: 11,
-                  fontWeight:
-                  FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
