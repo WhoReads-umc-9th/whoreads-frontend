@@ -36,11 +36,15 @@ void main() {
             },
           );
       final paths = <String>[];
+      var refreshStatus = 200;
+      var rejectAll = false;
       server.listen((req) async {
         paths.add(req.uri.path);
         await req.drain<void>();
         req.response.headers.contentType = ContentType.json;
         if (req.uri.path == '/api/auth/refresh') {
+          req.response.statusCode = refreshStatus;
+          await Future<void>.delayed(const Duration(milliseconds: 30));
           req.response.write(
             jsonEncode({
               'result': {
@@ -49,7 +53,8 @@ void main() {
               },
             }),
           );
-        } else if (req.headers.value('authorization') == 'Bearer fresh-test') {
+        } else if (!rejectAll &&
+            req.headers.value('authorization') == 'Bearer fresh-test') {
           req.response.write('{"is_success":true}');
         } else {
           req.response.statusCode = 401;
@@ -62,6 +67,38 @@ void main() {
             .get('/protected')
             .timeout(const Duration(seconds: 3));
         expect(response.statusCode, 200);
+        // Simultaneous expiry shares one refresh and both callers complete.
+        tokens.addAll({
+          'access_token': 'expired-test',
+          'refresh_token': 'refresh-test',
+        });
+        paths.clear();
+        final responses = await Future.wait([
+          ApiClient.dio.get('/protected'),
+          ApiClient.dio.get('/protected'),
+        ]).timeout(const Duration(seconds: 3));
+        expect(responses.every((r) => r.statusCode == 200), isTrue);
+        expect(paths.where((p) => p == '/api/auth/refresh').length, 1);
+
+        // Transient refresh failure must retain the saved session.
+        tokens.addAll({
+          'access_token': 'expired-test',
+          'refresh_token': 'refresh-test',
+        });
+        refreshStatus = 500;
+        await expectLater(ApiClient.dio.get('/protected'), throwsA(anything));
+        expect(tokens['refresh_token'], 'refresh-test');
+
+        // A second 401 cannot recurse indefinitely.
+        refreshStatus = 200;
+        rejectAll = true;
+        paths.clear();
+        final denied = await ApiClient.dio
+            .get('/protected')
+            .timeout(const Duration(seconds: 3));
+        expect(denied.statusCode, 401);
+        expect(paths.where((p) => p == '/api/protected').length, 2);
+        expect(tokens, isEmpty);
       } on TimeoutException {
         fail(
           'Request stalled after successful refresh. Observed paths: $paths; '

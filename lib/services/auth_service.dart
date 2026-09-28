@@ -6,26 +6,27 @@ class AuthService {
   Future<void> logout() async {
     try {
       await ApiClient.dio.post("/auth/logout");
-      await TokenStorage.clear();
     } catch (e) {
-      debugPrint("로그아웃 실패");
+      debugPrint("서버 로그아웃 요청 실패");
+    } finally {
+      await TokenStorage.clear();
     }
   }
+
   Future<bool> getLoggedIn() async {
     try {
       final token = await TokenStorage.getAccessToken();
-      final refreshToken = await TokenStorage.getRefreshToken();
-      debugPrint("최초 확인된 토큰 존재 여부: ${refreshToken!= null}, $token,$refreshToken");
 
       if (token != null) {
         final bool isTokenValid = await ApiClient.attemptTokenRefresh();
         return isTokenValid;
       }
       return false;
-    } catch (e){
-      return false;
+    } catch (e) {
+      return (await TokenStorage.getAccessToken())?.isNotEmpty == true;
     }
   }
+
   Future<bool> deleteAccount() async {
     try {
       final response = await ApiClient.dio.patch("/auth/delete");

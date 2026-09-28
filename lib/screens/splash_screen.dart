@@ -15,7 +15,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -27,10 +26,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
     try {
       final accessToken = await TokenStorage.getAccessToken();
-
-      debugPrint('====================');
-      debugPrint('TOKEN = $accessToken');
-      debugPrint('====================');
 
       if (!mounted) return;
 
@@ -56,8 +51,12 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (e) {
       debugPrint('AUTO LOGIN FAILED: $e');
 
-      // 인증 실패 시 저장된 토큰 제거
-      await TokenStorage.clear();
+      // A network failure does not invalidate the locally stored session.
+      final token = await TokenStorage.getAccessToken();
+      if (mounted && token != null && token.isNotEmpty) {
+        _goToHome();
+        return;
+      }
 
       if (!mounted) return;
 
@@ -68,20 +67,16 @@ class _SplashScreenState extends State<SplashScreen> {
   void _goToHome() {
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (_) => const MyLibraryPage(),
-      ),
-          (route) => false,
+      MaterialPageRoute(builder: (_) => const MyLibraryPage()),
+      (route) => false,
     );
   }
 
   void _goToOnboarding() {
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (_) => const OnboardingFlowScreen(),
-      ),
-          (route) => false,
+      MaterialPageRoute(builder: (_) => const OnboardingFlowScreen()),
+      (route) => false,
     );
   }
 
@@ -92,10 +87,7 @@ class _SplashScreenState extends State<SplashScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         body: Center(
-          child: SvgPicture.asset(
-            'assets/images/logo.svg',
-            width: 200,
-          ),
+          child: SvgPicture.asset('assets/images/logo.svg', width: 200),
         ),
       ),
     );
