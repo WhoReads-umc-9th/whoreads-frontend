@@ -119,6 +119,12 @@ class TimerService with ChangeNotifier {
         _stopHeartbeat();
       }
       await _saveCurrentSession();
+      if (running || active.status == 'PAUSED') {
+        await _serviceManager.start(
+          currentSeconds: _currentSeconds,
+          isRunning: running,
+        );
+      }
       notifyListeners();
       if (active.status == 'PAUSED' || running) return TimerRecoveryType.none;
       if (active.idleMinutes > 120) return TimerRecoveryType.forceTerminated;
