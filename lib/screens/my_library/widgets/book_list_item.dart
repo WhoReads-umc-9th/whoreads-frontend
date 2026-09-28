@@ -22,7 +22,8 @@ class BookListItem extends StatelessWidget {
     const double overlap = 10.0; // 겹치는 정도
 
     return SizedBox(
-      width: (avatarSize - overlap) * (displayCelebrities.length - 1) + avatarSize,
+      width:
+          (avatarSize - overlap) * (displayCelebrities.length - 1) + avatarSize,
       height: avatarSize,
       child: Stack(
         children: List.generate(displayCelebrities.length, (index) {
@@ -48,7 +49,7 @@ class BookListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double progressValue = book.progress ?? 0.0;
+    final double progressValue = book.progress;
     final int progressPercent = (progressValue * 100).toInt();
 
     return Material(
@@ -77,22 +78,21 @@ class BookListItem extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   child: book.coverUrl != null
                       ? Image.network(
-                    book.coverUrl!,
-                    width: 60,
-                    height: 80,
-                    fit: BoxFit.cover,
-                  )
+                          book.coverUrl!,
+                          width: 60,
+                          height: 80,
+                          fit: BoxFit.cover,
+                        )
                       : Container(
-                    width: 60,
-                    height: 80,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.book, color: Colors.grey),
-                  ),
+                          width: 60,
+                          height: 80,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.book, color: Colors.grey),
+                        ),
                 ),
               ),
 
               const SizedBox(width: 16), // 이미지와 텍스트 사이 간격 약간 넓힘
-
               // 텍스트 정보 (Expanded로 남은 공간 채움)
               Expanded(
                 child: Column(
@@ -113,10 +113,7 @@ class BookListItem extends StatelessWidget {
                       book.author,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
 
                     if (showProgress) ...[
@@ -151,7 +148,7 @@ class BookListItem extends StatelessWidget {
                           ),
                           // 오른쪽: 현재/전체 페이지 (회색)
                           Text(
-                            '${book.currentPage ?? 0}/${book.totalPages}p',
+                            '${book.currentPage}/${book.totalPages}p',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
@@ -169,7 +166,7 @@ class BookListItem extends StatelessWidget {
                         alignment: Alignment.centerRight, // 우측 정렬
                         child: _buildCelebrityStack(), // 스택 위젯 호출
                       ),
-                    ]
+                    ],
                   ],
                 ),
               ),

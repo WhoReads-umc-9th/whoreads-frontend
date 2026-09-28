@@ -171,7 +171,7 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
               settingId: widget.routine!['id'],
             );
 
-            if (mounted) Navigator.maybePop(context);
+            if (this.mounted) Navigator.maybePop(this.context);
           } catch (e) {
             debugPrint("루틴 알림 삭제 오류: $e");
           }
@@ -219,7 +219,7 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
           days: selectedDaysEnum,
         );
       }
-      if (mounted) Navigator.maybePop(context);
+      if (this.mounted) Navigator.maybePop(this.context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

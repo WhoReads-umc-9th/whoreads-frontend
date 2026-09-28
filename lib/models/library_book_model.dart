@@ -2,10 +2,7 @@ class CelebrityModel {
   final int id;
   final String profileUrl;
 
-  CelebrityModel({
-    required this.id,
-    required this.profileUrl,
-  });
+  CelebrityModel({required this.id, required this.profileUrl});
 
   factory CelebrityModel.fromJson(Map<String, dynamic> json) {
     return CelebrityModel(
@@ -31,11 +28,13 @@ class LibraryBookModel {
     required this.author,
     required this.coverUrl,
     required this.totalPages,
-    required this.currentPage, required this.celebritiesCount, required this.celebrities,
+    required this.currentPage,
+    required this.celebritiesCount,
+    required this.celebrities,
   });
 
   double get progress =>
-      totalPages == 0 ? 0 : currentPage / totalPages;
+      totalPages <= 0 ? 0 : (currentPage / totalPages).clamp(0.0, 1.0);
 
   factory LibraryBookModel.fromJson(Map<String, dynamic> json) {
     final bookJson = json['book'] ?? {};

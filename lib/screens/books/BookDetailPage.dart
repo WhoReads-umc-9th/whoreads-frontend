@@ -8,10 +8,7 @@ import '../../services/library_service.dart';
 class BookDetailPage extends StatefulWidget {
   final int bookId;
 
-  const BookDetailPage({
-    super.key,
-    required this.bookId,
-  });
+  const BookDetailPage({super.key, required this.bookId});
 
   @override
   State<BookDetailPage> createState() => _BookDetailPageState();
@@ -19,6 +16,15 @@ class BookDetailPage extends StatefulWidget {
 
 class _BookDetailPageState extends State<BookDetailPage> {
   bool isLoading = true;
+  bool _mutating = false;
+  String? _loadError;
+
+  void _showFailure(String message) {
+    if (mounted)
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+  }
 
   // 파싱할 데이터 변수들
   String? title;
@@ -91,6 +97,12 @@ class _BookDetailPageState extends State<BookDetailPage> {
   }
 
   Future<void> _fetchBookDetail() async {
+    if (!mounted) return;
+    if (!mounted) return;
+    setState(() {
+      isLoading = true;
+      _loadError = null;
+    });
     try {
       final response = await ApiClient.dio.get(
         '/books/${widget.bookId}/detail',
@@ -101,36 +113,35 @@ class _BookDetailPageState extends State<BookDetailPage> {
             ? jsonDecode(response.data as String)
             : response.data;
         final result = decoded['result'] ?? {};
-        final readingInfo =
-            _asStringKeyMap(result['reading_info'] ?? result['readingInfo']);
+        final readingInfo = _asStringKeyMap(
+          result['reading_info'] ?? result['readingInfo'],
+        );
 
         String nextStatus =
             readingInfo?['reading_status']?.toString() ??
-                readingInfo?['readingStatus']?.toString() ??
-                'NONE';
+            readingInfo?['readingStatus']?.toString() ??
+            'NONE';
         if (nextStatus.isEmpty) nextStatus = 'NONE';
 
-        int? nextUserBookId = _readInt(
-          readingInfo,
-          ['user_book_id', 'userBookId'],
-        );
-        int? nextReadingPage = _readInt(
-          readingInfo,
-          ['reading_page', 'readingPage'],
-        );
-        int? nextTotalPage = _readInt(
-          readingInfo,
-          ['total_page', 'totalPage'],
-        );
+        int? nextUserBookId = _readInt(readingInfo, [
+          'user_book_id',
+          'userBookId',
+        ]);
+        int? nextReadingPage = _readInt(readingInfo, [
+          'reading_page',
+          'readingPage',
+        ]);
+        int? nextTotalPage = _readInt(readingInfo, ['total_page', 'totalPage']);
         String? nextStarted =
             readingInfo?['started_at']?.toString() ??
-                readingInfo?['startedAt']?.toString();
+            readingInfo?['startedAt']?.toString();
         String? nextCompleted =
             readingInfo?['completed_at']?.toString() ??
-                readingInfo?['completedAt']?.toString();
+            readingInfo?['completedAt']?.toString();
 
-        final snapshot =
-            await LibraryService.lookupCatalogBookInLibrary(widget.bookId);
+        final snapshot = await LibraryService.lookupCatalogBookInLibrary(
+          widget.bookId,
+        );
         if (snapshot != null) {
           nextUserBookId ??= snapshot.userBookId;
           if (nextStatus == 'NONE') {
@@ -141,10 +152,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
         }
 
         final resultMap = _asStringKeyMap(result);
-        nextTotalPage ??=
-            _readInt(resultMap, ['total_page', 'totalPage']);
+        nextTotalPage ??= _readInt(resultMap, ['total_page', 'totalPage']);
         nextStarted ??= snapshot?.startedAt;
         nextCompleted ??= snapshot?.completedAt;
+
+        if (!mounted) return;
 
         setState(() {
           title = result['title'];
@@ -166,141 +178,182 @@ class _BookDetailPageState extends State<BookDetailPage> {
           isLoading = false;
         });
       } else {
-        debugPrint('상세 페이지 API 에러: ${response.statusCode}');
+        _loadError = '도서 정보를 불러오지 못했습니다.';
+        if (!mounted) return;
         setState(() => isLoading = false);
       }
     } catch (e) {
-      debugPrint('네트워크 에러: $e');
+      _loadError = '도서 정보를 불러오지 못했습니다.';
+      if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
 
   // 🌟 [새로 추가됨] 서재에 책 추가 API 호출 (POST)
   Future<void> _addBook() async {
+    if (_mutating) return;
+    if (!mounted) return;
+    setState(() => _mutating = true);
     try {
-      final response = await ApiClient.dio.post(
-        '/me/library/book/${widget.bookId}',
-      );
+      try {
+        final response = await ApiClient.dio.post(
+          '/me/library/book/${widget.bookId}',
+        );
 
-      // 201 Created 또는 200 OK
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final decoded = response.data is String
-            ? jsonDecode(response.data as String)
-            : response.data;
+        // 201 Created 또는 200 OK
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final decoded = response.data is String
+              ? jsonDecode(response.data as String)
+              : response.data;
 
-        setState(() {
-          final resMap = _asStringKeyMap(decoded['result']);
-          // 🌟 서버에서 내려준 새로 생성된 user_book_id 저장!
-          userBookId = _readInt(resMap, ['user_book_id', 'userBookId']);
-          // 🌟 책이 추가되었으므로 기본 상태를 '담아둠(WISH)'으로 변경
-          readingStatus = 'WISH';
-        });
+          if (!mounted) return;
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('서재에 책을 담았습니다!')),
-          );
+          setState(() {
+            final resMap = _asStringKeyMap(decoded['result']);
+            // 🌟 서버에서 내려준 새로 생성된 user_book_id 저장!
+            userBookId = _readInt(resMap, ['user_book_id', 'userBookId']);
+            // 🌟 책이 추가되었으므로 기본 상태를 '담아둠(WISH)'으로 변경
+            readingStatus = 'WISH';
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('서재에 책을 담았습니다!')));
+          }
+        } else {
+          _showFailure('저장하지 못했습니다. 연결을 확인하고 다시 시도해주세요.');
         }
-      } else {
-        debugPrint('추가 실패: ${response.statusCode} - ${response.data}');
+      } catch (e) {
+        _showFailure('저장하지 못했습니다. 연결을 확인하고 다시 시도해주세요.');
       }
-    } catch (e) {
-      debugPrint('추가 에러: $e');
+    } finally {
+      if (mounted) setState(() => _mutating = false);
     }
   }
 
   // 서재에서 책 삭제 API 호출 (DELETE)
   Future<void> _deleteBook() async {
-    if (userBookId == null) {
-      debugPrint('삭제할 userBookId가 없습니다.');
-      return;
-    }
-
+    if (_mutating) return;
+    if (!mounted) return;
+    setState(() => _mutating = true);
     try {
-      final response = await ApiClient.dio.delete(
-        '/me/library/book/$userBookId',
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        setState(() {
-          readingStatus = 'NONE';
-          userBookId = null; // 삭제되었으므로 userBookId 초기화
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('서재에서 삭제되었습니다.')),
-          );
-        }
-      } else {
-        debugPrint('삭제 실패: ${response.statusCode} - ${response.data}');
+      if (userBookId == null) {
+        _showFailure('서재 정보를 확인할 수 없습니다. 다시 불러와주세요.');
+        return;
       }
-    } catch (e) {
-      debugPrint('삭제 에러: $e');
+
+      try {
+        final response = await ApiClient.dio.delete(
+          '/me/library/book/$userBookId',
+        );
+
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          if (!mounted) return;
+          setState(() {
+            readingStatus = 'NONE';
+            userBookId = null; // 삭제되었으므로 userBookId 초기화
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('서재에서 삭제되었습니다.')));
+          }
+        } else {
+          _showFailure('저장하지 못했습니다. 연결을 확인하고 다시 시도해주세요.');
+        }
+      } catch (e) {
+        _showFailure('저장하지 못했습니다. 연결을 확인하고 다시 시도해주세요.');
+      }
+    } finally {
+      if (mounted) setState(() => _mutating = false);
     }
   }
 
   // 수정 내용 저장 API 호출 (PATCH)
   Future<void> _saveChanges() async {
+    if (_mutating) return;
+    if (!mounted) return;
+    setState(() => _mutating = true);
     try {
-      // 🌟 저장해둔 userBookId를 사용해서 PATCH 요청
-      final targetId = userBookId ?? widget.bookId;
-
-      Map<String, dynamic> body = {
-        "reading_status": editStatus == 'DONE' ? 'COMPLETE' : editStatus,
-      };
-
+      if (userBookId == null) {
+        _showFailure('서재 정보를 확인할 수 없습니다. 다시 불러와주세요.');
+        return;
+      }
       if (editStatus == 'READING') {
-        body["reading_page"] = int.tryParse(pageController.text) ?? 0;
-        final started = _toApiDateOnly(startedAt);
-        if (started != null) {
-          body["started_at"] = started;
+        final page = int.tryParse(pageController.text.trim());
+        if (page == null ||
+            page < 0 ||
+            (totalPage != null && totalPage! > 0 && page > totalPage!)) {
+          _showFailure('읽은 페이지를 전체 페이지 범위 안에서 입력해주세요.');
+          return;
         }
       }
+      try {
+        // 🌟 저장해둔 userBookId를 사용해서 PATCH 요청
+        final targetId = userBookId!;
 
-      if (editStatus == 'COMPLETE' || editStatus == 'DONE') {
-        final ended = _toApiDateOnly(completedAt);
-        if (ended != null) {
-          body["completed_at"] = ended;
-        }
-      }
+        Map<String, dynamic> body = {
+          "reading_status": editStatus == 'DONE' ? 'COMPLETE' : editStatus,
+        };
 
-      final response = await ApiClient.dio.patch(
-        '/me/library/book/$targetId',
-        data: body,
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        setState(() {
-          readingStatus = editStatus;
-          if (editStatus == 'READING') {
-            readingPage = int.tryParse(pageController.text) ?? readingPage;
-            final s = _toApiDateOnly(startedAt);
-            if (s != null) startedAt = s;
-          } else if (editStatus == 'COMPLETE' || editStatus == 'DONE') {
-            readingPage = totalPage;
-            final e = _toApiDateOnly(completedAt);
-            if (e != null) completedAt = e;
+        if (editStatus == 'READING') {
+          body["reading_page"] = int.tryParse(pageController.text) ?? 0;
+          final started = _toApiDateOnly(startedAt);
+          if (started != null) {
+            body["started_at"] = started;
           }
-          isEditing = false;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('수정이 완료되었습니다.')),
-          );
         }
-      } else {
-        debugPrint('수정 실패: ${response.statusCode} - ${response.data}');
+
+        if (editStatus == 'COMPLETE' || editStatus == 'DONE') {
+          final ended = _toApiDateOnly(completedAt);
+          if (ended != null) {
+            body["completed_at"] = ended;
+          }
+        }
+
+        final response = await ApiClient.dio.patch(
+          '/me/library/book/$targetId',
+          data: body,
+        );
+
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          if (!mounted) return;
+          setState(() {
+            readingStatus = editStatus;
+            if (editStatus == 'READING') {
+              readingPage = int.tryParse(pageController.text) ?? readingPage;
+              final s = _toApiDateOnly(startedAt);
+              if (s != null) startedAt = s;
+            } else if (editStatus == 'COMPLETE' || editStatus == 'DONE') {
+              readingPage = totalPage;
+              final e = _toApiDateOnly(completedAt);
+              if (e != null) completedAt = e;
+            }
+            isEditing = false;
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('수정이 완료되었습니다.')));
+          }
+        } else {
+          _showFailure('저장하지 못했습니다. 연결을 확인하고 다시 시도해주세요.');
+        }
+      } catch (e) {
+        _showFailure('저장하지 못했습니다. 연결을 확인하고 다시 시도해주세요.');
       }
-    } catch (e) {
-      debugPrint('수정 에러: $e');
+    } finally {
+      if (mounted) setState(() => _mutating = false);
     }
   }
 
   Widget _buildStatusButton(String label, String value) {
     final String currentStatus = isEditing ? editStatus : readingStatus;
-    final isSelected = currentStatus == value ||
+    final isSelected =
+        currentStatus == value ||
         (value == "COMPLETE" && currentStatus == "DONE");
 
     return GestureDetector(
@@ -357,7 +410,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
   Widget _buildReadingProgressAndPeriod() {
     final int current = readingPage ?? 0;
     final int total = (totalPage != null && totalPage! > 0) ? totalPage! : 1;
-    final double progress = current / total;
+    final double progress = (current / total).clamp(0.0, 1.0);
     final int percent = (progress * 100).toInt();
 
     final String formattedStart = startedAt?.replaceAll('-', '.') ?? '-';
@@ -367,14 +420,23 @@ class _BookDetailPageState extends State<BookDetailPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('독서량', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
+          const Text(
+            '독서량',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress,
               backgroundColor: const Color(0xFFE5E7EB),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF84E00)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFFF84E00),
+              ),
               minHeight: 8,
             ),
           ),
@@ -382,12 +444,29 @@ class _BookDetailPageState extends State<BookDetailPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('$percent%', style: const TextStyle(color: Color(0xFFF84E00), fontWeight: FontWeight.bold, fontSize: 14)),
-              Text('$current/${totalPage ?? 0}p', style: const TextStyle(color: Color(0xFF4B5563), fontSize: 13)),
+              Text(
+                '$percent%',
+                style: const TextStyle(
+                  color: Color(0xFFF84E00),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                '$current/${totalPage ?? 0}p',
+                style: const TextStyle(color: Color(0xFF4B5563), fontSize: 13),
+              ),
             ],
           ),
           const SizedBox(height: 24),
-          const Text('독서 기간', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
+          const Text(
+            '독서 기간',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -397,13 +476,37 @@ class _BookDetailPageState extends State<BookDetailPage> {
             ),
             child: Row(
               children: [
-                const Text('시작', style: TextStyle(color: Color(0xFFF84E00), fontWeight: FontWeight.bold, fontSize: 14)),
+                const Text(
+                  '시작',
+                  style: TextStyle(
+                    color: Color(0xFFF84E00),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: Text(formattedStart, style: const TextStyle(color: Colors.black87, fontSize: 14))),
+                Expanded(
+                  child: Text(
+                    formattedStart,
+                    style: const TextStyle(color: Colors.black87, fontSize: 14),
+                  ),
+                ),
 
-                const Text('종료', style: TextStyle(color: Color(0xFFF84E00), fontWeight: FontWeight.bold, fontSize: 14)),
+                const Text(
+                  '종료',
+                  style: TextStyle(
+                    color: Color(0xFFF84E00),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: Text(formattedEnd, style: const TextStyle(color: Colors.black87, fontSize: 14))),
+                Expanded(
+                  child: Text(
+                    formattedEnd,
+                    style: const TextStyle(color: Colors.black87, fontSize: 14),
+                  ),
+                ),
               ],
             ),
           ),
@@ -413,7 +516,14 @@ class _BookDetailPageState extends State<BookDetailPage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('독서량', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
+          const Text(
+            '독서량',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
           const SizedBox(height: 8),
 
           if (editStatus == 'READING')
@@ -432,7 +542,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
                       controller: pageController,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
                       decoration: const InputDecoration(
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -450,7 +564,14 @@ class _BookDetailPageState extends State<BookDetailPage> {
                       },
                     ),
                   ),
-                  Text(' / ${totalPage ?? 0}p', style: const TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.bold)),
+                  Text(
+                    ' / ${totalPage ?? 0}p',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             )
@@ -464,21 +585,37 @@ class _BookDetailPageState extends State<BookDetailPage> {
               ),
               child: Center(
                 child: Text(
-                  editStatus == 'COMPLETE' ? '${totalPage ?? 0} / ${totalPage ?? 0}p' : '0 / ${totalPage ?? 0}p',
-                  style: const TextStyle(fontSize: 15, color: Colors.grey, fontWeight: FontWeight.bold),
+                  editStatus == 'COMPLETE'
+                      ? '${totalPage ?? 0} / ${totalPage ?? 0}p'
+                      : '0 / ${totalPage ?? 0}p',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
 
           const SizedBox(height: 24),
-          const Text('독서 기간', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
+          const Text(
+            '독서 기간',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
           const SizedBox(height: 8),
 
           Row(
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey[300]!),
                     color: Colors.grey[100],
@@ -486,9 +623,24 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   ),
                   child: Row(
                     children: [
-                      const Text('시작', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 14)),
+                      const Text(
+                        '시작',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(formattedStart, style: const TextStyle(color: Colors.grey, fontSize: 14))),
+                      Expanded(
+                        child: Text(
+                          formattedStart,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -496,7 +648,10 @@ class _BookDetailPageState extends State<BookDetailPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey[300]!),
                     color: Colors.grey[100],
@@ -504,9 +659,24 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   ),
                   child: Row(
                     children: [
-                      const Text('종료', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 14)),
+                      const Text(
+                        '종료',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(formattedEnd, style: const TextStyle(color: Colors.grey, fontSize: 14))),
+                      Expanded(
+                        child: Text(
+                          formattedEnd,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -523,7 +693,27 @@ class _BookDetailPageState extends State<BookDetailPage> {
     if (isLoading) {
       return const Scaffold(
         backgroundColor: Colors.white,
-        body: Center(child: CircularProgressIndicator(color: Color(0xFFFF8A5B))),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF8A5B)),
+        ),
+      );
+    }
+
+    if (_loadError != null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_loadError!),
+              TextButton(
+                onPressed: _fetchBookDetail,
+                child: const Text('다시 시도'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -538,13 +728,27 @@ class _BookDetailPageState extends State<BookDetailPage> {
           if (readingStatus == 'NONE' && !isEditing)
             TextButton(
               // 🌟 [수정됨] 추가 버튼 누르면 POST API 호출하도록 연동
-              onPressed: _addBook,
-              child: const Text('추가', style: TextStyle(color: Color(0xFFF84E00), fontSize: 16, fontWeight: FontWeight.bold)),
+              onPressed: _mutating ? null : _addBook,
+              child: const Text(
+                '추가',
+                style: TextStyle(
+                  color: Color(0xFFF84E00),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             )
           else if (isEditing)
             TextButton(
-              onPressed: _saveChanges,
-              child: const Text('저장', style: TextStyle(color: Color(0xFFF84E00), fontSize: 16, fontWeight: FontWeight.bold)),
+              onPressed: _mutating ? null : _saveChanges,
+              child: const Text(
+                '저장',
+                style: TextStyle(
+                  color: Color(0xFFF84E00),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             )
           else
             PopupMenuButton<String>(
@@ -553,8 +757,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
                 if (value == 'edit') {
                   setState(() {
                     isEditing = true;
-                    editStatus =
-                        readingStatus == 'DONE' ? 'COMPLETE' : readingStatus;
+                    editStatus = readingStatus == 'DONE'
+                        ? 'COMPLETE'
+                        : readingStatus;
                     pageController.text = (readingPage ?? 0).toString();
                   });
                 } else if (value == 'delete') {
@@ -584,14 +789,30 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     Container(
                       decoration: BoxDecoration(
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(2, 4)),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 5,
+                            offset: const Offset(2, 4),
+                          ),
                         ],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: Image.network(
-                          coverUrl ?? '', width: 110, height: 160, fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(width: 110, height: 160, color: Colors.grey[200], child: const Icon(Icons.book, color: Colors.grey)),
+                          coverUrl ?? '',
+                          width: 110,
+                          height: 160,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                width: 110,
+                                height: 160,
+                                color: Colors.grey[200],
+                                child: const Icon(
+                                  Icons.book,
+                                  color: Colors.grey,
+                                ),
+                              ),
                         ),
                       ),
                     ),
@@ -601,17 +822,31 @@ class _BookDetailPageState extends State<BookDetailPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title ?? '제목 없음', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
+                          Text(
+                            title ?? '제목 없음',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           const SizedBox(height: 6),
-                          Text(authorName ?? '작자 미상', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                          Text(
+                            authorName ?? '작자 미상',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                            ),
+                          ),
                           const SizedBox(height: 12),
 
-                          Row(
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
                             children: [
                               _buildStatusButton("담아둠", "WISH"),
-                              const SizedBox(width: 4),
                               _buildStatusButton("읽는 중", "READING"),
-                              const SizedBox(width: 4),
                               _buildStatusButton("다 읽음", "COMPLETE"),
                             ],
                           ),
@@ -627,19 +862,33 @@ class _BookDetailPageState extends State<BookDetailPage> {
                               if (link != null && link!.isNotEmpty) {
                                 final uri = Uri.parse(link!);
                                 if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  await launchUrl(
+                                    uri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
                                 }
                               }
                             },
-                            child: const Text("책 더 자세히 보기", style: TextStyle(color: Color(0xFFF84E00), fontWeight: FontWeight.w600, decoration: TextDecoration.underline, decorationColor: Color(0xFFF84E00))),
+                            child: const Text(
+                              "책 더 자세히 보기",
+                              style: TextStyle(
+                                color: Color(0xFFF84E00),
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Color(0xFFF84E00),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                    )
+                    ),
                   ],
                 ),
 
-                if (isEditing || readingStatus == 'READING' || readingStatus == 'DONE' || readingStatus == 'COMPLETE') ...[
+                if (isEditing ||
+                    readingStatus == 'READING' ||
+                    readingStatus == 'DONE' ||
+                    readingStatus == 'COMPLETE') ...[
                   const SizedBox(height: 24),
                   _buildReadingProgressAndPeriod(),
                   const SizedBox(height: 24),
@@ -648,8 +897,16 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-                    child: const Center(child: Text("이 책을 읽으면 아래 유명인들과 더 친밀해질 수 있어요!", style: TextStyle(fontSize: 13, color: Colors.black87))),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        "이 책을 읽으면 아래 유명인들과 더 친밀해질 수 있어요!",
+                        style: TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -664,30 +921,43 @@ class _BookDetailPageState extends State<BookDetailPage> {
 
           Expanded(
             child: quotes.isEmpty
-                ? const Center(child: Text('등록된 추천사가 없습니다.', style: TextStyle(color: Colors.grey)))
+                ? const Center(
+                    child: Text(
+                      '등록된 추천사가 없습니다.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
                 : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              itemCount: quotes.length,
-              itemBuilder: (context, index) {
-                final quoteData = quotes[index];
-                final celeb = quoteData['celebrity'] ?? {};
-                final source = quoteData['source'] ?? {};
-                final List<dynamic> jobTags = celeb['job_tags'] ?? [];
-                final String job = jobTags.isNotEmpty ? jobTags.first : '';
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 24,
+                    ),
+                    itemCount: quotes.length,
+                    itemBuilder: (context, index) {
+                      final quoteData = quotes[index];
+                      final celeb = quoteData['celebrity'] ?? {};
+                      final source = quoteData['source'] ?? {};
+                      final List<dynamic> jobTags = celeb['job_tags'] ?? [];
+                      final String job = jobTags.isNotEmpty
+                          ? jobTags.first
+                          : '';
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: QuoteCard(
-                    profileImage: celeb['image_url'] ?? 'https://i.pravatar.cc/150',
-                    name: celeb['name'] ?? '유명인',
-                    job: job,
-                    quote: quoteData['original_text'] ?? '',
-                    source: source['type'] == 'INTERVIEW' ? '인터뷰 발췌' : '추천사 출처',
-                    sourceUrl: source['url'],
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: QuoteCard(
+                          profileImage:
+                              celeb['image_url'] ?? 'https://i.pravatar.cc/150',
+                          name: celeb['name'] ?? '유명인',
+                          job: job,
+                          quote: quoteData['original_text'] ?? '',
+                          source: source['type'] == 'INTERVIEW'
+                              ? '인터뷰 발췌'
+                              : '추천사 출처',
+                          sourceUrl: source['url'],
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
