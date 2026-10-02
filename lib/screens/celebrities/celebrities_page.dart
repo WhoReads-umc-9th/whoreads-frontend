@@ -423,7 +423,7 @@ class _CelebrityCard extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () {
                       final copyright =
-                          celeb['image_copyright']?.toString().trim() ?? '';
+                          celeb['image_attribution']?.toString().trim() ?? '';
                       showDialog<void>(
                         context: context,
                         builder: (context) => AlertDialog(
