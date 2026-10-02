@@ -9,7 +9,7 @@ class CelebrityDetail {
   final int id;
   final String name;
   final String imageUrl;
-  final String imageCopyright;
+  final String imageAttribution;
   final String shortBio;
   final List<String> jobTags;
   final bool isFollowing; // 🌟 [추가됨] 팔로우 상태 파싱용
@@ -18,7 +18,7 @@ class CelebrityDetail {
     required this.id,
     required this.name,
     required this.imageUrl,
-    required this.imageCopyright,
+    required this.imageAttribution,
     required this.shortBio,
     required this.jobTags,
     this.isFollowing = false,
@@ -29,7 +29,7 @@ class CelebrityDetail {
       id: json['id'] ?? 0,
       name: json['name'] ?? '이름 없음',
       imageUrl: json['image_url'] ?? '',
-      imageCopyright: json['image_copyright']?.toString() ?? '',
+      imageAttribution: json['image_attribution']?.toString() ?? '',
       shortBio: json['short_bio'] ?? '',
       jobTags: List<String>.from(json['job_tags'] ?? []),
       // 서버에서 팔로우 여부를 내려준다면 파싱, 없으면 기본값 false
@@ -342,7 +342,7 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
                 children: [
                   _CelebrityProfileImage(
                     imageUrl: celebrityProfile!.imageUrl,
-                    imageCopyright: celebrityProfile!.imageCopyright,
+                    imageAttribution: celebrityProfile!.imageAttribution,
                     size: 100,
                     borderRadius: 16,
                   ),
@@ -513,21 +513,21 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
 
 class _CelebrityProfileImage extends StatelessWidget {
   final String imageUrl;
-  final String imageCopyright;
+  final String imageAttribution;
   final double size;
   final double borderRadius;
 
   const _CelebrityProfileImage({
     required this.imageUrl,
-    required this.imageCopyright,
+    required this.imageAttribution,
     required this.size,
     required this.borderRadius,
   });
 
   void _showCopyright(BuildContext context) {
-    final copyright = imageCopyright.trim().isEmpty
+    final copyright = imageAttribution.trim().isEmpty
         ? '저작권 정보가 없습니다.'
-        : imageCopyright.trim();
+        : imageAttribution.trim();
 
     showDialog<void>(
       context: context,
