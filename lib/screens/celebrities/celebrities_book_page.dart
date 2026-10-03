@@ -547,9 +547,12 @@ class _CelebrityProfileImageState extends State<_CelebrityProfileImage> {
     }
 
     _attributionOverlay = OverlayEntry(
-      builder: (context) => Positioned(
-        width: 500,
-        child: CompositedTransformFollower(
+      builder: (context) {
+        final tooltipWidth = MediaQuery.sizeOf(context).width * 0.8;
+
+        return Positioned(
+          width: tooltipWidth,
+          child: CompositedTransformFollower(
           link: _layerLink,
           showWhenUnlinked: false,
           targetAnchor: Alignment.bottomCenter,
@@ -586,8 +589,8 @@ class _CelebrityProfileImageState extends State<_CelebrityProfileImage> {
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
 
     Overlay.of(context).insert(_attributionOverlay!);
