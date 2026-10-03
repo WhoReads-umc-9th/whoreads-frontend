@@ -553,37 +553,38 @@ class _CelebrityProfileImageState extends State<_CelebrityProfileImage> {
         return Positioned(
           width: tooltipWidth,
           child: CompositedTransformFollower(
-          link: _layerLink,
-          showWhenUnlinked: false,
-          targetAnchor: Alignment.bottomCenter,
-          followerAnchor: Alignment.topCenter,
-          offset: const Offset(0, 8),
-          child: Material(
-            color: Colors.transparent,
-            child: Center(
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 500),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+            link: _layerLink,
+            showWhenUnlinked: false,
+            targetAnchor: Alignment.bottomCenter,
+            followerAnchor: Alignment.topCenter,
+            offset: const Offset(0, 8),
+            child: Material(
+              color: Colors.transparent,
+              child: Center(
+                child: Container(
+                  width: tooltipWidth,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    _attribution,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 12,
+                      height: 1.35,
                     ),
-                  ],
-                ),
-                child: Text(
-                  _attribution,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 12,
-                    height: 1.35,
                   ),
                 ),
               ),
