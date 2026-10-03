@@ -511,7 +511,7 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
   }
 }
 
-class _CelebrityProfileImage extends StatelessWidget {
+class _CelebrityProfileImage extends StatefulWidget {
   final String imageUrl;
   final String imageAttribution;
   final double size;
@@ -524,73 +524,142 @@ class _CelebrityProfileImage extends StatelessWidget {
     required this.borderRadius,
   });
 
-  void _showCopyright(BuildContext context) {
-    final copyright = imageAttribution.trim().isEmpty
-        ? '저작권 정보가 없습니다.'
-        : imageAttribution.trim();
+  @override
+  State<_CelebrityProfileImage> createState() => _CelebrityProfileImageState();
+}
 
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        content: Text(copyright),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('확인'),
+class _CelebrityProfileImageState extends State<_CelebrityProfileImage> {
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _attributionOverlay;
+
+  String get _attribution => widget.imageAttribution.trim().isEmpty
+      ? '저작권 정보가 없습니다.'
+      : widget.imageAttribution.trim();
+
+  void _hideAttribution() {
+    _attributionOverlay?.remove();
+    _attributionOverlay = null;
+  }
+
+  void _showAttribution() {
+    if (_attributionOverlay != null) {
+      return;
+    }
+
+    _attributionOverlay = OverlayEntry(
+      builder: (context) => Positioned(
+        width: 500,
+        child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          targetAnchor: Alignment.bottomCenter,
+          followerAnchor: Alignment.topCenter,
+          offset: const Offset(0, 8),
+          child: Material(
+            color: Colors.transparent,
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 500),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  _attribution,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
+        ),
       ),
     );
+
+    Overlay.of(context).insert(_attributionOverlay!);
+  }
+
+  @override
+  void dispose() {
+    _hideAttribution();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(borderRadius),
-            child: imageUrl.isNotEmpty
-                ? Image.network(
-                    imageUrl,
-                    width: size,
-                    height: size,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Image.asset(
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              child: widget.imageUrl.isNotEmpty
+                  ? Image.network(
+                      widget.imageUrl,
+                      width: widget.size,
+                      height: widget.size,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/images/person.png',
+                        width: widget.size,
+                        height: widget.size,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Image.asset(
                       'assets/images/person.png',
-                      width: size,
-                      height: size,
+                      width: widget.size,
+                      height: widget.size,
                       fit: BoxFit.cover,
                     ),
-                  )
-                : Image.asset(
-                    'assets/images/person.png',
-                    width: size,
-                    height: size,
-                    fit: BoxFit.cover,
+            ),
+            Positioned(
+              right: 4,
+              bottom: 4,
+              child: MouseRegion(
+                onEnter: (_) => _showAttribution(),
+                onExit: (_) => _hideAttribution(),
+                child: GestureDetector(
+                  onTap: () {
+                    if (_attributionOverlay == null) {
+                      _showAttribution();
+                    } else {
+                      _hideAttribution();
+                    }
+                  },
+                  child: const Icon(
+                    Icons.info_outline,
+                    size: 20,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black54,
+                        blurRadius: 2,
+                      ),
+                    ],
                   ),
-          ),
-          Positioned(
-            right: 4,
-            bottom: 4,
-            child: GestureDetector(
-              onTap: () => _showCopyright(context),
-              child: const Icon(
-                Icons.info_outline,
-                size: 20,
-                color: Colors.white,
-                shadows: [
-                  Shadow(
-                    color: Colors.black54,
-                    blurRadius: 2,
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
