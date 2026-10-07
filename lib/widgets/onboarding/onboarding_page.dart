@@ -5,10 +5,7 @@ import '../../screens/onboarding/onboarding_data.dart';
 class OnboardingPage extends StatelessWidget {
   final OnboardingData data;
 
-  const OnboardingPage({
-    super.key,
-    required this.data,
-  });
+  const OnboardingPage({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +20,7 @@ class OnboardingPage extends StatelessWidget {
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: constraints.maxHeight,
-            ),
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: IntrinsicHeight(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -34,7 +29,10 @@ class OnboardingPage extends StatelessWidget {
 
                   SizedBox(
                     height: svgAreaHeight,
-                    child: _buildSvgArea(context),
+                    child: SvgPicture.asset(
+                      data.svgSingle,
+                      fit: BoxFit.contain,
+                    ),
                   ),
 
                   const SizedBox(height: 20),
@@ -71,32 +69,6 @@ class OnboardingPage extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildSvgArea(BuildContext context) {
-    final double width = MediaQuery.of(context).size.width;
-
-    return Stack(
-      alignment: Alignment.topCenter,
-      children: [
-        Positioned(
-          top: 0,
-          child: SvgPicture.asset(
-            data.svgTop!,
-            width: width * 0.9,
-            fit: BoxFit.contain,
-          ),
-        ),
-        Positioned(
-          top: width * 0.3,
-          child: SvgPicture.asset(
-            data.svgBottom!,
-            width: width * 0.9,
-            fit: BoxFit.contain,
-          ),
-        ),
-      ],
     );
   }
 }
