@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
@@ -67,55 +68,93 @@ class KakaoAuthService {
         '/auth/kakao/login/token',
         data: {'access_token': kakaoAccessToken},
       );
-
-      final decoded = response.data is String
-          ? jsonDecode(response.data as String)
-          : response.data;
-
-      final bool ok = (response.statusCode == 200 || response.statusCode == 201) &&
-          !(decoded is Map && decoded['is_success'] == false);
-
-      if (!ok || decoded is! Map || decoded['result'] == null) {
-        final message = decoded is Map ? decoded['message']?.toString() : null;
-        return KakaoLoginResult(
-          status: KakaoLoginStatus.failed,
-          errorMessage: message ?? '카카오 로그인에 실패했습니다.',
-        );
-      }
-
-      final result = decoded['result'] as Map;
-      final bool isNewMember = result['is_new_member'] == true;
-
-      if (isNewMember) {
-        return KakaoLoginResult(
-          status: KakaoLoginStatus.needsSignup,
-          registrationToken: result['registration_token']?.toString(),
-          nickname: result['nickname']?.toString(),
-        );
-      }
-
-      // 기존 회원 → 토큰 저장
-      final tokenData = result['token_data'];
-      if (tokenData is Map && tokenData['access_token'] != null) {
-        await TokenStorage.saveTokens(
-          accessToken: tokenData['access_token'].toString(),
-          refreshToken: tokenData['refresh_token']?.toString(),
-        );
-        await _trySendFcmToken();
-        return const KakaoLoginResult(status: KakaoLoginStatus.loggedIn);
-      }
-
-      return const KakaoLoginResult(
-        status: KakaoLoginStatus.failed,
-        errorMessage: '로그인 응답에 토큰이 없습니다.',
-      );
-    } catch (e) {
-      debugPrint('카카오 로그인 API 에러: $e');
+      return await _completeLogin(response);
+    } catch (_) {
       return const KakaoLoginResult(
         status: KakaoLoginStatus.failed,
         errorMessage: '서버와 통신할 수 없습니다.',
       );
     }
+  }
+
+  /// REST 인가 코드를 서버 콜백으로 전달한다.
+  /// SDK access_token은 code로 사용할 수 없다. 호출자는 REST 방식으로 발급된
+  /// 미사용 코드를 전달해야 하며, 브라우저가 이미 콜백을 호출했다면 재호출하면 안 된다.
+  Future<KakaoLoginResult> loginWithAuthorizationCode(String code) async {
+    if (code.trim().isEmpty) {
+      return const KakaoLoginResult(
+        status: KakaoLoginStatus.failed,
+        errorMessage: '카카오 로그인 인증 코드가 없습니다.',
+      );
+    }
+    try {
+      final response = await ApiClient.dio.get(
+        '/auth/kakao/callback',
+        queryParameters: {'code': code},
+      );
+      return await _completeLogin(response);
+    } catch (_) {
+      // 인가 코드나 토큰이 포함된 요청 URL을 로그에 남기지 않는다.
+      return const KakaoLoginResult(
+        status: KakaoLoginStatus.failed,
+        errorMessage: '서버와 통신할 수 없습니다.',
+      );
+    }
+  }
+
+  Future<KakaoLoginResult> _completeLogin(Response<dynamic> response) async {
+    final decoded = response.data is String
+        ? jsonDecode(response.data as String)
+        : response.data;
+
+    final bool ok =
+        (response.statusCode == 200 || response.statusCode == 201) &&
+        !(decoded is Map && decoded['is_success'] == false);
+
+    if (!ok || decoded is! Map || decoded['result'] is! Map) {
+      final message = decoded is Map ? decoded['message']?.toString() : null;
+      return KakaoLoginResult(
+        status: KakaoLoginStatus.failed,
+        errorMessage: message ?? '카카오 로그인에 실패했습니다.',
+      );
+    }
+
+    final result = decoded['result'] as Map;
+    final bool isNewMember = result['is_new_member'] == true;
+
+    if (isNewMember) {
+      final registrationToken = result['registration_token']?.toString();
+      if (registrationToken == null || registrationToken.trim().isEmpty) {
+        return const KakaoLoginResult(
+          status: KakaoLoginStatus.failed,
+          errorMessage: '가입 정보가 없습니다. 카카오 로그인을 다시 시도해주세요.',
+        );
+      }
+      return KakaoLoginResult(
+        status: KakaoLoginStatus.needsSignup,
+        registrationToken: registrationToken,
+        nickname: result['nickname']?.toString(),
+      );
+    }
+
+    // 기존 회원 → 토큰 저장
+    final tokenData = result['token_data'];
+    if (result['is_new_member'] == false &&
+        tokenData is Map &&
+        tokenData['access_token'] is String &&
+        (tokenData['access_token'] as String).trim().isNotEmpty) {
+      await TokenStorage.saveTokens(
+        accessToken: tokenData['access_token'].toString(),
+        refreshToken: tokenData['refresh_token']?.toString(),
+      );
+      await _trySendFcmToken();
+      return const KakaoLoginResult(status: KakaoLoginStatus.loggedIn);
+    }
+
+    return const KakaoLoginResult(
+      status: KakaoLoginStatus.failed,
+      errorMessage: '로그인 응답에 토큰이 없습니다.',
+    );
   }
 
   /// 카카오 신규 회원가입 (registrationToken + 추가 정보) → 성공 시 토큰 저장.
@@ -141,7 +180,8 @@ class KakaoAuthService {
           ? jsonDecode(response.data as String)
           : response.data;
 
-      final bool ok = (response.statusCode == 200 || response.statusCode == 201) &&
+      final bool ok =
+          (response.statusCode == 200 || response.statusCode == 201) &&
           !(decoded is Map && decoded['is_success'] == false);
 
       if (!ok || decoded is! Map || decoded['result'] == null) {
