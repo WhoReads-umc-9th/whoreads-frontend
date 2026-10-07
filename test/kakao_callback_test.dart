@@ -1,11 +1,14 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:whoreads/core/network/api_client.dart';
 import 'package:whoreads/services/kakao_auth_service.dart';
+import 'package:whoreads/services/kakao_oauth_session.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +32,11 @@ void main() {
   });
 
   setUp(() {
+    dotenv.testLoad(
+      fileInput:
+          'BASE_URL=https://example.invalid\n'
+          'KAKAO_REST_API_KEY=0123456789abcdef0123456789abcdef',
+    );
     tokens.clear();
     requests.clear();
     ApiClient.dio.interceptors.clear();
@@ -51,6 +59,94 @@ void main() {
       ),
     );
   }
+
+  testWidgets(
+    '모바일 로그인 진입이 REST 인가 후 콜백을 한 번만 호출한다',
+    (tester) async {
+      late BuildContext context;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (value) {
+              context = value;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      KakaoOAuthSession? requestedSession;
+      final restService = KakaoAuthService(
+        authorize: (_, session) async {
+          requestedSession = session;
+          return session.parseCallback(
+            session.redirectUri.replace(
+              queryParameters: {
+                'code': 'test-rest-code',
+                'state': session.state,
+              },
+            ),
+          );
+        },
+      );
+      respond({
+        'is_success': true,
+        'result': {
+          'is_new_member': false,
+          'token_data': {'access_token': 'test-rest-access'},
+        },
+      });
+      final result = await tester.runAsync(() => restService.login(context));
+      expect(result!.status, KakaoLoginStatus.loggedIn);
+      expect(requestedSession!.authorizationUri.host, 'kauth.kakao.com');
+      expect(requests, hasLength(1));
+      expect(requests.single.method, 'GET');
+      expect(requests.single.uri.path, '/api/auth/kakao/callback');
+      expect(requests.single.uri.queryParameters['code'], 'test-rest-code');
+      expect(tokens['access_token'], 'test-rest-access');
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+    }),
+  );
+
+  testWidgets(
+    '로그인 창 취소 또는 잘못된 state는 서버 호출 없이 종료한다',
+    (tester) async {
+      late BuildContext context;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (value) {
+              context = value;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      for (final canceled in [true, false]) {
+        final restService = KakaoAuthService(
+          authorize: (_, session) async {
+            if (canceled) return null;
+            return session.parseCallback(
+              session.redirectUri.replace(
+                queryParameters: {'code': 'test-code', 'state': 'wrong-state'},
+              ),
+            );
+          },
+        );
+        final result = await restService.login(context);
+        expect(result.status, KakaoLoginStatus.failed);
+        expect(result.errorMessage, canceled ? isNull : isNotNull);
+        expect(requests, isEmpty);
+        expect(tokens, isEmpty);
+      }
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+    }),
+  );
 
   test('인가 코드를 GET 콜백에 전달하고 기존 회원 토큰을 저장한다', () async {
     respond({

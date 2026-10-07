@@ -25,6 +25,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   late final PageController _pageController;
   final KakaoAuthService _kakaoAuthService = KakaoAuthService();
   int _index = 0;
+  bool _kakaoLoginInProgress = false;
 
   @override
   void initState() {
@@ -110,7 +111,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Future<void> _handleKakaoLogin() async {
-    final result = await _kakaoAuthService.login();
+    if (_kakaoLoginInProgress) return;
+    _kakaoLoginInProgress = true;
+    final KakaoLoginResult result;
+    try {
+      result = await _kakaoAuthService.login(context);
+    } finally {
+      _kakaoLoginInProgress = false;
+    }
     if (!mounted) return;
 
     switch (result.status) {

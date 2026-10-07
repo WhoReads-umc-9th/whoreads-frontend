@@ -2,11 +2,14 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 
 import '../core/auth/token_storage.dart';
 import '../core/network/api_client.dart';
+import '../screens/auth/kakao_login_page.dart';
+import 'kakao_oauth_session.dart';
 import 'notification/fcm_service.dart';
 
 /// 카카오 로그인 결과 상태
@@ -42,9 +45,59 @@ class KakaoLoginResult {
 }
 
 class KakaoAuthService {
+  final Future<KakaoOAuthCallback?> Function(BuildContext, KakaoOAuthSession)
+  _authorize;
+
+  KakaoAuthService({
+    Future<KakaoOAuthCallback?> Function(BuildContext, KakaoOAuthSession)?
+    authorize,
+  }) : _authorize = authorize ?? _openLoginPage;
+
+  /// 모바일 카카오계정 REST 인증 → 서버 콜백 → 앱 로그인/가입.
+  Future<KakaoLoginResult> login(BuildContext context) async {
+    if (kIsWeb) return _loginWithSdk();
+    if (defaultTargetPlatform != TargetPlatform.android &&
+        defaultTargetPlatform != TargetPlatform.iOS) {
+      return const KakaoLoginResult(
+        status: KakaoLoginStatus.failed,
+        errorMessage: '카카오 로그인은 Android/iOS 앱에서 이용할 수 있습니다.',
+      );
+    }
+    try {
+      final session = KakaoOAuthSession.fromEnvironment(
+        apiBaseUrl: ApiClient.baseUrl,
+      );
+      final callback = await _authorize(context, session);
+      if (callback?.code == null) {
+        return KakaoLoginResult(
+          status: KakaoLoginStatus.failed,
+          errorMessage: callback?.errorMessage,
+        );
+      }
+      return loginWithAuthorizationCode(callback!.code!);
+    } on FormatException catch (error) {
+      return KakaoLoginResult(
+        status: KakaoLoginStatus.failed,
+        errorMessage: error.message.toString(),
+      );
+    } catch (_) {
+      return const KakaoLoginResult(
+        status: KakaoLoginStatus.failed,
+        errorMessage: '카카오 로그인에 실패했습니다.',
+      );
+    }
+  }
+
+  static Future<KakaoOAuthCallback?> _openLoginPage(
+    BuildContext context,
+    KakaoOAuthSession session,
+  ) => Navigator.of(context).push<KakaoOAuthCallback>(
+    MaterialPageRoute(builder: (_) => KakaoLoginPage(session: session)),
+  );
+
   /// 카카오톡/카카오계정으로 로그인 → 백엔드에 access_token 전달.
   /// 기존 회원이면 토큰 저장, 신규 회원이면 registrationToken 반환.
-  Future<KakaoLoginResult> login() async {
+  Future<KakaoLoginResult> _loginWithSdk() async {
     // 1. 카카오 SDK 로그인 → 카카오 access_token 확보
     final String kakaoAccessToken;
     try {
