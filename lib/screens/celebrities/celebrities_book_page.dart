@@ -9,6 +9,7 @@ class CelebrityDetail {
   final int id;
   final String name;
   final String imageUrl;
+  final String imageAttribution;
   final String shortBio;
   final List<String> jobTags;
   final bool isFollowing; // 🌟 [추가됨] 팔로우 상태 파싱용
@@ -17,6 +18,7 @@ class CelebrityDetail {
     required this.id,
     required this.name,
     required this.imageUrl,
+    required this.imageAttribution,
     required this.shortBio,
     required this.jobTags,
     this.isFollowing = false,
@@ -27,6 +29,7 @@ class CelebrityDetail {
       id: json['id'] ?? 0,
       name: json['name'] ?? '이름 없음',
       imageUrl: json['image_url'] ?? '',
+      imageAttribution: json['image_attribution']?.toString() ?? '',
       shortBio: json['short_bio'] ?? '',
       jobTags: List<String>.from(json['job_tags'] ?? []),
       // 서버에서 팔로우 여부를 내려준다면 파싱, 없으면 기본값 false
@@ -387,22 +390,11 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
             Center(
               child: Column(
                 children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      image: celebrityProfile!.imageUrl.isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(celebrityProfile!.imageUrl),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                      color: Colors.grey[200],
-                    ),
-                    child: celebrityProfile!.imageUrl.isEmpty
-                        ? const Icon(Icons.person, size: 50, color: Colors.grey)
-                        : null,
+                  _CelebrityProfileImage(
+                    imageUrl: celebrityProfile!.imageUrl,
+                    imageAttribution: celebrityProfile!.imageAttribution,
+                    size: 100,
+                    borderRadius: 16,
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -647,6 +639,159 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
                     },
                   ),
             const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CelebrityProfileImage extends StatefulWidget {
+  final String imageUrl;
+  final String imageAttribution;
+  final double size;
+  final double borderRadius;
+
+  const _CelebrityProfileImage({
+    required this.imageUrl,
+    required this.imageAttribution,
+    required this.size,
+    required this.borderRadius,
+  });
+
+  @override
+  State<_CelebrityProfileImage> createState() => _CelebrityProfileImageState();
+}
+
+class _CelebrityProfileImageState extends State<_CelebrityProfileImage> {
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _attributionOverlay;
+
+  String get _attribution => widget.imageAttribution.trim().isEmpty
+      ? '저작권 정보가 없습니다.'
+      : widget.imageAttribution.trim();
+
+  void _hideAttribution() {
+    _attributionOverlay?.remove();
+    _attributionOverlay = null;
+  }
+
+  void _showAttribution() {
+    if (_attributionOverlay != null) {
+      return;
+    }
+
+    _attributionOverlay = OverlayEntry(
+      builder: (context) {
+        final tooltipWidth = MediaQuery.sizeOf(context).width * 0.8;
+
+        return Positioned(
+          width: tooltipWidth,
+          child: CompositedTransformFollower(
+            link: _layerLink,
+            showWhenUnlinked: false,
+            targetAnchor: Alignment.bottomCenter,
+            followerAnchor: Alignment.topCenter,
+            offset: const Offset(0, 8),
+            child: Material(
+              color: Colors.transparent,
+              child: Center(
+                child: Container(
+                  width: tooltipWidth,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    _attribution,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 10,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_attributionOverlay!);
+  }
+
+  @override
+  void dispose() {
+    _hideAttribution();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              child: widget.imageUrl.isNotEmpty
+                  ? Image.network(
+                      widget.imageUrl,
+                      width: widget.size,
+                      height: widget.size,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/images/person.png',
+                        width: widget.size,
+                        height: widget.size,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Image.asset(
+                      'assets/images/person.png',
+                      width: widget.size,
+                      height: widget.size,
+                      fit: BoxFit.cover,
+                    ),
+            ),
+            Positioned(
+              right: 4,
+              bottom: 4,
+              child: MouseRegion(
+                onEnter: (_) => _showAttribution(),
+                onExit: (_) => _hideAttribution(),
+                child: GestureDetector(
+                  onTap: () {
+                    if (_attributionOverlay == null) {
+                      _showAttribution();
+                    } else {
+                      _hideAttribution();
+                    }
+                  },
+                  child: const Icon(
+                    Icons.info_outline,
+                    size: 20,
+                    color: Color(0xCCFFFFFF),
+                    shadows: [Shadow(color: Colors.black54, blurRadius: 2)],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
