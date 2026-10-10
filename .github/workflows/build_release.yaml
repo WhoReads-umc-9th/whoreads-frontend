@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -31,8 +35,13 @@ jobs:
           echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
 
       - name: Create Real .env File
-        run: |
-          echo "BASE_URL=${{ secrets.BASE_URL }}" > ./.env
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
+          KAKAO_NATIVE_APP_KEY: ${{ secrets.KAKAO_NATIVE_APP_KEY }}
+          KAKAO_JAVASCRIPT_APP_KEY: ${{ secrets.KAKAO_JAVASCRIPT_APP_KEY }}
+        run: python3 scripts/release_config.py write-env
       # 5. key.jks 복원 및 key.properties 자동 생성
       - name: Configure Keystore & Properties
         run: |
@@ -55,11 +64,17 @@ jobs:
       - name: Build Android APK (Release)
         run: flutter build apk --release --no-tree-shake-icons
 
+      - name: Validate bundled Kakao configuration
+        run: |
+          python3 scripts/release_config.py audit build/app/outputs/bundle/release/app-release.aab
+          python3 scripts/release_config.py audit build/app/outputs/flutter-apk/app-release.apk
+
       # 8. 업로드 단계에서 APK 경로도 같이 포함시키기
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release
+          if-no-files-found: error
           path: |
             build/app/outputs/bundle/release/app-release.aab
             build/app/outputs/flutter-apk/app-release.apk
