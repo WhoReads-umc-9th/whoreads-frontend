@@ -10,6 +10,14 @@
 .history
 .svn/
 .env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.pfx
+key.properties
+**/*service-account*.json
 .swiftpm/
 migrate_working_dir/
 
