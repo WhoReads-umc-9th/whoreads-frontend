@@ -15,8 +15,11 @@ class TokenStorage {
     String? refreshToken,
   }) async {
     await _storage.write(key: _accessKey, value: accessToken);
-    if (refreshToken != null) {
+    if (refreshToken != null && refreshToken.isNotEmpty) {
       await _storage.write(key: _refreshKey, value: refreshToken);
+    } else {
+      // A signup/account switch must not retain another session's refresh token.
+      await _storage.delete(key: _refreshKey);
     }
   }
 

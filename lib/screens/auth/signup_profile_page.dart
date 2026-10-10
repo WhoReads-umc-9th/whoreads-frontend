@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'login_page.dart';
 import '../../core/auth/token_storage.dart';
 import '../../core/network/api_client.dart';
 import '../../services/kakao_auth_service.dart';
@@ -112,11 +113,52 @@ class _SignupProfilePageState extends State<SignupProfilePage> {
       if ((response.statusCode == 200 || response.statusCode == 201) &&
           decoded['is_success'] == true) {
         final result = decoded['result'];
-        final accessToken = result['access_token'] as String?;
-        final refreshToken = result['refresh_token'] as String?;
+        var accessToken = result['access_token'] as String?;
+        var refreshToken = result['refresh_token'] as String?;
 
         if (accessToken == null) {
           throw Exception('access_token이 응답에 없습니다.');
+        }
+
+        // Signup's JoinData contains only an access token. Obtain a renewable
+        // login session so completing the DNA test cannot expire the signup token.
+        if (refreshToken == null || refreshToken.isEmpty) {
+          try {
+            final login = await ApiClient.checked(
+              ApiClient.dio.post(
+                '/auth/login',
+                data: {
+                  'login_id': widget.loginId,
+                  'password': widget.password,
+                },
+              ),
+            );
+            final loginData = login.data is String
+                ? jsonDecode(login.data as String)
+                : login.data;
+            final session = loginData['result'];
+            final loginAccess = session['access_token'];
+            final loginRefresh = session['refresh_token'];
+            if (loginAccess is! String ||
+                loginAccess.trim().isEmpty ||
+                loginRefresh is! String ||
+                loginRefresh.trim().isEmpty) {
+              throw const FormatException('Invalid login session');
+            }
+            accessToken = loginAccess;
+            refreshToken = loginRefresh;
+          } catch (_) {
+            // Registration already succeeded: do not allow duplicate signup.
+            if (!mounted) return;
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const LoginPage()),
+              (_) => false,
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('회원가입이 완료되었습니다. 로그인해주세요.')),
+            );
+            return;
+          }
         }
 
         await TokenStorage.saveTokens(

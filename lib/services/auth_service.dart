@@ -23,11 +23,17 @@ class AuthService {
     try {
       final token = await TokenStorage.getAccessToken();
 
-      if (token != null) {
-        final bool isTokenValid = await ApiClient.attemptTokenRefresh();
-        return isTokenValid;
+      if (token == null || token.isEmpty) return false;
+
+      // Email signup currently returns an access token without a refresh token.
+      // Validate that session first; ApiClient refreshes only after a real 401.
+      final response = await ApiClient.dio.get('/members/me');
+      if (response.statusCode == 401) {
+        await TokenStorage.clear();
+        return false;
       }
-      return false;
+      ApiClient.requireSuccess(response);
+      return true;
     } catch (e) {
       return (await TokenStorage.getAccessToken())?.isNotEmpty == true;
     }
