@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 
-from release_config import audit
+from release_config import audit, verify_kakao_server
 
 REPO = "WhoReads-umc-9th/whoreads-frontend"
 WORKFLOW = "build_release.yaml"
@@ -26,6 +26,14 @@ def select_run(runs):
     if run["status"] != "completed" or run["conclusion"] != "success":
         raise ValueError("Newest main release build has not succeeded; do not use an older AAB")
     return run
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def main():
@@ -59,8 +67,10 @@ def main():
     if len(bundles) != 1 or len(apks) != 1:
         raise ValueError("Artifact must contain one AAB and one paired APK")
     bundle, apk = bundles[0], apks[0]
-    if audit(bundle) != audit(apk):
+    config = audit(bundle)
+    if config != audit(apk):
         raise ValueError("Paired APK and AAB configuration differs")
+    verify_kakao_server(config)
     badging = subprocess.check_output([args.aapt2, "dump", "badging", str(apk)], text=True)
     metadata = re.search(r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging)
     if not metadata or metadata[1] != "com.whoreads.mobile":
@@ -72,7 +82,8 @@ def main():
               "aab": str(bundle.resolve()), "apk": str(apk.resolve()),
               "package": metadata[1], "versionCodeFromPairedApk": code,
               "versionNameFromPairedApk": metadata[3],
-              "sha256": hashlib.file_digest(bundle.open("rb"), "sha256").hexdigest(),
+              "sha256": sha256_file(bundle),
+              "kakaoServer": "302/state/callback verified; app contains no Kakao keys",
               "status": "prepared; Play upload and publication not performed"}
     (destination / "release-provenance.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report, indent=2))

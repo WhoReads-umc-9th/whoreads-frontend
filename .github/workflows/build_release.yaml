@@ -44,10 +44,6 @@ jobs:
       - name: Create Real .env File
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
-          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
-          KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
-          KAKAO_NATIVE_APP_KEY: ${{ secrets.KAKAO_NATIVE_APP_KEY }}
-          KAKAO_JAVASCRIPT_APP_KEY: ${{ secrets.KAKAO_JAVASCRIPT_APP_KEY }}
         run: python3 scripts/release_config.py write-env
 
       # 6. 의존성 패키지 다운로드 및 캐시 정리
@@ -63,7 +59,7 @@ jobs:
       - name: Build Android APK (Release)
         run: flutter build apk --release --no-tree-shake-icons
 
-      - name: Validate bundled Kakao configuration
+      - name: Validate key-free app configuration
         run: |
           python3 scripts/release_config.py audit build/app/outputs/bundle/release/app-release.aab
           python3 scripts/release_config.py audit build/app/outputs/flutter-apk/app-release.apk

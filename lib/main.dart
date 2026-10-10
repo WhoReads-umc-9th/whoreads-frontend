@@ -28,17 +28,15 @@ Future<void> main() async {
     debugPrint('.env load skipped or failed on web: $e');
   }
 
-  // 2. 카카오 SDK 초기화 (웹일 때는 JavaScript App Key 우선 적용)
-  try {
-    final nativeKey = dotenv.env['KAKAO_NATIVE_APP_KEY'] ?? '';
-    final jsKey = dotenv.env['KAKAO_JAVASCRIPT_APP_KEY'] ?? nativeKey;
-
-    KakaoSdk.init(
-      nativeAppKey: nativeKey,
-      javaScriptAppKey: kIsWeb ? jsKey : null,
-    );
-  } catch (e) {
-    debugPrint('KakaoSdk init skipped or failed: $e');
+  // 2. 모바일은 서버에서 카카오 인증을 시작한다. 기존 웹 SDK만 별도 초기화한다.
+  if (kIsWeb) {
+    try {
+      KakaoSdk.init(
+        javaScriptAppKey: dotenv.env['KAKAO_JAVASCRIPT_APP_KEY'] ?? '',
+      );
+    } catch (_) {
+      debugPrint('KakaoSdk init skipped or failed.');
+    }
   }
 
   // 3. Firebase 및 FCM 안전 초기화

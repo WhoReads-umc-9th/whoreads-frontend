@@ -1,37 +1,25 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:whoreads/services/kakao_oauth_session.dart';
 
 void main() {
-  const key = '0123456789abcdef0123456789abcdef';
   const base = 'https://example.invalid/api';
   final redirect = Uri.parse('$base/auth/kakao/callback');
   late KakaoOAuthSession session;
 
   setUp(() {
-    dotenv.testLoad(fileInput: 'KAKAO_REST_API_KEY=$key');
-    session = KakaoOAuthSession(
-      restApiKey: key,
-      redirectUri: redirect,
-      state: 'test-session',
-    );
+    session = KakaoOAuthSession(redirectUri: redirect, state: 'test-session');
   });
 
-  test('REST 키와 서버 콜백, state로 카카오 인가 URL을 만든다', () {
+  test('앱 키 없이 서버의 로그인 시작 주소와 state를 만든다', () {
     final uri = session.authorizationUri;
-    expect(uri.origin, 'https://kauth.kakao.com');
-    expect(uri.path, '/oauth/authorize');
-    expect(uri.queryParameters, {
-      'client_id': key,
-      'redirect_uri': redirect.toString(),
-      'response_type': 'code',
-      'state': 'test-session',
-    });
+    expect(uri.origin, 'https://example.invalid');
+    expect(uri.path, '/api/auth/kakao/authorize');
+    expect(uri.queryParameters, {'state': 'test-session'});
   });
 
   test('로그인 시도마다 새 state를 만든다', () {
-    final first = KakaoOAuthSession.fromEnvironment(apiBaseUrl: base);
-    final second = KakaoOAuthSession.fromEnvironment(apiBaseUrl: base);
+    final first = KakaoOAuthSession.forBackend(apiBaseUrl: base);
+    final second = KakaoOAuthSession.forBackend(apiBaseUrl: base);
     expect(first.state.length, greaterThanOrEqualTo(32));
     expect(first.state, isNot(second.state));
     expect(first.redirectUri, redirect);
@@ -87,23 +75,23 @@ void main() {
     expect(callback.errorMessage, isNull);
   });
 
-  test('네이티브 키만 있으면 REST 로그인을 시작하지 않는다', () {
-    dotenv.testLoad(fileInput: 'KAKAO_NATIVE_APP_KEY=$key');
-    expect(
-      () => KakaoOAuthSession.fromEnvironment(apiBaseUrl: base),
-      throwsFormatException,
-    );
+  test('키 설정 없이 서버 주소만으로 로그인을 시작한다', () {
+    final created = KakaoOAuthSession.forBackend(apiBaseUrl: base);
+    expect(created.authorizationUri.queryParameters.keys, ['state']);
+    expect(created.redirectUri, redirect);
   });
 
-  test('인가 콜백과 코드 교환 서버가 다르면 시작하지 않는다', () {
-    dotenv.testLoad(
-      fileInput:
-          'KAKAO_REST_API_KEY=$key\n'
-          'KAKAO_REDIRECT_URI=https://other.invalid/api/auth/kakao/callback',
-    );
-    expect(
-      () => KakaoOAuthSession.fromEnvironment(apiBaseUrl: base),
-      throwsFormatException,
-    );
+  test('안전하지 않은 서버 주소로 로그인을 시작하지 않는다', () {
+    for (final address in [
+      'http://example.invalid/api',
+      'https://user@example.invalid/api',
+      'https://example.invalid/api?injected=1',
+      'https://example.invalid/api#fragment',
+    ]) {
+      expect(
+        () => KakaoOAuthSession.forBackend(apiBaseUrl: address),
+        throwsFormatException,
+      );
+    }
   });
 }

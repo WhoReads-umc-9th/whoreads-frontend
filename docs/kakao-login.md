@@ -1,14 +1,14 @@
 # 카카오 로그인 연결 상태
 
-2026-10-07 공개 서버 명세(`/v3/api-docs`) 기준.
+2026-10-11 서버 관리 방식으로 변경.
 
 ## 모바일 로그인 버튼
 
-Android/iOS 로그인 버튼은 REST API 키로 카카오계정 로그인 화면을 앱 안의
+Android/iOS 로그인 버튼은 키 없이 서버의 카카오 로그인 진입점을 앱 안의
 WebView에 연다. 카카오톡 앱 SSO 대신 카카오계정 인증을 사용한다.
 
-1. `https://kauth.kakao.com/oauth/authorize`에 REST 키, `response_type=code`,
-   서버 `redirect_uri`, 로그인 시도마다 새로 생성한 `state`를 전달한다.
+1. `GET /api/auth/kakao/authorize?state=...`를 연다. 로그인 시도마다 새 state를
+   생성하며 서버가 REST 키와 고정 redirect_uri로 카카오 인가 URL을 만들어 302로 연결한다.
 2. WebView가 정확한 서버 콜백 주소로 이동할 때 탐색을 차단한다.
    `state`를 검증하고 인가 코드를 로그인 서비스에 반환한다.
 3. 서비스가 `GET /api/auth/kakao/callback?code=...`를 한 번 호출한다.
@@ -18,21 +18,21 @@ WebView에 연다. 카카오톡 앱 SSO 대신 카카오계정 인증을 사용�
    `POST /api/auth/kakao/signup` 완료 후 홈으로 이동한다.
 
 서버 콜백은 JSON을 반환한다. 이 흐름에서는 별도 앱 복귀 리다이렉트나
-서버 수정 없이 앱이 결과를 처리한다. 웹 플랫폼의 기존 SDK 흐름은 유지한다.
+서버의 로그인 진입점 배포 후 앱이 결과를 처리한다. 웹 플랫폼의 기존 SDK 흐름은 유지한다.
 
 ## 환경 설정
 
-실제 키는 Git에서 제외된 `.env`에 설정한다. `.env.example`에는 키를 넣지 않는다.
+모바일 `.env`에는 서버 주소만 넣는다. 실제 카카오 키는 백엔드 저장소의 GitHub
+Secrets에서 서버 런타임 환경변수로만 주입한다. 앱에는 REST/Native 키나 Client Secret을 넣지 않는다.
 
 ```dotenv
 BASE_URL=https://api.whoreads.kro.kr
-KAKAO_REST_API_KEY=<카카오 REST API 키>
-KAKAO_REDIRECT_URI=https://api.whoreads.kro.kr/api/auth/kakao/callback
 ```
 
-카카오 개발자 콘솔에도 같은 Redirect URI를 등록해야 한다.
-앱의 인가 요청 주소와 백엔드의 코드 교환 주소는 정확히 같아야 한다.
-네이티브 앱 키는 REST API 키 대신 사용할 수 없다.
+서버 KAKAO_REDIRECT_URI와 카카오 개발자 콘솔에는 같은 HTTPS 콜백을 등록한다.
+모바일은 SDK 초기화나 네이티브 URL scheme 없이 기존 REST 로그인 흐름을 사용한다.
+OAuth client_id는 브라우저의 카카오 인가 URL에 보이는 식별자이며 완전히 감출 수 없다.
+Client Secret과 어드민 키는 서버에만 보관하고 URL이나 앱 응답에 넣지 않는다.
 `.env` 변경 후에는 앱을 완전히 다시 실행해야 반영된다.
 
 ## 실패 및 취소 처리

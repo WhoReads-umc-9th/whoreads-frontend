@@ -4,11 +4,12 @@ import os
 from pathlib import Path
 import re
 import sys
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
+from urllib.request import Request, build_opener, HTTPRedirectHandler
+from urllib.error import HTTPError, URLError
 import zipfile
 
-KEYS = ("BASE_URL", "KAKAO_REST_API_KEY", "KAKAO_REDIRECT_URI",
-        "KAKAO_NATIVE_APP_KEY", "KAKAO_JAVASCRIPT_APP_KEY")
+KEYS = ("BASE_URL",)
 
 
 def parse_env(text):
@@ -18,6 +19,8 @@ def parse_env(text):
         if not line or line.startswith("#"):
             continue
         key, sep, value = line.partition("=")
+        if not sep:
+            raise ValueError("Malformed dotenv variable")
         if sep:
             if key.strip() in result:
                 raise ValueError("Duplicate dotenv variable")
@@ -31,22 +34,49 @@ def validate(values):
     if (uri.scheme != "https" or not uri.hostname or uri.username
             or uri.password or uri.query or uri.fragment):
         raise ValueError("BASE_URL must be an HTTPS API address")
-    if not re.fullmatch(r"[a-fA-F0-9]{32}", values.get("KAKAO_REST_API_KEY", "").strip()):
-        raise ValueError("KAKAO_REST_API_KEY missing or invalid; release blocked")
-    for key in ("KAKAO_NATIVE_APP_KEY", "KAKAO_JAVASCRIPT_APP_KEY"):
-        value = values.get(key, "").strip()
-        if value and not re.fullmatch(r"[a-fA-F0-9]{32}", value):
-            raise ValueError("Optional Kakao platform key invalid")
-    api = base if base.endswith("/api") else base + "/api"
-    callback = api + "/auth/kakao/callback"
-    redirect = values.get("KAKAO_REDIRECT_URI", "").strip() or callback
-    if redirect != callback:
-        raise ValueError("KAKAO_REDIRECT_URI does not match the backend callback")
-    clean = {key: values.get(key, "").strip() for key in KEYS}
-    clean.update(BASE_URL=base, KAKAO_REDIRECT_URI=redirect)
-    if any("\n" in v or "\r" in v for v in clean.values()):
+    if "\n" in base or "\r" in base:
         raise ValueError("Release configuration must contain single-line values")
-    return clean
+    if uri.path not in ("", "/api"):
+        raise ValueError("BASE_URL must point to the API root")
+    return {"BASE_URL": base}
+
+
+def verify_kakao_server(values):
+    """Check the deployed OAuth entry point without following it or logging keys."""
+    import secrets
+
+    class NoRedirect(HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
+    base = validate(values)["BASE_URL"]
+    api = base if base.endswith("/api") else base + "/api"
+    state = secrets.token_urlsafe(32)
+    request = Request(api + "/auth/kakao/authorize?state=" + state)
+    try:
+        with build_opener(NoRedirect).open(request, timeout=15):
+            raise ValueError("Kakao server must return a 302 redirect")
+    except HTTPError as response:
+        if response.code != 302:
+            raise ValueError("Kakao server entry point is not deployed or healthy") from None
+        location = response.headers.get("Location", "")
+        cache = response.headers.get("Cache-Control", "")
+        response.close()
+    except URLError:
+        raise ValueError("Kakao server is unreachable") from None
+    uri = urlsplit(location)
+    params = parse_qs(uri.query, keep_blank_values=True)
+    if (uri.scheme != "https" or uri.hostname != "kauth.kakao.com"
+            or uri.username or uri.password or uri.fragment or uri.port not in (None, 443)
+            or uri.path != "/oauth/authorize"
+            or set(params) != {"client_id", "redirect_uri", "response_type", "state"}
+            or params.get("state") != [state]
+            or params.get("response_type") != ["code"]
+            or params.get("redirect_uri") != [api + "/auth/kakao/callback"]
+            or len(params.get("client_id", [])) != 1
+            or not re.fullmatch(r"[a-fA-F0-9]{32}", params["client_id"][0])
+            or "no-store" not in cache):
+        raise ValueError("Kakao server redirect is invalid or exposes unexpected data")
 
 
 def audit(path):
@@ -65,30 +95,15 @@ def main():
     args = parser.parse_args()
     if args.command == "write-env":
         values = validate(os.environ)
-        # Check tracked source only; generated, ignored configuration is allowed.
-        import subprocess
-        tracked = subprocess.check_output(["git", "ls-files", "-z"]).decode().split("\0")
-        app_keys = [v.encode() for k, v in values.items() if k.endswith("_KEY") and v]
-        for name in filter(None, tracked):
-            data = Path(name).read_bytes()
-            if any(key in data for key in app_keys):
-                raise ValueError("App key literal found in tracked source; use build injection")
         target = Path(args.path or ".env")
         with os.fdopen(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as stream:
             stream.write("".join(f"{k}={v}\n" for k, v in values.items()))
         target.chmod(0o600)
-        native = values["KAKAO_NATIVE_APP_KEY"]
-        config = Path("ios/Flutter/Kakao.xcconfig")
-        if config.parent.is_dir():
-            # Xcode reads this ignored config before processing Info.plist.
-            scheme = "kakao" + native if native else "whoreads-kakao-unconfigured"
-            config.write_text(f"KAKAO_CALLBACK_SCHEME = {scheme}\n", encoding="utf-8")
-            config.chmod(0o600)
     else:
         if not args.path:
             parser.error("audit requires an AAB or APK path")
         audit(Path(args.path))
-    print("Release Kakao configuration validated (values hidden)")
+    print("Key-free release configuration validated (values hidden)")
 
 
 if __name__ == "__main__":

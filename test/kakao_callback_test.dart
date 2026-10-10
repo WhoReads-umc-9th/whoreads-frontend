@@ -32,11 +32,7 @@ void main() {
   });
 
   setUp(() {
-    dotenv.testLoad(
-      fileInput:
-          'BASE_URL=https://example.invalid\n'
-          'KAKAO_REST_API_KEY=0123456789abcdef0123456789abcdef',
-    );
+    dotenv.testLoad(fileInput: 'BASE_URL=https://example.invalid');
     tokens.clear();
     requests.clear();
     ApiClient.dio.interceptors.clear();
@@ -97,7 +93,14 @@ void main() {
       });
       final result = await tester.runAsync(() => restService.login(context));
       expect(result!.status, KakaoLoginStatus.loggedIn);
-      expect(requestedSession!.authorizationUri.host, 'kauth.kakao.com');
+      expect(requestedSession!.authorizationUri.host, 'example.invalid');
+      expect(
+        requestedSession!.authorizationUri.path,
+        '/api/auth/kakao/authorize',
+      );
+      expect(requestedSession!.authorizationUri.queryParameters.keys, [
+        'state',
+      ]);
       expect(requests, hasLength(1));
       expect(requests.single.method, 'GET');
       expect(requests.single.uri.path, '/api/auth/kakao/callback');

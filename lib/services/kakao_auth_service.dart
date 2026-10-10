@@ -64,7 +64,7 @@ class KakaoAuthService {
       );
     }
     try {
-      final session = KakaoOAuthSession.fromEnvironment(
+      final session = KakaoOAuthSession.forBackend(
         apiBaseUrl: ApiClient.baseUrl,
       );
       final callback = await _authorize(context, session);

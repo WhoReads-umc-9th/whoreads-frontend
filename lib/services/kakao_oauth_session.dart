@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 class KakaoOAuthCallback {
   final String? code;
   final String? errorMessage;
@@ -12,45 +10,29 @@ class KakaoOAuthCallback {
 
 /// 한 번의 REST 로그인 요청과 해당 요청의 콜백을 묶는다.
 class KakaoOAuthSession {
-  final String restApiKey;
   final Uri redirectUri;
   final String state;
 
-  KakaoOAuthSession({
-    required this.restApiKey,
-    required this.redirectUri,
-    String? state,
-  }) : state = state ?? _createState();
+  KakaoOAuthSession({required this.redirectUri, String? state})
+    : state = state ?? _createState();
 
-  factory KakaoOAuthSession.fromEnvironment({required String apiBaseUrl}) {
-    final key = dotenv.isInitialized
-        ? dotenv.env['KAKAO_REST_API_KEY']?.trim() ?? ''
-        : '';
-    if (!RegExp(r'^[a-fA-F0-9]{32}$').hasMatch(key)) {
-      throw const FormatException('카카오 REST API 키가 설정되지 않았습니다.');
-    }
+  factory KakaoOAuthSession.forBackend({required String apiBaseUrl}) {
     final backendCallback = Uri.parse('$apiBaseUrl/auth/kakao/callback');
-    final configured = dotenv.isInitialized
-        ? dotenv.env['KAKAO_REDIRECT_URI']?.trim()
-        : null;
-    final redirect = Uri.tryParse(
-      configured?.isNotEmpty == true ? configured! : backendCallback.toString(),
-    );
-    // 인가 코드가 발급된 redirect_uri와 코드 교환 서버가 일치해야 한다.
-    if (redirect == null ||
-        redirect.scheme != 'https' ||
-        redirect != backendCallback) {
+    if (backendCallback.scheme != 'https' ||
+        backendCallback.host.isEmpty ||
+        backendCallback.userInfo.isNotEmpty ||
+        backendCallback.hasQuery ||
+        backendCallback.hasFragment) {
       throw const FormatException('카카오 로그인 서버 주소가 올바르지 않습니다.');
     }
-    return KakaoOAuthSession(restApiKey: key, redirectUri: redirect);
+    return KakaoOAuthSession(redirectUri: backendCallback);
   }
 
-  Uri get authorizationUri => Uri.https('kauth.kakao.com', '/oauth/authorize', {
-    'client_id': restApiKey,
-    'redirect_uri': redirectUri.toString(),
-    'response_type': 'code',
-    'state': state,
-  });
+  // 서버가 REST 키와 고정 redirect_uri로 카카오 인가 주소를 생성한다.
+  Uri get authorizationUri => redirectUri.replace(
+    path: redirectUri.path.replaceFirst(RegExp(r'/callback$'), '/authorize'),
+    queryParameters: {'state': state},
+  );
 
   bool isCallback(Uri uri) =>
       uri.scheme == redirectUri.scheme &&
