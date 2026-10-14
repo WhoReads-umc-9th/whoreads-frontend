@@ -414,23 +414,38 @@ Device: $deviceModel
                 children: [
                   Row(
                     children: [
-                      const Text('독서 루틴 알림', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        icon: const Icon(Icons.add, color: Colors.black87, size: 22),
-                        onPressed: () {
+                      const Text(
+                        '독서 루틴 알림',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const Spacer(),
+                      InkWell(
+                        onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const RoutineSettingPage()),
+                            MaterialPageRoute(
+                              builder: (context) => const RoutineSettingPage(),
+                            ),
                           ).then((_) {
-                            setState(() { isLoading = true; });
+                            setState(() {
+                              isLoading = true;
+                            });
                             _fetchAllData();
                           });
                         },
+                        child: const Icon(
+                          Icons.add,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
                   routineSettings.isEmpty
                       ? const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16.0),
@@ -570,7 +585,7 @@ Device: $deviceModel
                 ),
               ),
             ),
-            const SizedBox(height: 20)
+            SizedBox(height: 20 + MediaQuery.viewPaddingOf(context).bottom)
           ],
         ),
       ),
