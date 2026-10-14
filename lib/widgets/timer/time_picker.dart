@@ -11,6 +11,22 @@ class TimePickerWidget extends StatefulWidget {
 class _TimePickerWidgetState extends State<TimePickerWidget> {
   final List<int> _minutes = List.generate(25, (index) => index * 5);
   int _selectedIndex = 18; // 초기값 90분
+  late final FixedExtentScrollController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = FixedExtentScrollController(initialItem: _selectedIndex);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onTimeSelected(_minutes[_selectedIndex]);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
