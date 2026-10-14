@@ -69,8 +69,10 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
         rightText = "확인";
         isSingle = true;
         onRight = () async {
-          await _service.handleExitAction();
-          if (_service.lastError == null) _closePopup();
+          // checkRecoveryState() already completed the server session.
+          // Do not send a second complete request for the same session.
+          await _service.discardLocalSession();
+          _closePopup();
         };
       case TimerRecoveryType.pausedWithLeft:
         title = "문제가 발생하여 타이머가 중단되었습니다.\n이전 독서를 이어할까요?";
