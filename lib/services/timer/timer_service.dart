@@ -182,6 +182,7 @@ class TimerService with ChangeNotifier {
     if (_completionRecorded) return true;
     if (_completionInFlight || sessionId < 0) return false;
     _completionInFlight = true;
+    _lastError = null;
     _stopLocalTimer();
     _stopHeartbeat();
     try {
@@ -526,19 +527,6 @@ class TimerService with ChangeNotifier {
             _completeElapsedSession().then((completed) {
               if (completed) AppRouter.navigatorKey.currentState?.pushNamed('/timer');
             });
-          }
-          break;
-        case 'NOTI_BACKGROUND_COMPLETE_OLD':
-          String? currentRouteName;
-          AppRouter.navigatorKey.currentState?.popUntil((route) {
-            currentRouteName = route.settings.name;
-            return true;
-          });
-          if (currentRouteName == '/timer') {
-            notifyListeners();
-          } else {
-            notifyListeners();
-            AppRouter.navigatorKey.currentState?.pushNamed('/timer');
           }
           break;
         case 'NOTI_ACTION_PAUSE':
