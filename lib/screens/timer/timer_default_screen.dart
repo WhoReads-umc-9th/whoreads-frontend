@@ -69,7 +69,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
         rightText = "확인";
         isSingle = true;
         onRight = () async {
-          await _service.handleExitAction();
+          await _service.acknowledgeCompletedSession();
           if (_service.lastError == null) _closePopup();
         };
       case TimerRecoveryType.pausedWithLeft:
