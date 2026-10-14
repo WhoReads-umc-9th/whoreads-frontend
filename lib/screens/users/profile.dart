@@ -570,7 +570,7 @@ Device: $deviceModel
                 ),
               ),
             ),
-            const SizedBox(height: 20)
+            SizedBox(height: 20 + MediaQuery.viewPaddingOf(context).bottom)
           ],
         ),
       ),
