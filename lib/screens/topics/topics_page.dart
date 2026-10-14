@@ -345,7 +345,7 @@ class _TopicsPageState extends State<TopicsPage> {
           final List<dynamic> themeBooks =
               topic['books'] is List ? topic['books'] as List<dynamic> : [];
 
-          actualCount = (topic['bookCount'] as num?)?.toInt() ?? 0;
+          actualCount = (topic['book_count'] as num?)?.toInt() ?? 0;
 
           for (var b in themeBooks) {
             if (b is Map &&
