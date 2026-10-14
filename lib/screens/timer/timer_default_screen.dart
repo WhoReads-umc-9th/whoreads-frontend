@@ -22,6 +22,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _service.addListener(_showPendingCompletion);
 
     FlutterForegroundTask.initCommunicationPort();
     FlutterForegroundTask.addTaskDataCallback(_service.handleForegroundData);
@@ -33,9 +34,19 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _service.removeListener(_showPendingCompletion);
     FlutterForegroundTask.removeTaskDataCallback(_service.handleForegroundData);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _showPendingCompletion() {
+    if (!_service.completionPopupPending || _isPopupShowing || !mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isPopupShowing || !_service.completionPopupPending) return;
+      if (ModalRoute.of(context)?.isCurrent != true) return;
+      _showRecoveryPopup(TimerRecoveryType.timerCompleted);
+    });
   }
 
   void _manageRecoveryTrigger() async {
@@ -43,8 +54,17 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
 
     final type = await _service.checkRecoveryState();
 
-    if (!mounted || type == TimerRecoveryType.none) return;
+    if (!mounted) return;
+    if (_service.completionPopupPending) {
+      _showPendingCompletion();
+      return;
+    }
+    if (type == TimerRecoveryType.none) return;
+    _showRecoveryPopup(type);
+  }
 
+  void _showRecoveryPopup(TimerRecoveryType type) {
+    if (!mounted || _isPopupShowing) return;
     setState(() {
       _isPopupShowing = true;
     });
@@ -71,9 +91,11 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
         onRight = () async {
           // checkRecoveryState() already completed the server session.
           // Do not send a second complete request for the same session.
+          _service.acknowledgeCompletionPopup();
           await _service.discardLocalSession();
           _closePopup();
         };
+        break;
       case TimerRecoveryType.pausedWithLeft:
         title = "문제가 발생하여 타이머가 중단되었습니다.\n이전 독서를 이어할까요?";
         description = "이어하면 중단된 시간이 반영돼요\n종료하면 기록된 시간만 남아요!";
