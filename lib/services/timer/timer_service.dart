@@ -31,6 +31,8 @@ class TimerService with ChangeNotifier {
   Timer? _heartbeatTimer;
   Timer? _localCountDownTimer;
   DateTime? _deadline;
+  bool _completionInFlight = false;
+  bool _completionRecorded = false;
 
   int _totalSettingSeconds = 0;
   int _currentSeconds = 0;
@@ -70,6 +72,7 @@ class TimerService with ChangeNotifier {
         return TimerRecoveryType.none;
       }
       sessionId = active.sessionId;
+      _completionRecorded = false;
       _totalSettingSeconds =
           (active.totalReadMinutes + active.remainingMinutes) * 60;
       _currentSeconds = active.remainingMinutes * 60;
@@ -99,15 +102,8 @@ class TimerService with ChangeNotifier {
       _currentSeconds = _currentSeconds.clamp(0, _totalSettingSeconds);
       elapsedSeconds = _totalSettingSeconds - _currentSeconds;
       if (_currentSeconds <= 0 && running) {
-        await _apiService.completeTimer(sessionId);
-        _isRunning = false;
-        _isStopping = true;
-        await _clearLocalSessionOnly(prefs);
-        await _serviceManager.stop();
-        _stopHeartbeat();
-        _stopLocalTimer();
-        notifyListeners();
-        return TimerRecoveryType.timerCompleted;
+        final completed = await _completeElapsedSession();
+        return completed ? TimerRecoveryType.timerCompleted : TimerRecoveryType.none;
       }
       _isRunning = running;
       _isStopping = !running;
@@ -168,89 +164,44 @@ class TimerService with ChangeNotifier {
 
   Future<void> discardLocalSession() => _clearAll();
 
-  /// 💡 복구 화면 연산 오케스트레이터
+  /// Use the same recovery calculation and completion policy on every entry.
   Future<void> restore() async {
     if (_isRestoring) return;
     _isRestoring = true;
     notifyListeners();
-
     try {
-      final activeSession = await _apiService.getActiveSession();
-      if (activeSession == null) {
-        await _clearAll();
-        return;
-      }
-
-      if (activeSession.idleMinutes > 120) {
-        await _apiService.completeTimer(activeSession.sessionId);
-        await _clearAll();
-        return;
-      }
-
-      sessionId = activeSession.sessionId;
-      int originalTotalMinutes =
-          activeSession.totalReadMinutes + activeSession.remainingMinutes;
-      _totalSettingSeconds = originalTotalMinutes * 60;
-
-      if (_totalSettingSeconds <= 0) {
-        await _apiService.completeTimer(activeSession.sessionId);
-        await _clearAll();
-        return;
-      }
-
-      bool targetRunning =
-          activeSession.status == 'IN_PROGRESS' ||
-          activeSession.status == 'RUNNING';
-      _isStopping = activeSession.status == 'PAUSED';
-
-      int calculatedCurrent =
-          _totalSettingSeconds - (activeSession.totalReadMinutes * 60);
-
-      // 🚨 계산된 잔여시간이 0 이하이면 즉시 완료 후 리턴
-      if (calculatedCurrent <= 0) {
-        await _apiService.completeTimer(activeSession.sessionId);
-        await _clearAll();
-        return;
-      }
-
-      final bool isServiceRunning =
-          await FlutterForegroundTask.isRunningService;
-      if (isServiceRunning) {
-        _currentSeconds =
-            await FlutterForegroundTask.getData<int>(key: 'currentSeconds') ??
-            calculatedCurrent;
-      } else {
-        _currentSeconds = calculatedCurrent;
-      }
-
-      // 복구 후에도 currentSeconds가 0 이하이면 완주 처리
-      if (_currentSeconds <= 0) {
-        await _apiService.completeTimer(activeSession.sessionId);
-        await _clearAll();
-        return;
-      }
-
-      elapsedSeconds = _totalSettingSeconds - _currentSeconds;
-      _isRunning = targetRunning;
-
-      await _saveCurrentSession();
-
-      if (_isRunning) {
-        _startLocalTimer();
-        if (!isServiceRunning) {
-          await _serviceManager.start(
-            currentSeconds: _currentSeconds,
-            isRunning: true,
-          );
-          await _saveCurrentSession();
-        }
-        _startHeartbeat();
-      }
-    } catch (e) {
-      _reportFailure();
+      await checkRecoveryState();
     } finally {
       _isRestoring = false;
       notifyListeners();
+    }
+  }
+
+  /// Complete exactly once; keep the session available if the server rejects it.
+  Future<bool> _completeElapsedSession() async {
+    if (_completionRecorded) return true;
+    if (_completionInFlight || sessionId < 0) return false;
+    _completionInFlight = true;
+    _stopLocalTimer();
+    _stopHeartbeat();
+    try {
+      await _apiService.completeTimer(sessionId);
+      _completionRecorded = true;
+      _isRunning = false;
+      _isStopping = true;
+      _currentSeconds = 0;
+      elapsedSeconds = _totalSettingSeconds;
+      await _serviceManager.stop();
+      await TimerLocalStorage.instance.clear();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isRunning = false;
+      _isStopping = true;
+      _reportFailure();
+      return false;
+    } finally {
+      _completionInFlight = false;
     }
   }
 
@@ -266,20 +217,16 @@ class TimerService with ChangeNotifier {
         return;
       }
 
-      if (_currentSeconds > 0) {
-        _currentSeconds =
-            ((_deadline!.difference(DateTime.now()).inMilliseconds) / 1000)
-                .ceil()
-                .clamp(0, _totalSettingSeconds);
-        elapsedSeconds = _totalSettingSeconds - _currentSeconds;
-        notifyListeners();
-      } else {
-        _stopLocalTimer();
-        _currentSeconds = 0;
-        _isRunning = false;
-        _isStopping = true;
-        notifyListeners();
-        AppRouter.navigatorKey.currentState?.pushNamed('/timer');
+      _currentSeconds =
+          ((_deadline!.difference(DateTime.now()).inMilliseconds) / 1000)
+              .ceil()
+              .clamp(0, _totalSettingSeconds);
+      elapsedSeconds = _totalSettingSeconds - _currentSeconds;
+      notifyListeners();
+      if (_currentSeconds == 0) {
+        if (await _completeElapsedSession()) {
+          AppRouter.navigatorKey.currentState?.pushNamed('/timer');
+        }
       }
     });
   }
@@ -307,6 +254,7 @@ class TimerService with ChangeNotifier {
           totalMinutes: targetMinutes,
         );
         sessionId = responseSessionId;
+        _completionRecorded = false;
 
         _currentSeconds = _totalSettingSeconds;
         _isRunning = true;
@@ -481,12 +429,12 @@ class TimerService with ChangeNotifier {
   }
 
   Future<void> completeTimer() async {
-    if (_isBusy) return;
+    if (_isBusy || _completionInFlight) return;
     _isBusy = true;
     _lastError = null;
     notifyListeners();
     try {
-      if (sessionId == -1) {
+      if (sessionId == -1 || _completionRecorded) {
         await _clearAll();
         return;
       }
@@ -511,7 +459,7 @@ class TimerService with ChangeNotifier {
   }
 
   void onTimeSelected(int minutes) {
-    if (_isRunning) return;
+    if (_isRunning || _isStopping || _isBusy) return;
     _totalSettingSeconds = minutes * 60;
     _currentSeconds = _totalSettingSeconds;
     notifyListeners();
@@ -548,6 +496,8 @@ class TimerService with ChangeNotifier {
     _isRunning = false;
     _isStopping = false;
     sessionId = -1;
+    _completionRecorded = false;
+    _deadline = null;
 
     final prefs = await SharedPreferences.getInstance();
     await _clearLocalSessionOnly(prefs);
@@ -563,12 +513,22 @@ class TimerService with ChangeNotifier {
 
   void handleForegroundData(dynamic data) {
     if (data is int && _isRunning) {
-      _currentSeconds = data.clamp(0, _totalSettingSeconds);
+      // The local monotonic deadline owns the visible countdown.
+      // Foreground task updates must never move the clock backwards.
+      _currentSeconds = data.clamp(0, _currentSeconds);
       elapsedSeconds = _totalSettingSeconds - _currentSeconds;
       notifyListeners();
     } else if (data is String) {
       switch (data) {
         case 'NOTI_BACKGROUND_COMPLETE':
+          if (_isRunning) {
+            _currentSeconds = 0;
+            _completeElapsedSession().then((completed) {
+              if (completed) AppRouter.navigatorKey.currentState?.pushNamed('/timer');
+            });
+          }
+          break;
+        case 'NOTI_BACKGROUND_COMPLETE_OLD':
           String? currentRouteName;
           AppRouter.navigatorKey.currentState?.popUntil((route) {
             currentRouteName = route.settings.name;
