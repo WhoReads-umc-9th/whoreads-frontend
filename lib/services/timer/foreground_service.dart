@@ -95,15 +95,12 @@ class MyTimerHandler extends TaskHandler {
   Future<void> onNotificationButtonPressed(String id) async {
     switch (id) {
       case 'action_pause':
-        _pause();
         FlutterForegroundTask.sendDataToMain('NOTI_ACTION_PAUSE');
         break;
       case 'action_resume':
-        _resume();
         FlutterForegroundTask.sendDataToMain('NOTI_ACTION_RESUME');
         break;
       case 'action_stop':
-        _stop();
         FlutterForegroundTask.sendDataToMain('NOTI_ACTION_STOP');
         break;
     }
