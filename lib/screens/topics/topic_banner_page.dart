@@ -22,47 +22,83 @@ class TopicBannerPage extends StatefulWidget {
 }
 
 class _TopicBannerPageState extends State<TopicBannerPage> {
+  static const int pageSize = 20;
+  final ScrollController _scrollController = ScrollController();
   bool isLoading = false;
+  bool isLoadingMore = false;
+  bool hasNext = true;
+  int currentPage = 0;
   List<dynamic> books = [];
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _fetchTopicBooks();
   }
 
-  Future<void> _fetchTopicBooks() async {
-    if (widget.theme == null || widget.theme!.isEmpty) return;
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-    setState(() => isLoading = true);
+  void _onScroll() {
+    if (!_scrollController.hasClients || isLoading || isLoadingMore || !hasNext) {
+      return;
+    }
+    if (_scrollController.position.extentAfter < 300) {
+      _fetchTopicBooks();
+    }
+  }
+
+  Future<void> _fetchTopicBooks() async {
+    if (widget.theme == null || widget.theme!.isEmpty ||
+        isLoading || isLoadingMore || !hasNext) {
+      return;
+    }
+
+    final firstPage = currentPage == 0;
+    setState(() {
+      if (firstPage) {
+        isLoading = true;
+      } else {
+        isLoadingMore = true;
+      }
+    });
 
     try {
       final response = await ApiClient.dio.get(
-        '/books/themes/${widget.theme}',
-        queryParameters: {'limit': 20},
+        '/topics/${widget.theme}/books',
+        queryParameters: {'page': currentPage, 'size': pageSize},
       );
 
       if (response.statusCode == 200) {
         final decoded = response.data is String
             ? jsonDecode(response.data as String)
             : response.data;
+        final List<dynamic> fetchedBooks = decoded is List
+            ? decoded
+            : (decoded is Map && decoded['content'] is List
+                ? decoded['content'] as List<dynamic>
+                : <dynamic>[]);
 
+        if (!mounted) return;
         setState(() {
-          if (decoded is List) {
-            books = decoded;
-          } else if (decoded is Map && decoded['result'] is List) {
-            books = decoded['result'];
-          } else if (decoded is Map && decoded['books'] is List) {
-            books = decoded['books'];
-          } else {
-            books = [];
-          }
+          books.addAll(fetchedBooks);
+          currentPage++;
+          hasNext = fetchedBooks.length == pageSize;
         });
       }
     } catch (e) {
       debugPrint('주제 상세 도서 조회 오류: $e');
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          isLoadingMore = false;
+        });
+      }
     }
   }
 
@@ -129,14 +165,19 @@ class _TopicBannerPageState extends State<TopicBannerPage> {
                 ),
               )
                   : GridView.builder(
+                controller: _scrollController,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 24,
                   childAspectRatio: 0.55,
                 ),
-                itemCount: books.length,
+                itemCount: books.length + (isLoadingMore ? 1 : 0),
+                
                 itemBuilder: (context, index) {
+                  if (index == books.length) {
+                    return const Center(child: CircularProgressIndicator(color: Color(0xFFFF6A00)));
+                  }
                   final book = books[index];
                   final genre = book['genre'] ?? '기타';
                   final title = book['title'] ?? '제목 없음';
