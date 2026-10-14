@@ -418,6 +418,14 @@ class TimerService with ChangeNotifier {
     }
   }
 
+  // checkRecoveryState() already completed the server session before showing
+  // the completion dialog. Acknowledge it without posting /complete again.
+  Future<void> acknowledgeCompletedSession() async {
+    await _clearAll();
+    _lastError = null;
+    notifyListeners();
+  }
+
   Future<void> handleExitAction() async {
     await completeTimer();
   }
