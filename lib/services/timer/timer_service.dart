@@ -33,6 +33,12 @@ class TimerService with ChangeNotifier {
   DateTime? _deadline;
   bool _completionInFlight = false;
   bool _completionRecorded = false;
+  bool _completionPopupPending = false;
+  bool get completionPopupPending => _completionPopupPending;
+  void acknowledgeCompletionPopup() {
+    _completionPopupPending = false;
+    notifyListeners();
+  }
 
   int _totalSettingSeconds = 0;
   int _currentSeconds = 0;
@@ -61,7 +67,7 @@ class TimerService with ChangeNotifier {
 
   /// 💡 복구 상태 체크 마스터 엔진
   Future<TimerRecoveryType> checkRecoveryState() async {
-    if (_isCheckingRecovery || _isBusy) return TimerRecoveryType.none;
+    if (_completionPopupPending || _isCheckingRecovery || _isBusy) return TimerRecoveryType.none;
     _isCheckingRecovery = true;
     _lastError = null;
     try {
@@ -198,6 +204,7 @@ class TimerService with ChangeNotifier {
     try {
       await _apiService.completeTimer(sessionId);
       _completionRecorded = true;
+      _completionPopupPending = true;
       _isRunning = false;
       _isStopping = true;
       _currentSeconds = 0;
@@ -508,6 +515,7 @@ class TimerService with ChangeNotifier {
     _isStopping = false;
     sessionId = -1;
     _completionRecorded = false;
+    _completionPopupPending = false;
     _deadline = null;
 
     final prefs = await SharedPreferences.getInstance();
