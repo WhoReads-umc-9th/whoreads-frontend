@@ -327,8 +327,8 @@ class _TopicsPageState extends State<TopicsPage> {
 
       try {
         final response = await ApiClient.dio.get(
-          '/books/themes/$theme',
-          queryParameters: {'limit': 3},
+          '/topics',
+          queryParameters: {'tag': theme, 'previewSize': 3},
         );
 
         if (response.statusCode == 200) {
@@ -336,9 +336,16 @@ class _TopicsPageState extends State<TopicsPage> {
               ? jsonDecode(response.data as String)
               : response.data;
 
-          List<dynamic> themeBooks = decoded is List ? decoded : [];
+          final topic = decoded is List
+              ? decoded.cast<dynamic>().whereType<Map>().firstWhere(
+                  (item) => item['tag'] == theme,
+                  orElse: () => <String, dynamic>{},
+                )
+              : <String, dynamic>{};
+          final List<dynamic> themeBooks =
+              topic['books'] is List ? topic['books'] as List<dynamic> : [];
 
-          actualCount = themeBooks.length;
+          actualCount = (topic['bookCount'] as num?)?.toInt() ?? 0;
 
           for (var b in themeBooks) {
             if (b is Map &&
