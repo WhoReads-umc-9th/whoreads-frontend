@@ -169,6 +169,11 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
                   _buildTimerDisplay(),
                   const SizedBox(height: 40),
                   _buildControlButtons(),
+                  if (_service.canRetryCompletion && _service.lastError != null)
+                    TextButton(
+                      onPressed: _service.retryCompletion,
+                      child: const Text('완료 저장 다시 시도'),
+                    ),
                   if (_service.lastError != null)
                     Padding(
                       padding: const EdgeInsets.all(16),
