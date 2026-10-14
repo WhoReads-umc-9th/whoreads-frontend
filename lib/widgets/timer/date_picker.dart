@@ -50,12 +50,14 @@ class _DatePickerWidgetState extends State<_DatePickerWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 250, // 높이 조절
+      height: 250 + MediaQuery.viewPaddingOf(context).bottom, // 높이 조절
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)), // 더 둥글게
       ),
-      padding: const EdgeInsets.fromLTRB(20, 30, 20, 20),
+      padding: EdgeInsets.fromLTRB(
+        20, 30, 20, 20 + MediaQuery.viewPaddingOf(context).bottom,
+      ),
       child: Column(
         children: [
           Expanded(
