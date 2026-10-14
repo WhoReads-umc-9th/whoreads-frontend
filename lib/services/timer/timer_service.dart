@@ -164,6 +164,16 @@ class TimerService with ChangeNotifier {
 
   Future<void> discardLocalSession() => _clearAll();
 
+  bool get canRetryCompletion =>
+      sessionId >= 0 && _currentSeconds == 0 && !_completionRecorded;
+
+  Future<void> retryCompletion() async {
+    if (_isBusy || _completionInFlight || !canRetryCompletion) return;
+    if (await _completeElapsedSession()) {
+      AppRouter.navigatorKey.currentState?.pushNamed('/timer');
+    }
+  }
+
   /// Use the same recovery calculation and completion policy on every entry.
   Future<void> restore() async {
     if (_isRestoring) return;
