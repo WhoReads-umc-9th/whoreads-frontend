@@ -3,13 +3,31 @@
 `main` push 또는 Actions의 **Flutter Android Release and Play Closed Test → Run workflow**로 실행한다.
 정기 예약 실행은 없다. 배포 대상은 기존 `com.whoreads.mobile`의 Alpha(`alpha`) 비공개 테스트다.
 
+## 실행 흐름과 실시간 로그
+
+GitHub Actions 실행 서버가 테스트, 빌드, 배포를 모두 실행한다. 별도 Jenkins 서버는 사용하지 않는다. fastlane은 Actions 안에서 Google Play API를 호출하는 배포 도구다.
+
+```mermaid
+flowchart TD
+  A[main push 또는 PR merge] --> B[GitHub Actions]
+  B --> C[prepare: Play 버전과 배포 범위 검사]
+  C --> D[build: 테스트와 서버 검증]
+  D --> E[서명 AAB와 APK 생성 및 검사]
+  E --> F[publish: fastlane에서 Play API 호출]
+  F --> G[Alpha 비공개 테스트 제출]
+  G --> H[Google 검사 및 필요한 심사]
+  H --> I[기존 테스터에게 업데이트 제공]
+```
+
+[Actions 실행 목록](https://github.com/WhoReads-umc-9th/whoreads-frontend/actions/workflows/build_release.yaml)에서 최신 실행을 열고 `prepare`, `build`, `publish` 작업을 선택하면 각 단계의 실시간 로그를 볼 수 있다. Actions 성공은 API 제출 성공이며, 심사와 제공 여부는 Play Console에서도 확인한다.
+
 ## 최초 연결
 
 1. Google Cloud 프로젝트에서 **Google Play Android Developer API**를 활성화한다.
 2. Play 배포 전용 서비스 계정을 만든다. Firebase Admin 계정을 재사용하거나 Cloud 관리자 역할을 부여하지 않는다.
 3. Play Console → 사용자 및 권한에서 이 서비스 계정에 **WhoReads 앱만** 읽기 및 테스트 트랙 출시 권한을 부여한다. 프로덕션 출시, 재무, 사용자 관리 권한은 부여하지 않는다.
 4. 서비스 계정 JSON을 저장소 Actions Secret `PLAY_SERVICE_ACCOUNT_JSON`에 등록한다. 저장소 파일, 모바일 `.env`, 앱, 아티팩트에 키를 넣지 않는다. 생성한 로컬 사본은 등록 후 삭제한다.
-5. Play 게시 개요의 무관한 보류 변경은 **나중을 위해 저장**으로 분리한 뒤, Actions Variable `PLAY_AUTO_DEPLOY`를 `true`로 설정한다.
+5. Play 게시 개요에서 무관한 보류 변경이 없는지 확인한 뒤, Actions Variable `PLAY_AUTO_DEPLOY`를 `true`로 설정한다. **나중을 위해 저장**은 API commit에서 제외되는 보장이 없다. 기존 초안을 기록한 뒤 원래 설정으로 복구하거나, 필요한 변경은 별도로 처리한다.
 
 기존 `BASE_URL`, `GOOGLE_SERVICES_JSON` 및 Android 업로드 서명 Secrets도 필요하다.
 `PLAY_AUTO_DEPLOY`가 비어 있거나 `false`이면 빌드만 수행하고 제출은 건너뛴다고 요약에 표시한다.
@@ -22,11 +40,12 @@
 - 빌드에는 BASE_URL만 포함하며 APK/AAB 설정을 검사한다. 배포용 서비스 계정은 prepare/publish 작업에서만 사용하고 Flutter build 작업에는 전달하지 않는다.
 - 같은 실행에서 생성한 AAB/APK의 SHA256, APK 패키지/버전 및 커밋을 기록하고 제출 전에 다시 확인한다. Play가 반환한 AAB versionCode/SHA256도 비교한다.
 - 동시 실행을 직렬화하고, 제출 시 main에 새 커밋이 있으면 이전 빌드를 차단한다. Alpha만 수정하며 다른 트랙은 같은 API edit 안에서 변경되지 않았는지 확인한다.
+- 현재 WhoReads는 Alpha만 사용하므로 prepare 및 publish에서 다른 트랙의 버전 또는 국가 설정이 발견되면 업로드를 차단한다. 특히 공개 테스트 국가만 설정한 미제출 초안도 차단한다. 나중에 공개/프로덕션 배포를 시작하려면 먼저 배포 범위와 이 검사를 함께 변경해야 한다.
 - 이미 같은 커밋/버전이 Alpha에 기록됐으면 업로드하지 않는다. 업로드·제출이 애매하게 실패하면 자동 재시도하지 않는다. Play Console의 실제 상태부터 확인한다.
 - `ERROR_IF_IN_REVIEW`로 기존 심사를 취소하지 않는다. 거절 시 미제출 상태로 조용히 바꾸는 fallback도 없다.
 
 Play API 제출 성공은 **Google 심사 승인 또는 테스터 제공 완료**를 의미하지 않는다.
-`play-submission-result`와 Play Console에서 상태를 확인한다. 향후 Console에서 별도의 보류 변경을 만들 때도 자동 배포와 함께 제출되지 않도록 나중을 위해 저장한다.
+`play-submission-result`와 Play Console에서 상태를 확인한다. Play API는 기존 Console 보류 변경도 함께 제출할 수 있으므로 다른 트랙이나 앱 메타데이터 변경을 API 자동 배포와 섞지 않는다. Console의 저장 옵션만으로 제출 범위가 분리됐다고 판단하지 않는다.
 
 ## 중지 및 문제 확인
 

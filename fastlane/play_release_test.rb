@@ -8,12 +8,13 @@ class PlayReleaseTest < Minitest::Test
   SHA = "a" * 40
 
   class FakePlay
-    attr_accessor :tracks, :uploaded_sha, :commit_error
+    attr_accessor :tracks, :uploaded_sha, :commit_error, :non_alpha_countries
     attr_reader :uploads, :commits, :deletes
 
     def initialize(checksum)
       @tracks = [API::Track.new(track: "alpha", releases: [API::TrackRelease.new(version_codes: [3], status: "completed")]),
-                 API::Track.new(track: "beta", releases: [API::TrackRelease.new(version_codes: [4], status: "draft")])]
+                 API::Track.new(track: "beta", releases: [])]
+      @non_alpha_countries = []
       @uploaded_sha = checksum
       @uploads, @commits, @deletes = 0, [], 0
     end
@@ -24,6 +25,10 @@ class PlayReleaseTest < Minitest::Test
     def list_edit_bundles(*) = API::BundlesListResponse.new(bundles: [API::Bundle.new(version_code: 4)])
     def list_edit_apks(*) = API::ApksListResponse.new(apks: [])
     def validate_edit(*) = nil
+
+    def get_edit_countryavailability(*)
+      API::TrackCountryAvailability.new(countries: non_alpha_countries.map { |code| API::TrackTargetedCountry.new(country_code: code) })
+    end
 
     def upload_edit_bundle(*)
       @uploads += 1
@@ -66,7 +71,7 @@ class PlayReleaseTest < Minitest::Test
     WhoReadsRelease.write_json(File.join(@directory, "release-manifest.json"), @manifest)
   end
 
-  def test_drafts_and_other_tracks_determine_the_next_version
+  def test_unassigned_uploaded_bundles_determine_the_next_version
     codes = WhoReadsRelease.with_edit(@api) { |id, _| WhoReadsRelease.snapshot(@api, id).first }
     assert_equal({ "version_name" => "1.0.4", "version_code" => 5 }, WhoReadsRelease.next_version("1.0.3+4", codes))
     assert_equal 1, @api.deletes
@@ -150,6 +155,22 @@ class PlayReleaseTest < Minitest::Test
   def test_google_checksum_mismatch_prevents_commit
     @api.uploaded_sha = "wrong"
     assert_raises(RuntimeError) { WhoReadsRelease.publish(api: @api) }
+    assert_empty @api.commits
+  end
+
+  def test_existing_open_testing_country_draft_blocks_upload
+    @api.non_alpha_countries = ["KR"]
+    error = assert_raises(RuntimeError) { WhoReadsRelease.publish(api: @api) }
+    assert_match(/country settings/, error.message)
+    assert_equal 0, @api.uploads
+    assert_empty @api.commits
+  end
+
+  def test_a_release_on_another_track_blocks_upload
+    @api.tracks.last.releases = [API::TrackRelease.new(version_codes: [4], status: "draft")]
+    error = assert_raises(RuntimeError) { WhoReadsRelease.publish(api: @api) }
+    assert_match(/Non-Alpha track beta/, error.message)
+    assert_equal 0, @api.uploads
     assert_empty @api.commits
   end
 

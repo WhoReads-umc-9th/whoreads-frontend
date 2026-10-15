@@ -1,0 +1,137 @@
+Browser tab: 1765258650, Title: "출시 트랙 | whoreads", URL: "https://play.google.com/console/u/1/developers/6323748251621633962/app/4972264526619622212/tracks/4698582161525962375?tab=countryAvailability".
+1 AXWebArea 출시 트랙 | whoreads, URL: play.google.com/console/u/1/developers/6323748251621633962/app/4972264526619622212/tracks/4698582161525962375?tab=countryAvailability
+	2 container
+		3 text Google Play Console 로드 중
+		4 container
+			5 container
+				6 link Description: Google Play Console 로고, Value: play.google.com/console/u/1/developers/6323748251621633962/app-list
+				7 button 알림 알림 센터 열기
+					8 text 알림
+				9 button whoreads
+					10 text whoreads
+				11 button 개발자 계정 전환
+					12 image 개발자 계정 전환
+			13 container
+				14 link Description: 모든 앱, Value: play.google.com/console/u/1/developers/6323748251621633962/app-list
+				15 content list
+					16 container 대시보드
+						17 button 대시보드
+							18 text 대시보드
+					19 container 통계
+						20 button 통계
+							21 text 통계
+					22 container 게시 개요
+						23 button 게시 개요
+							24 text 게시 개요
+					25 container Google Play로 보호됨
+						26 button Google Play로 보호됨
+							27 text Google Play로 보호됨
+					28 container (expanded) Description: 테스트 및 출시, Secondary Actions: Collapse
+						29 button 테스트 및 출시
+							30 text 테스트 및 출시
+						109 content list
+							110 container
+								111 container 최신 버전 및 번들
+									112 button 최신 버전 및 번들
+								113 container 프로덕션
+									114 button 프로덕션
+								115 container (expanded) Description: 테스트, Secondary Actions: Collapse
+									116 button 테스트
+									117 content list
+										118 container
+											119 container 공개 테스트
+												120 button 공개 테스트
+											121 container 비공개 테스트
+												122 button 비공개 테스트
+											123 container 내부 테스트
+												124 button 내부 테스트
+											125 container (collapsed) Description: 사전 출시 보고서, Secondary Actions: Expand
+												126 button 사전 출시 보고서
+											127 container 내부 앱 공유
+												128 button 내부 앱 공유
+								129 container 사전 등록
+									130 button 사전 등록
+								131 container 앱 무결성
+									132 button 앱 무결성
+								133 container 고급 설정
+									134 button 고급 설정
+					31 container (collapsed) Description: 모니터링 및 개선, Secondary Actions: Expand
+						32 button 모니터링 및 개선
+							33 text 모니터링 및 개선
+					34 container (collapsed) Description: 사용자 늘리기, Secondary Actions: Expand
+						35 button 사용자 늘리기
+							36 text 사용자 늘리기
+					37 container (collapsed) Description: Play를 통한 수익 창출, Secondary Actions: Expand
+						38 button Play를 통한 수익 창출
+							39 text Play를 통한 수익 창출
+			40 container main-content
+				108 container
+					135 heading 공개 테스트, Value: 1
+						157 text 공개 테스트
+					136 pop up button (collapsed) Description: 휴대전화, 태블릿, Desktop (Googlebook OS, ChromeOS), Android XR 폼 팩터를 선택합니다., ID: aBA9EEAE9-56CE-41A6-A48F-1EDB5D3331CE--4, Secondary Actions: Expand
+					158 button 새 버전 만들기
+						159 text 새 버전 만들기
+					137 container
+						160 text 공개 테스트 버전을 생성 및 관리하여 앱을 테스터에게 제공하세요. 누구나 Google Play를 통해 테스트에 참여할 수 있습니다.
+						138 link Description: 공개 테스트 자세히 알아보기(새 탭에서 열림), Value: play.google.com/console/about/opentesting
+					161 heading 공개 테스트 트랙 설정, Value: 3
+						162 text 공개 테스트 트랙 설정
+					163 text 비활성
+					164 progress indicator Description: 공개 테스트 트랙 설정, Value: 50
+					165 button (expanded) Description: 공개 테스트 트랙 설정의 완료된 작업 4개 중 2개 숨기기, Secondary Actions: Collapse
+						166 text 2/4 완료
+					167 container
+						168 text 트랙 설정
+						169 container 작업이 완료됨 국가 선택
+							170 text 국가 선택
+						171 container 작업이 완료됨 테스터 선택
+							172 text 테스터 선택
+						173 text 버전 생성 및 출시
+						174 button 새 버전 만들기
+						175 container 작업이 잠김 버전 미리보기 및 확인
+							176 text 버전 미리보기 및 확인
+						177 container 작업이 잠김 검토를 위해 Google에 버전 전송
+							178 text 검토를 위해 Google에 버전 전송
+					140 tab group
+						141 tab (selectable, settable, boolean) Description: 출시, Value: 0
+						142 tab (selected, settable, boolean) Description: 국가/지역, Value: 1
+						143 tab (selectable, settable, boolean) Description: 테스터, Value: 0
+					144 heading 국가/지역, Value: 2
+						179 text 국가/지역
+					145 button (collapsed) Description: "국가/지역"에 대한 추가 정보, Secondary Actions: Expand
+					180 text 프로덕션(휴대전화, 태블릿, Desktop, Android XR)과 동기화되지 않았습니다.
+					181 text 프로덕션(휴대전화, 태블릿, Desktop, Android XR)과 별도로 이 트랙의 국가 및 지역을 관리합니다.
+					182 button 동기화
+						183 text 동기화
+					184 pop up button (collapsed) 타겟팅됨(1개), ID: aBA9EEAE9-56CE-41A6-A48F-1EDB5D3331CE--6, Secondary Actions: Expand
+					185 container 검색
+						186 container
+							187 text 검색
+							188 text field (settable) 검색
+					189 button 국가/지역 수정
+						190 text 국가/지역 수정
+					191 table 국가/지역
+						192 row 국가/지역 상태
+							193 cell 국가/지역
+								194 text 국가/지역
+							195 cell 상태
+								196 text 상태
+						197 row 대한민국 타겟팅됨
+							198 cell
+								199 container 대한민국
+									200 text 대한민국
+							201 cell
+								202 text 타겟팅됨
+				146 link Description: 제품 업데이트, Value: play.google.com/console/about/whats-new/
+				147 link Description: 상태 대시보드, Value: status.play.google.com/
+				148 link Description: 도움말, Value: play.google.com/console/u/1/developers/6323748251621633962/help-and-support?app=4972264526619622212
+				149 text © 2026 Google
+				150 link Description: 개인 정보 보호, Value: google.com/policies/privacy/
+				151 link Description: 개발자 배포 계약, Value: play.google.com/about/developer-distribution-agreement.html
+				152 link Description: 서비스 약관, Value: play.google.com/about/console/terms-of-service/
+		153 container 예기치 않은 오류가 발생했습니다. 다시 시도해 주세요. (5783B8E1)
+			154 container
+				155 text 예기치 않은 오류가 발생했습니다. 다시 시도해 주세요. (5783B8E1) F6 키를 눌러 알림 버튼에 액세스하세요.
+				156 button 닫기
+
+The focused UI element is 1 AXWebArea 출시 트랙 | whoreads, URL: play.google.com/console/u/1/developers/6323748251621633962/app/4972264526619622212/tracks/4698582161525962375?tab=countryAvailability

@@ -73,6 +73,23 @@ module WhoReadsRelease
     [codes.map(&:to_i), target, tracks]
   end
 
+  def self.assert_closed_test_scope!(api, edit_id, tracks)
+    # Play commit can submit pre-existing Console changes as well as this edit.
+    # This app currently uses Alpha only. Reject other releases or country drafts
+    # before uploading, even when our code never explicitly updates those tracks.
+    tracks.reject { |track| track.track == TRACK }.each do |track|
+      unless (track.releases || []).empty?
+        raise "Non-Alpha track #{track.track} has releases; closed-test-only deployment is blocked"
+      end
+      next if track.track == "internal"
+
+      availability = api.get_edit_countryavailability(PACKAGE, edit_id, track.track)
+      unless (availability.countries || []).empty?
+        raise "Non-Alpha track #{track.track} has country settings; clear unrelated Console changes before deploying"
+      end
+    end
+  end
+
   def self.write_json(path, data)
     FileUtils.mkdir_p(File.dirname(path))
     File.write(path, JSON.pretty_generate(data) + "\n")
@@ -83,7 +100,11 @@ module WhoReadsRelease
     used_codes = []
     if enabled
       api = service
-      used_codes = with_edit(api) { |id, _| snapshot(api, id).first }
+      used_codes = with_edit(api) do |id, _|
+        codes, _, tracks = snapshot(api, id)
+        assert_closed_test_scope!(api, id, tracks)
+        codes
+      end
     end
     version = YAML.safe_load_file(File.join(ROOT, "pubspec.yaml")).fetch("version")
     plan = next_version(version, used_codes).merge(
@@ -151,6 +172,7 @@ module WhoReadsRelease
     api ||= service
     with_edit(api) do |id, committed|
       codes, target, tracks_before = snapshot(api, id)
+      assert_closed_test_scope!(api, id, tracks_before)
       code = manifest.fetch("version_code")
       # A rerun after a successful or ambiguously timed-out commit is read-only.
       matching = (target.releases || []).find do |release|
