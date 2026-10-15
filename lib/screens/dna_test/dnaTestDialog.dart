@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'dna_test_page.dart';
 
 class DnaTestDialog extends StatelessWidget {
   const DnaTestDialog({super.key});
@@ -25,12 +24,15 @@ class DnaTestDialog extends StatelessWidget {
               children: [
                 // 닫기 아이콘 크기(28)와 동일하게 맞춰서 제목을 정확히 중앙 정렬
                 const SizedBox(width: 28),
-                const Text(
-                  '독서 DNA 테스트',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                const Expanded(
+                  child: Text(
+                    '독서 DNA 테스트',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
                 GestureDetector(
@@ -92,20 +94,7 @@ class DnaTestDialog extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: () {
-                  debugPrint("버튼 눌림!");
-
-                  // 화면 전환을 위해 Navigator 객체 캐싱
-                  final navigator = Navigator.of(context);
-
-                  // 1. 다이얼로그 닫기
-                  Navigator.maybePop(context);
-
-                  // 2. 페이지 이동
-                  navigator.push(
-                    MaterialPageRoute(builder: (context) => const DnaTestPage()),
-                  );
-                },
+                onPressed: () => Navigator.of(context).pop(true),
                 child: const Text(
                   '1분 만에 확인하기',
                   style: TextStyle(

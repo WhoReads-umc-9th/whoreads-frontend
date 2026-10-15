@@ -13,6 +13,9 @@ import '../../core/network/api_client.dart';
 import '../../services/notification_setting.dart';
 import '../celebrities/celebrities_book_page.dart';
 import '../dna_test/dnaTestDialog.dart';
+import '../dna_test/DnaResultPage.dart';
+import '../dna_test/dna_test_page.dart';
+import '../../models/dna_models.dart';
 import 'account_profile_page.dart';
 import 'follow_list_page.dart';
 import 'terms_page.dart';
@@ -47,6 +50,29 @@ class _ProfilePageState extends State<ProfilePage> {
     _fetchAllData();
   }
 
+  Future<void> _openDnaResult() async {
+    DnaResult? result;
+    if (dnaResult.isEmpty) {
+      final start = await showDialog<bool>(
+        context: context,
+        builder: (_) => const DnaTestDialog(),
+      );
+      if (start != true || !mounted) return;
+      result = await Navigator.of(context).push<DnaResult>(
+        MaterialPageRoute(builder: (_) => const DnaTestPage(returnResult: true)),
+      );
+    } else {
+      result = DnaResult.fromJson(dnaResult);
+    }
+    if (!mounted) return;
+    if (result != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => DnaResultPage(result: result!)),
+      );
+    }
+    if (mounted) await _fetchAllData();
+  }
+
   Future<void> _fetchAllData() async {
     try {
       final results = await Future.wait([
@@ -76,11 +102,13 @@ class _ProfilePageState extends State<ProfilePage> {
         dnaResult = results[2].data['result'] ?? {};
       }
 
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
     } catch (e) {
       debugPrint('Profile API Error: $e');
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -370,9 +398,7 @@ Device: $deviceModel
 
             /// 3. 독서 DNA 카드
             GestureDetector(
-              onTap: () {
-                showDialog(context: context, builder: (context) => const DnaTestDialog());
-              },
+              onTap: _openDnaResult,
               child: _buildCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -613,12 +639,14 @@ Device: $deviceModel
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
             const Icon(Icons.chevron_right, color: Colors.grey, size: 20),

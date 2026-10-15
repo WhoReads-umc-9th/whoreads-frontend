@@ -5,7 +5,9 @@ import '../../models/dna_models.dart';
 import 'DnaResultPage.dart';
 
 class DnaTestPage extends StatefulWidget {
-  const DnaTestPage({super.key});
+  final bool returnResult;
+
+  const DnaTestPage({super.key, this.returnResult = false});
 
   @override
   State<DnaTestPage> createState() => _DnaTestPageState();
@@ -136,6 +138,10 @@ class _DnaTestPageState extends State<DnaTestPage> {
         final resultData = DnaResult.fromJson(data['result']);
 
         if (!mounted) return;
+        if (widget.returnResult) {
+          Navigator.pop(context, resultData);
+          return;
+        }
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(

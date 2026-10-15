@@ -9,6 +9,9 @@ import '../../core/auth/token_storage.dart';
 import '../../core/network/api_client.dart';
 import '../celebrities/celebrities_page.dart';
 import '../dna_test/dnaTestDialog.dart';
+import '../dna_test/dna_test_page.dart';
+import '../dna_test/DnaResultPage.dart';
+import '../../models/dna_models.dart';
 import '../users/profile.dart';
 import 'tabs/saved_tab.dart';
 import 'tabs/reading_tab.dart';
@@ -39,15 +42,24 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
     });
   }
 
-  void _showDnaTestDialog() {
-    showDialog(
+  Future<void> _showDnaTestDialog() async {
+    final start = await showDialog<bool>(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black.withOpacity(0.5),
-      builder: (context) {
-        return const DnaTestDialog();
-      },
+      builder: (_) => const DnaTestDialog(),
     );
+    if (start != true || !mounted) return;
+    final result = await Navigator.of(context).push<DnaResult>(
+      MaterialPageRoute(builder: (_) => const DnaTestPage(returnResult: true)),
+    );
+    if (!mounted) return;
+    if (result != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => DnaResultPage(result: result)),
+      );
+    }
+    if (mounted) await _checkDnaResult();
   }
 
   Future<void> _initialize() async {
