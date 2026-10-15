@@ -4,12 +4,14 @@
   "track": "alpha",
   "notifications": {
     "5": {
-      "delivery": "sending",
+      "delivery": "sent",
       "version_codes": [
         5
       ],
       "lifecycle": "RELEASE_LIFECYCLE_STATE_PUBLISHED",
-      "claimed_at": "2026-10-15T12:44:54Z"
+      "claimed_at": "2026-10-15T12:44:54Z",
+      "message_id": "1560272263427653683",
+      "sent_at": "2026-10-15T12:44:56Z"
     }
   },
   "latest_version_code": 5
