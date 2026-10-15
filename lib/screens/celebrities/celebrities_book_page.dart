@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
 import '../../services/library_service.dart';
+import '../books/BookDetailPage.dart';
 
 // --- 모델 클래스 ---
 class CelebrityDetail {
@@ -219,6 +220,24 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
       }
     } catch (e) {
       debugPrint('팔로우 에러: $e');
+    }
+  }
+
+  Future<void> _openBook(int bookId) async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => BookDetailPage(bookId: bookId)));
+    if (!mounted) return;
+    try {
+      final added = await LibraryService.fetchAddedBookIdsByUserBookIds();
+      if (!mounted) return;
+      setState(
+        () => _addedBooksMap
+          ..clear()
+          ..addAll(added),
+      );
+    } catch (_) {
+      // Keep the known library state if refreshing after navigation fails.
     }
   }
 
@@ -480,160 +499,165 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
 
                       final isAdded = _addedBooksMap.containsKey(book.bookId);
 
-                      return SizedBox(
-                        height: 100,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 책 표지
-                            Container(
-                              width: 70,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(2, 2),
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: book.coverUrl.isNotEmpty
-                                    ? Image.network(
-                                        book.coverUrl,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _openBook(book.bookId),
+                        child: SizedBox(
+                          height: 100,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 책 표지
+                              Container(
+                                width: 70,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(2, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: book.coverUrl.isNotEmpty
+                                      ? Image.network(
+                                          book.coverUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              Container(
+                                                color: Colors.grey[200],
+                                                child: const Icon(
+                                                  Icons.book,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                        )
+                                      : Container(
                                           color: Colors.grey[200],
                                           child: const Icon(
                                             Icons.book,
                                             color: Colors.grey,
                                           ),
                                         ),
-                                      )
-                                    : Container(
-                                        color: Colors.grey[200],
-                                        child: const Icon(
-                                          Icons.book,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
+                                ),
                               ),
-                            ),
 
-                            const SizedBox(width: 16),
+                              const SizedBox(width: 16),
 
-                            // 책 정보
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              // 책 정보
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      book.title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                        height: 1.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      book.author.isNotEmpty
+                                          ? book.author
+                                          : '저자 미상',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // 오른쪽 하단 버튼들
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    book.title,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    book.author.isNotEmpty
-                                        ? book.author
-                                        : '저자 미상',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                  isAdded
+                                      ? OutlinedButton.icon(
+                                          onPressed: () =>
+                                              _removeBookFromLibrary(
+                                                book.bookId,
+                                              ),
+                                          icon: const Icon(
+                                            Icons.check,
+                                            size: 14,
+                                            color: Colors.grey,
+                                          ),
+                                          label: const Text(
+                                            "추가됨",
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            side: const BorderSide(
+                                              color: Colors.grey,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 0,
+                                            ),
+                                            minimumSize: const Size(0, 30),
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                          ),
+                                        )
+                                      : ElevatedButton.icon(
+                                          onPressed: () =>
+                                              _addBookToLibrary(book.bookId),
+                                          icon: const Icon(
+                                            Icons.add,
+                                            size: 14,
+                                            color: Colors.white,
+                                          ),
+                                          label: const Text(
+                                            "추가",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFFFF8A65,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            elevation: 0,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 0,
+                                            ),
+                                            minimumSize: const Size(0, 30),
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                          ),
+                                        ),
                                 ],
                               ),
-                            ),
-
-                            // 오른쪽 하단 버튼들
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                isAdded
-                                    ? OutlinedButton.icon(
-                                        onPressed: () =>
-                                            _removeBookFromLibrary(book.bookId),
-                                        icon: const Icon(
-                                          Icons.check,
-                                          size: 14,
-                                          color: Colors.grey,
-                                        ),
-                                        label: const Text(
-                                          "추가됨",
-                                          style: TextStyle(
-                                            color: Colors.grey,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        style: OutlinedButton.styleFrom(
-                                          side: const BorderSide(
-                                            color: Colors.grey,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 0,
-                                          ),
-                                          minimumSize: const Size(0, 30),
-                                          tapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                      )
-                                    : ElevatedButton.icon(
-                                        onPressed: () =>
-                                            _addBookToLibrary(book.bookId),
-                                        icon: const Icon(
-                                          Icons.add,
-                                          size: 14,
-                                          color: Colors.white,
-                                        ),
-                                        label: const Text(
-                                          "추가",
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(
-                                            0xFFFF8A65,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
-                                          ),
-                                          elevation: 0,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 0,
-                                          ),
-                                          minimumSize: const Size(0, 30),
-                                          tapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                      ),
-                              ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
                     },
