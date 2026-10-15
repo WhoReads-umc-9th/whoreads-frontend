@@ -41,7 +41,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _clearOldTokens() async {
     await TokenStorage.clear();
   }
-  
+
   bool get _canLogin {
     final id = _idCtrl.text.trim();
     final pw = _pwCtrl.text;
@@ -62,10 +62,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final response = await ApiClient.dio.post(
         '/auth/login',
-        data: {
-          'login_id': loginId,
-          'password': password,
-        },
+        data: {'login_id': loginId, 'password': password},
       );
 
       final decoded = response.data is String
@@ -96,12 +93,9 @@ class _LoginPageState extends State<LoginPage> {
         FocusScope.of(context).unfocus();
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const MyLibraryPage(),
-          ),
+          MaterialPageRoute(builder: (context) => const MyLibraryPage()),
         );
-      }
-      else {
+      } else {
         _showErrorDialog(
           '아이디 또는 비밀번호를\n다시 확인하세요',
           '가입되지 않은 계정이거나\n비밀번호가 일치하지 않습니다',
@@ -236,8 +230,9 @@ class _LoginPageState extends State<LoginPage> {
             child: FilledButton(
               onPressed: _canLogin ? _onTapLogin : null,
               style: FilledButton.styleFrom(
-                backgroundColor:
-                _canLogin ? Colors.black : const Color(0xFFE5E7EB),
+                backgroundColor: _canLogin
+                    ? Colors.black
+                    : const Color(0xFFE5E7EB),
                 disabledBackgroundColor: const Color(0xFFE5E7EB),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -245,23 +240,23 @@ class _LoginPageState extends State<LoginPage> {
               ),
               child: _isLoading
                   ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : Text(
-                '로그인',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: _canLogin
-                      ? Colors.white
-                      : const Color(0xFF9CA3AF),
-                ),
-              ),
+                      '로그인',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: _canLogin
+                            ? Colors.white
+                            : const Color(0xFF9CA3AF),
+                      ),
+                    ),
             ),
           ),
         ),
@@ -345,7 +340,9 @@ class _LoginPageState extends State<LoginPage> {
                         onTap: () => setState(() => _obscurePw = !_obscurePw),
                         child: Container(
                           color: Colors.transparent, // 터치 영역 확보용
-                          padding: const EdgeInsets.all(4), // 터치가 너무 어렵지 않게 약간의 내부 여백
+                          padding: const EdgeInsets.all(
+                            4,
+                          ), // 터치가 너무 어렵지 않게 약간의 내부 여백
                           child: Icon(
                             _obscurePw
                                 ? Icons.visibility_off_outlined
@@ -381,59 +378,70 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 28),
 
-              Center(
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    const Text(
-                      '비밀번호를 잊으셨나요? ',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF9E9E9E),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: _onTapResetPassword,
-                      child: const Text(
-                        '비밀번호 재설정',
+              Column(
+                children: [
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      const Text(
+                        '비밀번호를 잊으셨나요?',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF4B5563),
-                          fontWeight: FontWeight.w700,
-                          decoration: TextDecoration.underline,
+                          color: Color(0xFF9E9E9E),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ),
-                    const Text(
-                      '계정이 기억나지 않나요? ',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF9E9E9E),
-                        fontWeight: FontWeight.w500,
+                      GestureDetector(
+                        onTap: _onTapResetPassword,
+                        child: const Text(
+                          '비밀번호 재설정',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF4B5563),
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      const Text(
+                        '계정이 기억나지 않나요?',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF9E9E9E),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => const FindAccountPage(),
                           ),
-                        );
-                      },
-                      child: const Text(
-                        '계정 찾기',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF4B5563),
-                          fontWeight: FontWeight.w700,
-                          decoration: TextDecoration.underline,
+                        ),
+                        child: const Text(
+                          '계정 찾기',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF4B5563),
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
