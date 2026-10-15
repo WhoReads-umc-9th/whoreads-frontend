@@ -19,6 +19,12 @@
 key.properties
 **/*service-account*.json
 .swiftpm/
+.release/
+.bundle/
+vendor/bundle/
+fastlane/report.xml
+fastlane/README.md
+gha-creds-*.json
 migrate_working_dir/
 
 # IntelliJ related

@@ -1,0 +1,15 @@
+require_relative "play_release"
+
+default_platform(:android)
+
+platform :android do
+  desc "Read Play versions and plan the next closed-test build without publishing"
+  lane :prepare do
+    WhoReadsRelease.prepare
+  end
+
+  desc "Publish the audited build to the existing Alpha closed-test track"
+  lane :closed_test do
+    WhoReadsRelease.publish
+  end
+end

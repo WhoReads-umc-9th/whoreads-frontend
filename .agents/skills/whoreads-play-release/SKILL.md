@@ -10,6 +10,14 @@ description: WhoReads Android 앱의 GitHub Actions AAB를 확인하거나 사�
 상태 확인 요청에서는 읽기와 파일 준비까지만 진행한다. 정기 예약 배포로 바꾸지 않는다.
 계정 비밀번호, 로그인 토큰, OTP를 파일이나 스킬에 저장하지 않는다. 기존 로그인 세션을 사용한다.
 
+## GitHub Actions 자동 배포가 연결된 경우
+
+`PLAY_AUTO_DEPLOY=true`와 `PLAY_SERVICE_ACCOUNT_JSON`이 설정되면 main push가 기존 Alpha 비공개 테스트 배포를 실행한다. 정기 예약 배포는 없다. 구현과 연결 절차는 `docs/play-auto-deploy.md`를 따른다.
+
+사용자가 배포를 요청하면 현재 main SHA의 실행부터 확인한다. 실행 중이면 중복 실행하지 않는다. 새 실행이 필요하면 `gh workflow run build_release.yaml --repo WhoReads-umc-9th/whoreads-frontend --ref main`을 실행한다. prepare가 Play의 초안까지 포함해 versionCode와 표시 버전을 함께 결정하므로 별도의 수동 버전 변경은 필요하지 않다. build 및 publish의 실제 완료와 `play-submission-result`를 확인하고, Play Console의 심사/제공 상태를 별도로 보고한다. 상태 조회 요청에서는 워크플로를 실행하거나 게시하지 않는다.
+
+자동 배포가 비활성화되었거나 publish가 건너뛰어진 경우 빌드 성공을 배포 완료로 표현하지 않는다. 오류 또는 불명확한 제출은 실제 Play 상태를 확인하고, 이전 성공 AAB로 대체하거나 무조건 재시도하지 않는다. 인증 연결 이전의 수동 절차가 필요할 때는 아래 순서를 따른다.
+
 1. git 상태와 origin/main을 확인한다. 아직 푸시되지 않은 수정이 있으면 요청된 변경만 검증하고 커밋/푸시해 빌드를 기다린다. 실제 변경을 포함한 SHA를 확인한다. Play의 최신 업로드 버전보다 높도록 표시 버전과 build 번호를 함께 올린다. 서명 키를 교체하지 않는다.
 2. 연결된 Play 전용 도구를 먼저 확인하고, 없으면 설치된 chrome:control-chrome 스킬의 browser-client를 사용한다. 사용자에게 승인받은 플러그인 복구가 필요하면 설치된 같은 버전의 누락 경로만 복구하고 REPL을 재시작한다. 보안 차단을 우회하지 않는다.
 3. Play에서 앱/트랙/제공 상태, 보류 중 변경, 초안을 포함한 최고 versionCode를 확인한다. 2026-10-11 확인한 개발자 ID는 6323748251621633962, 앱 ID는 4972264526619622212, 기존 트랙 URL은 https://play.google.com/console/u/1/developers/6323748251621633962/app/4972264526619622212/tracks/4698670068892095329 이다. URL은 현재 계정의 화면에서 확인한다. 프로덕션으로 승격하지 않고 기존 비공개 테스트 트랙을 갱신한다. 다른 트랙 요청이 있으면 그 요청을 따른다.

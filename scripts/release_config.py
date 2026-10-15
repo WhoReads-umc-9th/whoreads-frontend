@@ -90,7 +90,7 @@ def audit(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("write-env", "audit"))
+    parser.add_argument("command", choices=("write-env", "audit", "verify-server"))
     parser.add_argument("path", nargs="?")
     args = parser.parse_args()
     if args.command == "write-env":
@@ -99,6 +99,14 @@ def main():
         with os.fdopen(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as stream:
             stream.write("".join(f"{k}={v}\n" for k, v in values.items()))
         target.chmod(0o600)
+    elif args.command == "verify-server":
+        if not args.path:
+            parser.error("verify-server requires a dotenv, AAB, or APK path")
+        path = Path(args.path)
+        values = audit(path) if path.suffix in (".aab", ".apk") else parse_env(path.read_text())
+        if set(values) - set(KEYS):
+            raise ValueError("Unexpected mobile configuration variables")
+        verify_kakao_server(values)
     else:
         if not args.path:
             parser.error("audit requires an AAB or APK path")
@@ -109,6 +117,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (ValueError, KeyError, zipfile.BadZipFile):
+    except (ValueError, KeyError, OSError, zipfile.BadZipFile):
         print("Release configuration invalid or unsafe (values hidden)", file=sys.stderr)
         sys.exit(1)
