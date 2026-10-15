@@ -217,6 +217,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
             readingStatus = 'WISH';
           });
 
+          // The detail API supplies page counts only after the book is in the library.
+          await _fetchBookDetail();
+
           if (mounted) {
             ScaffoldMessenger.of(
               context,
@@ -285,9 +288,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
       if (editStatus == 'READING') {
         final page = int.tryParse(pageController.text.trim());
         if (page == null ||
-            page < 0 ||
+            page < 1 ||
             (totalPage != null && totalPage! > 0 && page > totalPage!)) {
-          _showFailure('읽은 페이지를 전체 페이지 범위 안에서 입력해주세요.');
+          _showFailure('읽은 페이지를 1 이상, 전체 페이지 범위 안에서 입력해주세요.');
           return;
         }
       }
@@ -450,12 +453,12 @@ class _BookDetailPageState extends State<BookDetailPage> {
                 style: const TextStyle(
                   color: Color(0xFFF84E00),
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 15,
                 ),
               ),
               Text(
                 '$current/${totalPage ?? 0}p',
-                style: const TextStyle(color: Color(0xFF4B5563), fontSize: 13),
+                style: const TextStyle(color: Color(0xFF4B5563), fontSize: 15),
               ),
             ],
           ),

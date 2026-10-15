@@ -107,7 +107,7 @@ void main() {
     await tester.tap(find.text('저장'));
     await tester.pumpAndSettle();
     expect(writes, 0);
-    expect(find.text('읽은 페이지를 전체 페이지 범위 안에서 입력해주세요.'), findsOneWidget);
+    expect(find.text('읽은 페이지를 1 이상, 전체 페이지 범위 안에서 입력해주세요.'), findsOneWidget);
   });
   test('Progress is bounded for malformed server page counts', () {
     for (final page in [-1, 101]) {
