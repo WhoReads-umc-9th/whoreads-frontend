@@ -37,9 +37,7 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
       - name: Verify deployment safeguards
-        run: |
-          bundle exec ruby fastlane/play_release_test.rb
-          python3 scripts/test_register_play_review.py
+        run: bundle exec ruby fastlane/play_release_test.rb
       - name: Plan release against all uploaded Play versions
         id: plan
         env:
@@ -195,11 +193,6 @@ jobs:
           path: .release/artifacts/play-result.json
           include-hidden-files: true
           if-no-files-found: warn
-      - name: Start backend review monitoring for the submitted version
-        env:
-          BASE_URL: ${{ secrets.BASE_URL }}
-          PLAY_REVIEW_MONITOR_TOKEN: ${{ secrets.PLAY_REVIEW_MONITOR_TOKEN }}
-        run: python3 scripts/register_play_review.py .release/artifacts/play-result.json
       - name: Report submission
         env:
           RELEASE_VERSION_NAME: ${{ needs.prepare.outputs.version_name }}
