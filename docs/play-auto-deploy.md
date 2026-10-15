@@ -53,6 +53,29 @@ Actions Variable `PLAY_AUTO_DEPLOY=false`로 다음 실행부터 업로드를 �
 인증 오류는 서비스 계정의 앱 접근 권한과 API 활성화를 확인하고, versionCode 중복은 Play의 초안·업로드 상태를 먼저 확인한다.
 심사 중이라 제출이 막히면 심사 완료 후 최신 main의 워크플로를 실행한다.
 
+## Discord 심사 완료 알림
+
+`Play Review Discord Notification`은 GitHub에서 약 10분 간격 및 배포 워크플로 성공 후 Alpha 상태를 조회한다.
+GitHub 예약 실행 지연이 생길 수 있으며 로컬 Mac 실행 여부와는 무관하다. 앱 업로드나 게시 작업은 수행하지 않는다.
+Discord 채널 웹훅은 Actions Secret `DISCORD_WEBHOOK_URL`에만 등록한다. 소스, 앱, 아티팩트에는 포함하지 않는다.
+
+읽기 전용 `applications.tracks.releases.list`의 최신 versionCode가
+`RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED` 또는 `RELEASE_LIFECYCLE_STATE_PUBLISHED`이면
+`[WhoReads] - 심사 완료`를 전송한다. 승인 후 수동 게시 대기도 심사 완료로 판단하며, 게시 버튼을 누르지는 않는다.
+기존 배포 API에서 사용하는 `edits.tracks.status=completed`만으로는 알림을 보내지 않는다.
+최신 버전만 감시하므로 과거에 승인된 버전이 남아 있어도 새 버전의 심사 완료로 오인하지 않는다.
+최초 실행에서 현재 최신 버전이 이미 승인된 경우 한 번 알리고, 이후 버전별로 한 번만 알린다.
+
+전송 기록은 모바일 소스와 분리된 `codex/play-review-notifications` 브랜치의 `state.json`에 보관한다.
+동시 실행은 직렬화하고, 전송 전 기록을 남긴 뒤 Discord의 `wait=true` 응답으로 실제 메시지 ID를 확인한다.
+전송 중 연결이 끊기거나 기록 갱신이 실패하면 중복 전송을 막기 위해 자동 재전송하지 않는다.
+이때 Actions 로그의 메시지 ID와 Discord 채널을 대조한 뒤, 해당 versionCode 기록을 `sent`로 정정하거나
+미전송이 확실할 때만 해당 기록을 삭제해 재시도한다. 기록 브랜치를 삭제하면 기존 알림이 다시 전송될 수 있다.
+상태만 확인하려면 Actions 수동 실행 시 `check_only`를 선택한다.
+
+공식 문서: [Play 심사 상태 조회](https://developers.google.com/android-publisher/api-ref/rest/v3/applications.tracks.releases),
+[Discord 웹훅 전송 확인](https://docs.discord.com/developers/resources/webhook#execute-webhook).
+
 ## 로컬 검증
 
 ```sh

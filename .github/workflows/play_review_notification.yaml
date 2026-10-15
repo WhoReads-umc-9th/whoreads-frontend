@@ -1,0 +1,46 @@
+name: Play Review Discord Notification
+
+on:
+  schedule:
+    - cron: '7,17,27,37,47,57 * * * *'
+  workflow_dispatch:
+    inputs:
+      check_only:
+        description: 'Check Play status without sending or recording a notification'
+        type: boolean
+        default: false
+  workflow_run:
+    workflows: [Flutter Android Release and Play Closed Test]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: whoreads-play-review-notification
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - name: Verify approval and duplicate-delivery safeguards
+        run: bundle exec ruby fastlane/play_review_monitor_test.rb
+      - name: Check Alpha review and notify Discord once
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GH_TOKEN: ${{ github.token }}
+          MONITOR_CHECK_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.check_only || false }}
+        run: bundle exec ruby fastlane/play_review_monitor.rb
