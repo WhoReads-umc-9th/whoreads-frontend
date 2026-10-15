@@ -2,6 +2,15 @@
   "schema": 1,
   "package": "com.whoreads.mobile",
   "track": "alpha",
-  "notifications": {},
+  "notifications": {
+    "5": {
+      "delivery": "sending",
+      "version_codes": [
+        5
+      ],
+      "lifecycle": "RELEASE_LIFECYCLE_STATE_PUBLISHED",
+      "claimed_at": "2026-10-15T12:44:54Z"
+    }
+  },
   "latest_version_code": 5
 }
