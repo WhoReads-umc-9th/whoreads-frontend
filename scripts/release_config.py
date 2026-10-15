@@ -80,9 +80,28 @@ def verify_kakao_server(values):
 
 
 def audit(path):
-    asset = "base/assets/flutter_assets/.env" if path.suffix == ".aab" else "assets/flutter_assets/.env"
-    with zipfile.ZipFile(path) as archive:
-        values = parse_env(archive.read(asset).decode("utf-8"))
+    ios_asset = "Frameworks/App.framework/flutter_assets/.env"
+    if path.is_dir():
+        if path.suffix != ".app":
+            raise ValueError("Expected an iOS app bundle")
+        values = parse_env((path / ios_asset).read_text(encoding="utf-8"))
+    else:
+        with zipfile.ZipFile(path) as archive:
+            if path.suffix == ".ipa":
+                assets = [name for name in archive.namelist()
+                          if re.fullmatch(r"Payload/[^/]+\.app/" + re.escape(ios_asset), name)]
+                if len(assets) != 1:
+                    raise ValueError("Expected exactly one iOS Flutter configuration")
+                asset = assets[0]
+            elif path.suffix == ".aab":
+                asset = "base/assets/flutter_assets/.env"
+            elif path.suffix == ".apk":
+                asset = "assets/flutter_assets/.env"
+            else:
+                raise ValueError("Unsupported release artifact")
+            if archive.namelist().count(asset) != 1:
+                raise ValueError("Expected exactly one Flutter configuration")
+            values = parse_env(archive.read(asset).decode("utf-8"))
     if set(values) - set(KEYS):
         raise ValueError("Unexpected dotenv variables in app; server secrets must not be bundled")
     return validate(values)
@@ -101,15 +120,15 @@ def main():
         target.chmod(0o600)
     elif args.command == "verify-server":
         if not args.path:
-            parser.error("verify-server requires a dotenv, AAB, or APK path")
+            parser.error("verify-server requires a dotenv, AAB, APK, IPA, or .app path")
         path = Path(args.path)
-        values = audit(path) if path.suffix in (".aab", ".apk") else parse_env(path.read_text())
+        values = audit(path) if path.suffix in (".aab", ".apk", ".ipa", ".app") else parse_env(path.read_text())
         if set(values) - set(KEYS):
             raise ValueError("Unexpected mobile configuration variables")
         verify_kakao_server(values)
     else:
         if not args.path:
-            parser.error("audit requires an AAB or APK path")
+            parser.error("audit requires an AAB, APK, IPA, or .app path")
         audit(Path(args.path))
     print("Key-free release configuration validated (values hidden)")
 

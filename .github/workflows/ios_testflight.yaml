@@ -1,0 +1,222 @@
+name: WhoReads iOS TestFlight
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: whoreads-testflight-main
+  cancel-in-progress: false
+
+env:
+  FASTLANE_SKIP_UPDATE_CHECK: "true"
+  FASTLANE_HIDE_CHANGELOG: "true"
+  FASTLANE_OPT_OUT_USAGE: "true"
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version_name: ${{ steps.plan.outputs.version_name }}
+      build_number: ${{ steps.plan.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - name: Verify TestFlight safeguards
+        run: bundle exec ruby fastlane/testflight_release_test.rb
+      - name: Restore this run's immutable version plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .release
+          count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '[.artifacts[] | select(.name == "ios-release-plan")] | length')
+          if [ "$count" -gt 0 ]; then
+            gh run download "$GITHUB_RUN_ID" --name ios-release-plan --dir .release
+          fi
+      - name: Plan the next internal TestFlight version
+        id: plan
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_BASE64: ${{ secrets.ASC_PRIVATE_KEY_BASE64 }}
+        run: bundle exec ruby fastlane/testflight_release.rb plan
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-plan
+          path: .release/ios-plan.json
+          include-hidden-files: true
+          overwrite: true
+          if-no-files-found: error
+
+  build:
+    needs: prepare
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Verify supported Xcode SDK
+        run: |
+          xcodebuild -version
+          test "$(xcodebuild -version | head -n 1 | awk '{print $2}' | cut -d . -f 1)" -ge 26
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          channel: stable
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-release-plan
+          path: .release
+      - name: Create key-free app configuration
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+        run: |
+          python3 scripts/release_config.py write-env
+          python3 scripts/release_config.py verify-server .env
+      - name: Test app and release validation
+        run: |
+          python3 -m unittest discover -s scripts/tests -v
+          flutter pub get
+          flutter test --no-pub
+      - name: Install ephemeral distribution signing inputs
+        env:
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: python3 scripts/ios_release.py install
+      - name: Build archive and export internal-only TestFlight IPA
+        env:
+          IOS_VERSION_NAME: ${{ needs.prepare.outputs.version_name }}
+          IOS_BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+        run: |
+          flutter build ipa --release --no-pub --no-codesign --build-name="$IOS_VERSION_NAME" --build-number="$IOS_BUILD_NUMBER"
+          python3 scripts/release_config.py audit build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+          xcodebuild -exportArchive -archivePath build/ios/archive/Runner.xcarchive -exportPath build/ios/ipa -exportOptionsPlist .release/ios-export.plist
+          python3 scripts/ios_release.py manifest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-testflight-ipa
+          path: .release/ios-artifacts/*
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
+      - name: Remove temporary signing credentials
+        if: always()
+        run: python3 scripts/ios_release.py cleanup
+
+  publish:
+    needs: [prepare, build]
+    runs-on: macos-15
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-release-plan
+          path: .release
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-testflight-ipa
+          path: .release/ios-artifacts
+      - name: Reject stale main and restore any prior upload attempt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          test "$latest_sha" = "$GITHUB_SHA" || { echo "Newer main exists; refusing an older upload."; exit 1; }
+          count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '[.artifacts[] | select(.name == "ios-testflight-result")] | length')
+          if [ "$count" -gt 0 ]; then
+            gh run download "$GITHUB_RUN_ID" --name ios-testflight-result --dir .release
+          fi
+      - name: Recheck key-free IPA and deployed Kakao authorization
+        run: python3 scripts/release_config.py verify-server .release/ios-artifacts/whoreads.ipa
+      - name: Upload and verify availability for internal testing
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_BASE64: ${{ secrets.ASC_PRIVATE_KEY_BASE64 }}
+        run: bundle exec ruby fastlane/testflight_release.rb publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-testflight-result
+          path: .release/ios-result.json
+          include-hidden-files: true
+          overwrite: true
+          if-no-files-found: warn
+
+  notify:
+    needs: [prepare, build, publish]
+    if: always() && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NOTIFICATION_KIND: ${{ needs.publish.result == 'success' && 'success' || 'failure' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - name: Restore result and claim this run's notification once
+        id: receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .release
+          count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq ".artifacts | map(select(.name == \"ios-discord-claim-$NOTIFICATION_KIND\")) | length")
+          if [ "$count" -gt 0 ]; then
+            echo "send=false" >> "$GITHUB_OUTPUT"
+            echo "This run's notification was already claimed; inspect its delivery before resending."
+            exit 0
+          fi
+          count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '[.artifacts[] | select(.name == "ios-testflight-result")] | length')
+          if [ "$count" -gt 0 ]; then
+            gh run download "$GITHUB_RUN_ID" --name ios-testflight-result --dir .release
+          fi
+          echo "$GITHUB_RUN_ID" > .release/ios-discord-claim.txt
+          echo "send=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: steps.receipt.outputs.send == 'true'
+        with:
+          name: ios-discord-claim-${{ env.NOTIFICATION_KIND }}
+          path: .release/ios-discord-claim.txt
+          include-hidden-files: true
+          if-no-files-found: error
+      - name: Notify Discord with the verified result
+        if: steps.receipt.outputs.send == 'true'
+        env:
+          IOS_DISCORD_WEBHOOK_URL: ${{ secrets.IOS_DISCORD_WEBHOOK_URL }}
+          IOS_PUBLISH_RESULT: ${{ needs.publish.result }}
+        run: bundle exec ruby fastlane/testflight_release.rb notify
