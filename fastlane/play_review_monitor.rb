@@ -6,7 +6,7 @@ require "uri"
 require_relative "play_release"
 
 module WhoReadsReviewMonitor
-  MESSAGE = "[WhoReads] - 심사 완료".freeze
+  MESSAGE = "[WhoReads] - android 비공개 테스트 심사완료".freeze
   APPROVED = %w[
     RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED
     RELEASE_LIFECYCLE_STATE_PUBLISHED

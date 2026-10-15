@@ -55,23 +55,30 @@ Actions Variable `PLAY_AUTO_DEPLOY=false`로 다음 실행부터 업로드를 �
 
 ## Discord 심사 완료 알림
 
-`Play Review Discord Notification`은 GitHub에서 약 10분 간격 및 배포 워크플로 성공 후 Alpha 상태를 조회한다.
-GitHub 예약 실행 지연이 생길 수 있으며 로컬 Mac 실행 여부와는 무관하다. 앱 업로드나 게시 작업은 수행하지 않는다.
-Discord 채널 웹훅은 Actions Secret `DISCORD_WEBHOOK_URL`에만 등록한다. 소스, 앱, 아티팩트에는 포함하지 않는다.
+Play 제출이 성공하면 `scripts/register_play_review.py`가 실제 `play-result.json`의 버전/커밋을
+백엔드 `POST /api/internal/play-review/jobs`에 등록한다. 등록이 실패하면 해당 단계도 실패로 보고한다.
+요청은 버전별로 멱등하므로 응답 유실 시 같은 등록만 재시도하며 앱을 다시 제출하지 않는다.
 
-읽기 전용 `applications.tracks.releases.list`의 최신 versionCode가
-`RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED` 또는 `RELEASE_LIFECYCLE_STATE_PUBLISHED`이면
-`[WhoReads] - 심사 완료`를 전송한다. 승인 후 수동 게시 대기도 심사 완료로 판단하며, 게시 버튼을 누르지는 않는다.
-기존 배포 API에서 사용하는 `edits.tracks.status=completed`만으로는 알림을 보내지 않는다.
-최신 버전만 감시하므로 과거에 승인된 버전이 남아 있어도 새 버전의 심사 완료로 오인하지 않는다.
-최초 실행에서 현재 최신 버전이 이미 승인된 경우 한 번 알리고, 이후 버전별로 한 번만 알린다.
+운영 백엔드의 Spring 스케줄러가 등록한 versionCode만 확인한다. 첫 확인 후 심사 중이면 10분마다
+공식 Play API를 조회한다. 승인 또는 게시 완료가 확인되면
+`[WhoReads] - android 비공개 테스트 심사완료`를 전송하고 해당 감시를 종료한다.
+서버 재시작과 Blue/Green 배포 시에도 MySQL 작업/전송 기록으로 감시를 이어가고 중복 전송을 막는다.
+작업이 없으면 Play API를 호출하지 않는다. Mac이나 GPT 실행 여부와 무관하게 동작한다.
 
-전송 기록은 모바일 소스와 분리된 `codex/play-review-notifications` 브랜치의 `state.json`에 보관한다.
-동시 실행은 직렬화하고, 전송 전 기록을 남긴 뒤 Discord의 `wait=true` 응답으로 실제 메시지 ID를 확인한다.
-전송 중 연결이 끊기거나 기록 갱신이 실패하면 중복 전송을 막기 위해 자동 재전송하지 않는다.
-이때 Actions 로그의 메시지 ID와 Discord 채널을 대조한 뒤, 해당 versionCode 기록을 `sent`로 정정하거나
-미전송이 확실할 때만 해당 기록을 삭제해 재시도한다. 기록 브랜치를 삭제하면 기존 알림이 다시 전송될 수 있다.
-상태만 확인하려면 Actions 수동 실행 시 `check_only`를 선택한다.
+백엔드 GitHub Secrets에는 `PLAY_REVIEW_SERVICE_ACCOUNT_BASE64`, `DISCORD_WEBHOOK_URL`,
+`PLAY_REVIEW_MONITOR_TOKEN`을 등록하고, 모바일 저장소에는 등록용 `PLAY_REVIEW_MONITOR_TOKEN`만 추가한다.
+이 값들은 서버/CI 런타임에서만 사용하며 모바일 빌드 환경에는 전달하지 않는다.
+`Provision Backend Play Review Credentials`는 명시적으로 실행할 때만 기존 Play 전용 키와 웹훅,
+새 등록 토큰을 대상 저장소 공개 키로 암호화한다. 결과 아티팩트에는 암호문만 포함되며,
+GitHub Secrets API로 등록한 뒤 서버를 배포한다. 일상적인 심사 감시에는 이 설정 워크플로가 필요 없다.
+
+`Verify Backend Play Review Scheduler` 수동 실행은 이미 승인된 제출 실행을 사용해 실제 백엔드
+스케줄러 → Play API → ‘알림 연결 테스트’ 메시지 전송을 검증한다. `prior_message_id`로 이전
+알림을 이관하면 기존 버전의 완료 알림을 다시 보내지 않는다.
+백엔드 저장소의 `docs/play-review-monitor.md`에 상태 조회 및 전송 불확실 상황의 확인 절차가 있다.
+
+기존 GitHub 주기 감시와 Codex 보조 감시는 서버 전환 검증 후 중지한다.
+`Play Review Discord Notification`은 과거 전송 기록 확인을 위한 수동 도구로만 보존한다.
 
 공식 문서: [Play 심사 상태 조회](https://developers.google.com/android-publisher/api-ref/rest/v3/applications.tracks.releases),
 [Discord 웹훅 전송 확인](https://docs.discord.com/developers/resources/webhook#execute-webhook).

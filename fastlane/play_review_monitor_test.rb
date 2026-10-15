@@ -65,11 +65,11 @@ class PlayReviewMonitorTest < Minitest::Test
   end
 
   def test_discord_waits_for_confirmation_and_disables_mentions
-    response = { "id" => "123456789", "content" => "[WhoReads] - 심사 완료" }
+    response = { "id" => "123456789", "content" => "[WhoReads] - android 비공개 테스트 심사완료" }
     request = lambda do |method, url, **options|
       assert_equal "post", method
       assert url.end_with?("?wait=true")
-      assert_equal "[WhoReads] - 심사 완료", options.fetch(:body).fetch("content")
+      assert_equal "[WhoReads] - android 비공개 테스트 심사완료", options.fetch(:body).fetch("content")
       assert_equal({ "parse" => [] }, options.fetch(:body).fetch("allowed_mentions"))
       response
     end
