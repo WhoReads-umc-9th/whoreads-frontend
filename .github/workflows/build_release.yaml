@@ -37,7 +37,9 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
       - name: Verify deployment safeguards
-        run: bundle exec ruby fastlane/play_release_test.rb
+        run: |
+          bundle exec ruby fastlane/play_release_test.rb
+          python3 scripts/test_register_play_review.py
       - name: Plan release against all uploaded Play versions
         id: plan
         env:
