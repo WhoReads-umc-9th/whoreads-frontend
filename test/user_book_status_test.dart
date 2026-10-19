@@ -29,6 +29,7 @@ class UserBookServer {
   int? postFailure;
   bool failRefresh = false;
   bool staleLibraryDate = false;
+  bool ignoreDateUpdates = false;
   Completer<void>? patchGate;
   final requests = <RequestOptions>[];
 
@@ -87,6 +88,9 @@ class UserBookServer {
         return jsonResponse({'message': '서버에서 변경을 거절했습니다.'}, patchFailure!);
       }
       final body = Map<String, dynamic>.from(request.data as Map);
+      if (!body.containsKey('reading_status')) {
+        return jsonResponse({'message': '서버 내부 오류가 발생했습니다.'}, 500);
+      }
       final nextStatus = body['reading_status'] as String? ?? status;
       if ((nextStatus == 'WISH' &&
               body.keys.any((k) => k != 'reading_status')) ||
@@ -112,8 +116,10 @@ class UserBookServer {
         }
       }
       status = nextStatus;
-      start = nextStart;
-      end = nextEnd;
+      if (!ignoreDateUpdates) {
+        start = nextStart;
+        end = nextEnd;
+      }
       page = nextPage;
       return jsonResponse({}, 204);
     }
@@ -354,7 +360,7 @@ void main() {
   });
 
   testWidgets(
-    'Page editing validates limits, updates only the page, and allows the final page',
+    'Page editing validates limits, sends the current status, and allows the final page',
     (tester) async {
       server.status = 'READING';
       await open(tester);
@@ -370,7 +376,10 @@ void main() {
       await tester.enterText(find.byType(TextField), '248');
       await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
-      expect(server.patches.single.data, {'reading_page': 248});
+      expect(server.patches.single.data, {
+        'reading_status': 'READING',
+        'reading_page': 248,
+      });
       expect(server.status, 'READING');
       expect(find.text('248/248p'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -413,7 +422,7 @@ void main() {
   );
 
   testWidgets(
-    'Rereading sends only a later start and accepts the cleared completion date',
+    'Rereading sends a later start without an end and accepts the cleared completion date',
     (tester) async {
       server.status = 'READING';
       server.start = '2026-01-01';
@@ -421,7 +430,10 @@ void main() {
       server.staleLibraryDate = true;
       await open(tester);
       await chooseDate(tester, '시작', kstToday());
-      expect(server.patches.single.data, {'started_at': ymd(kstToday())});
+      expect(server.patches.single.data, {
+        'reading_status': 'READING',
+        'started_at': ymd(kstToday()),
+      });
       expect(server.end, isNull);
       expect(server.page, 25);
       expect(find.text('2026.01.02'), findsNothing);
@@ -435,7 +447,7 @@ void main() {
   );
 
   testWidgets(
-    'Completion date editing sends only the changed date and disallows future input',
+    'Completion date editing sends the current status and changed date and disallows future input',
     (tester) async {
       server.status = 'COMPLETE';
       server.start = '2026-01-01';
@@ -446,7 +458,10 @@ void main() {
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
       await chooseDate(tester, '종료', kstToday());
-      expect(server.patches.single.data, {'completed_at': ymd(kstToday())});
+      expect(server.patches.single.data, {
+        'reading_status': 'COMPLETE',
+        'completed_at': ymd(kstToday()),
+      });
       expect(server.start, '2026-01-01');
     },
   );
@@ -479,6 +494,21 @@ void main() {
       expect(server.requests.where((r) => r.method == 'POST'), hasLength(1));
       expect(server.patches, hasLength(2));
       expect(server.status, 'COMPLETE');
+    },
+  );
+
+  testWidgets(
+    'A server that ignores date edits is reported instead of showing an unpersisted date',
+    (tester) async {
+      server.status = 'READING';
+      server.start = '2026-01-01';
+      server.ignoreDateUpdates = true;
+      await open(tester);
+      await chooseDate(tester, '시작', kstToday());
+      expect(server.start, '2026-01-01');
+      expect(find.text('시작'), findsOneWidget);
+      expect(find.text('2026.01.01'), findsOneWidget);
+      expect(find.text('날짜 변경이 서버에 반영되지 않았습니다. 다시 확인해주세요.'), findsOneWidget);
     },
   );
 
@@ -517,7 +547,10 @@ void main() {
       await tester.enterText(find.byType(TextField), '100');
       await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
-      expect(server.patches.single.data, {'reading_page': 100});
+      expect(server.patches.single.data, {
+        'reading_status': 'READING',
+        'reading_page': 100,
+      });
       expect(tester.takeException(), isNull);
       tester.view.resetViewInsets();
       await tester.pumpAndSettle();

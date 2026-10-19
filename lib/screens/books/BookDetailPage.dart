@@ -313,6 +313,8 @@ class _BookDetailPageState extends State<BookDetailPage> {
 
   Future<void> _persistUpdate(Map<String, dynamic> body) async {
     if (_mutating || !mounted) return;
+    // Explicit status also supports servers that still require it for partial edits.
+    body = {'reading_status': readingStatus, ...body};
     final validationError = _dateError(body);
     if (validationError != null) {
       await _showInputError(validationError);
@@ -363,6 +365,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
         }
       });
       await _fetchBookDetail(showLoading: false);
+      if ((body.containsKey('started_at') && body['started_at'] != startedAt) ||
+          (body.containsKey('completed_at') &&
+              body['completed_at'] != completedAt)) {
+        _showFailure('날짜 변경이 서버에 반영되지 않았습니다. 다시 확인해주세요.');
+      }
     } on DioException catch (error) {
       if (error.response?.statusCode == 400) {
         await _showInputError(_errorMessage(error.response?.data));

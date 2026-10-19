@@ -185,7 +185,7 @@ void main() {
     await tester.pumpAndSettle();
     final pagePatch = requests.lastWhere((r) => r.method == 'PATCH');
     expect(pagePatch.path, '/me/library/book/88');
-    expect(pagePatch.data, {'reading_page': 25});
+    expect(pagePatch.data, {'reading_status': 'READING', 'reading_page': 25});
     expect(find.text('25/484p'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
