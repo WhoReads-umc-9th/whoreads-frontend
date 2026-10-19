@@ -412,7 +412,7 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
                   _CelebrityProfileImage(
                     imageUrl: celebrityProfile!.imageUrl,
                     imageAttribution: celebrityProfile!.imageAttribution,
-                    size: 100,
+                    width: 100,
                     borderRadius: 16,
                   ),
                   const SizedBox(height: 12),
@@ -673,13 +673,13 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
 class _CelebrityProfileImage extends StatefulWidget {
   final String imageUrl;
   final String imageAttribution;
-  final double size;
+  final double width;
   final double borderRadius;
 
   const _CelebrityProfileImage({
     required this.imageUrl,
     required this.imageAttribution,
-    required this.size,
+    required this.width,
     required this.borderRadius,
   });
 
@@ -764,11 +764,13 @@ class _CelebrityProfileImageState extends State<_CelebrityProfileImage> {
 
   @override
   Widget build(BuildContext context) {
+    final imageHeight = widget.width / (3 / 4);
+
     return CompositedTransformTarget(
       link: _layerLink,
       child: SizedBox(
-        width: widget.size,
-        height: widget.size,
+        width: widget.width,
+        height: imageHeight,
         child: Stack(
           children: [
             ClipRRect(
@@ -776,20 +778,20 @@ class _CelebrityProfileImageState extends State<_CelebrityProfileImage> {
               child: widget.imageUrl.isNotEmpty
                   ? Image.network(
                       widget.imageUrl,
-                      width: widget.size,
-                      height: widget.size,
+                      width: widget.width,
+                      height: imageHeight,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Image.asset(
                         'assets/images/person.png',
-                        width: widget.size,
-                        height: widget.size,
+                        width: widget.width,
+                        height: imageHeight,
                         fit: BoxFit.cover,
                       ),
                     )
                   : Image.asset(
                       'assets/images/person.png',
-                      width: widget.size,
-                      height: widget.size,
+                      width: widget.width,
+                      height: imageHeight,
                       fit: BoxFit.cover,
                     ),
             ),
