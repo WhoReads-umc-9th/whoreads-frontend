@@ -136,27 +136,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Adding a book loads its page count and validates reading progress before saving', (tester) async {
+  testWidgets('Adding a book loads its page count and supports direct status and page updates', (tester) async {
     phone(tester);
+    var status = 'WISH';
+    int? page;
     ApiClient.dio.httpClientAdapter = FakeApi((request) {
       requests.add(request);
       if (request.path == '/books/42/detail') {
         return jsonResponse({'result': {
           'title': '새로 담은 책', 'author_name': '저자', 'quotes': [],
           'reading_info': added ? {
-            'reading_status': 'WISH', 'reading_page': 0, 'total_page': 484,
+            'user_book_id': 88, 'reading_status': status,
+            if (page != null) 'reading_page': page,
+            'total_page': 484,
           } : null,
         }});
       }
       if (request.path == '/me/library/list') {
-        return jsonResponse({'result': {'books':
-          added && request.queryParameters['status'] == 'WISH'
-              ? [{'user_book_id': 88, 'book': {'id': 42}}] : [],
-        }});
+        return jsonResponse({'result': {'books': []}});
       }
       if (request.path == '/me/library/book/42') {
         added = true;
         return jsonResponse({'result': {'user_book_id': 88}}, 201);
+      }
+      if (request.path == '/me/library/book/88') {
+        status = request.data['reading_status'] as String? ?? status;
+        page = request.data['reading_page'] as int? ?? page;
+        return jsonResponse({}, 204);
       }
       return jsonResponse({'is_success': true, 'result': {}});
     });
@@ -165,26 +171,21 @@ void main() {
     await tester.tap(find.text('추가'));
     await tester.pumpAndSettle();
     expect(requests.where((r) => r.path == '/books/42/detail'), hasLength(2));
-    await tester.tap(find.byType(PopupMenuButton<String>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('수정'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('읽는 중'));
     await tester.pumpAndSettle();
-    expect(find.text(' / 484p'), findsOneWidget);
-    await tester.tap(find.text('저장'));
+    expect(find.text('-/484p'), findsOneWidget);
+    final statusPatch = requests.singleWhere((r) => r.method == 'PATCH');
+    expect(statusPatch.path, '/me/library/book/88');
+    expect(statusPatch.data['reading_status'], 'READING');
+    expect((statusPatch.data as Map).containsKey('reading_page'), isFalse);
+    await tester.tap(find.text('페이지 수정'));
     await tester.pumpAndSettle();
-    expect(requests.where((r) => r.method == 'PATCH'), isEmpty);
-    await tester.enterText(find.byType(TextField), '-1');
-    await tester.tap(find.text('저장'));
-    await tester.pumpAndSettle();
-    expect(requests.where((r) => r.method == 'PATCH'), isEmpty);
     await tester.enterText(find.byType(TextField), '25');
     await tester.tap(find.text('저장'));
     await tester.pumpAndSettle();
-    final patch = requests.singleWhere((r) => r.method == 'PATCH');
-    expect(patch.path, '/me/library/book/88');
-    expect(patch.data['reading_page'], 25);
+    final pagePatch = requests.lastWhere((r) => r.method == 'PATCH');
+    expect(pagePatch.path, '/me/library/book/88');
+    expect(pagePatch.data, {'reading_page': 25});
     expect(find.text('25/484p'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
