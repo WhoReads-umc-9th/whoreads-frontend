@@ -93,6 +93,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withOpacity(0.35),
       builder: (_) => LoginMethodSheet(
@@ -160,7 +161,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      useSafeArea: false,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withOpacity(0.35),
       builder: (_) => SignupTermsSheet(

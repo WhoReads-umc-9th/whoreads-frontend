@@ -4,10 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 class SignupTermsSheet extends StatefulWidget {
   final VoidCallback onAgreed;
 
-  const SignupTermsSheet({
-    super.key,
-    required this.onAgreed,
-  });
+  const SignupTermsSheet({super.key, required this.onAgreed});
 
   @override
   State<SignupTermsSheet> createState() => _SignupTermsSheetState();
@@ -16,26 +13,29 @@ class SignupTermsSheet extends StatefulWidget {
 class _SignupTermsSheetState extends State<SignupTermsSheet> {
   bool all = false;
 
-  bool age14 = false;     // (필수) 만 14세 이상
-  bool terms = false;     // (필수) 서비스 이용약관
-  bool privacy = false;   // (필수) 개인정보 수집/이용(필수)
-  bool privacyOpt = false;// (선택) 개인정보 수집/이용(선택)
+  bool age14 = false; // (필수) 만 14세 이상
+  bool terms = false; // (필수) 서비스 이용약관
+  bool privacy = false; // (필수) 개인정보 수집/이용(필수)
+  bool privacyOpt = false; // (선택) 개인정보 수집/이용(선택)
   bool marketing = false; // (선택) 이벤트/혜택 수신
 
   bool get requiredOk => age14 && terms && privacy;
 
   // 약관/개인정보 처리방침 노션 페이지 링크
-  static const String _termsUrl = 'https://www.notion.so/3a8427c6192e806489a8f5c72799f376';
-  static const String _privacyUrl = 'https://www.notion.so/3a8427c6192e8068a905c521c0877420';
-  static const String _marketingUrl = 'https://www.notion.so/3a8427c6192e8034a481e8a423dfe3be';
+  static const String _termsUrl =
+      'https://www.notion.so/3a8427c6192e806489a8f5c72799f376';
+  static const String _privacyUrl =
+      'https://www.notion.so/3a8427c6192e8068a905c521c0877420';
+  static const String _marketingUrl =
+      'https://www.notion.so/3a8427c6192e8034a481e8a423dfe3be';
 
   Future<void> _openLink(String url) async {
     final uri = Uri.parse(url);
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('페이지를 열 수 없습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('페이지를 열 수 없습니다.')));
     }
   }
 
@@ -86,96 +86,98 @@ class _SignupTermsSheetState extends State<SignupTermsSheet> {
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
-      child: SafeArea(
-        top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 드래그 핸들
-              Container(
-                width: 44,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-
-              // 모두 동의
-              _AllAgreeTile(
-                value: all,
-                onChanged: _toggleAll,
-              ),
-
-              const SizedBox(height: 12),
-
-              _AgreeRow(
-                value: age14,
-                label: '(필수) 만 14세 이상입니다',
-                onChanged: (v) => _toggleItem('age14', v),
-                onTapDetail: null,
-              ),
-              _AgreeRow(
-                value: terms,
-                label: '(필수) 서비스 이용약관',
-                onChanged: (v) => _toggleItem('terms', v),
-                onTapDetail: () => _openLink(_termsUrl),
-              ),
-              _AgreeRow(
-                value: privacy,
-                label: '(필수) 개인정보 수집 및 이용에 대한 안내',
-                onChanged: (v) => _toggleItem('privacy', v),
-                onTapDetail: () => _openLink(_privacyUrl),
-              ),
-              _AgreeRow(
-                value: privacyOpt,
-                label: '(선택) 개인정보 수집 및 이용에 대한 안내',
-                onChanged: (v) => _toggleItem('privacyOpt', v),
-                onTapDetail: () => _openLink(_privacyUrl),
-              ),
-              _AgreeRow(
-                value: marketing,
-                label: '(선택) 이벤트 등 맞춤 혜택/정보 수신',
-                onChanged: (v) => _toggleItem('marketing', v),
-                onTapDetail: () => _openLink(_marketingUrl),
-              ),
-
-              const SizedBox(height: 16),
-
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton(
-                  onPressed: requiredOk
-                      ? () {
-                    widget.onAgreed(); // ✅ 부모(OnboardingFlowScreen)에서 정의한 이동 로직 실행
-                  }
-                      : null,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF1C1C22),
-                    disabledBackgroundColor: const Color(0xFFE5E7EB),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    '다음',
-                    style: TextStyle(
-                      color: requiredOk ? Colors.white : const Color(0xFF9CA3AF),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 드래그 핸들
+                Container(
+                  width: 44,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE5E7EB),
+                    borderRadius: BorderRadius.circular(99),
                   ),
                 ),
-              ),
-            ],
+
+                // 모두 동의
+                _AllAgreeTile(value: all, onChanged: _toggleAll),
+
+                const SizedBox(height: 12),
+
+                _AgreeRow(
+                  value: age14,
+                  label: '(필수) 만 14세 이상입니다',
+                  onChanged: (v) => _toggleItem('age14', v),
+                  onTapDetail: null,
+                ),
+                _AgreeRow(
+                  value: terms,
+                  label: '(필수) 서비스 이용약관',
+                  onChanged: (v) => _toggleItem('terms', v),
+                  onTapDetail: () => _openLink(_termsUrl),
+                ),
+                _AgreeRow(
+                  value: privacy,
+                  label: '(필수) 개인정보 수집 및 이용에 대한 안내',
+                  onChanged: (v) => _toggleItem('privacy', v),
+                  onTapDetail: () => _openLink(_privacyUrl),
+                ),
+                _AgreeRow(
+                  value: privacyOpt,
+                  label: '(선택) 개인정보 수집 및 이용에 대한 안내',
+                  onChanged: (v) => _toggleItem('privacyOpt', v),
+                  onTapDetail: () => _openLink(_privacyUrl),
+                ),
+                _AgreeRow(
+                  value: marketing,
+                  label: '(선택) 이벤트 등 맞춤 혜택/정보 수신',
+                  onChanged: (v) => _toggleItem('marketing', v),
+                  onTapDetail: () => _openLink(_marketingUrl),
+                ),
+
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton(
+                    onPressed: requiredOk
+                        ? () {
+                            widget
+                                .onAgreed(); // ✅ 부모(OnboardingFlowScreen)에서 정의한 이동 로직 실행
+                          }
+                        : null,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF1C1C22),
+                      disabledBackgroundColor: const Color(0xFFE5E7EB),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      '다음',
+                      style: TextStyle(
+                        color: requiredOk
+                            ? Colors.white
+                            : const Color(0xFF9CA3AF),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -187,10 +189,7 @@ class _AllAgreeTile extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
 
-  const _AllAgreeTile({
-    required this.value,
-    required this.onChanged,
-  });
+  const _AllAgreeTile({required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -202,11 +201,7 @@ class _AllAgreeTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _CircleCheck(
-            value: value,
-            onTap: () => onChanged(!value),
-            size: 24,
-          ),
+          _CircleCheck(value: value, onTap: () => onChanged(!value), size: 24),
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
@@ -244,8 +239,8 @@ class _AgreeRow extends StatelessWidget {
       // 터치 영역(InkWell) 안쪽에 패딩을 줍니다.
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10), // 여백을 4~6 정도로 일정하게 줌
-        child: SizedBox(
-          height: 24, // [핵심 해결책] 모든 줄의 높이를 24px(아이콘 크기)로 고정
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 24),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center, // 세로 중앙 정렬
             children: [
@@ -275,9 +270,9 @@ class _AgreeRow extends StatelessWidget {
                     constraints: const BoxConstraints(),
                     onPressed: onTapDetail,
                     icon: const Icon(
-                        Icons.chevron_right,
-                        color: Color(0xFF9CA3AF),
-                        size: 20
+                      Icons.chevron_right,
+                      color: Color(0xFF9CA3AF),
+                      size: 20,
                     ),
                   ),
                 ),
@@ -303,7 +298,9 @@ class _CircleCheck extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 1. 테두리 색상: 체크되면 주황색, 아니면 회색
-    final Color borderColor = value ? const Color(0xFFF84E00) : const Color(0xFFD1D5DB);
+    final Color borderColor = value
+        ? const Color(0xFFF84E00)
+        : const Color(0xFFD1D5DB);
 
     // 2. 배경 색상: 체크되면 주황색, 아니면 흰색
     final Color fillColor = value ? const Color(0xFFF84E00) : Colors.white;
