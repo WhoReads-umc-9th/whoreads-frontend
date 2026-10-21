@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/common/job_tag.dart';
 import '../../core/network/api_client.dart';
 import '../../services/library_service.dart';
 import '../books/BookDetailPage.dart';
@@ -426,27 +427,12 @@ class _CelebritiesBookPageState extends State<CelebritiesBookPage> {
                   ),
                   const SizedBox(height: 8),
                   Wrap(
+                    alignment: WrapAlignment.center,
                     spacing: 6,
-                    children: celebrityProfile!.jobTags.map((tag) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF007AFF),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          tag,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                    runSpacing: 6,
+                    children: celebrityProfile!.jobTags
+                        .map((tag) => JobTag(tag))
+                        .toList(),
                   ),
                   const SizedBox(height: 20),
                   Container(

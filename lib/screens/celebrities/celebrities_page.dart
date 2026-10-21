@@ -4,6 +4,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:whoreads/screens/notification_screen.dart';
 import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/network/api_client.dart';
+import '../../widgets/common/job_tag.dart';
 import '../my_library/my_library_page.dart';
 import '../users/profile.dart';
 import 'celebrities_book_page.dart';
@@ -23,6 +24,7 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
 
   List<dynamic> celebrities = [];
   bool isLoading = false;
+  int _requestId = 0;
 
   Map<String, String?> categoryMap = {
     '전체': null,
@@ -62,14 +64,8 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
   Future<void> fetchCelebritiesCategories() async {
     if (!mounted) return;
 
-    setState(() => isLoading = true);
-    final tag = categoryMap[selectedCategory];
-
     try {
-      final response = await ApiClient.dio.get(
-        '/celebrities/categories',
-        queryParameters: tag == null ? null : {'tag': tag},
-      );
+      final response = await ApiClient.dio.get('/celebrities/categories');
 
       debugPrint('STATUS CODE: ${response.statusCode}');
 
@@ -87,9 +83,10 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
           items = [];
         }
 
-        Map<String, String?> newCategoryMap = {};
+        final Map<String, String?> newCategoryMap = {'전체': null};
 
         for (var it in items) {
+          if (it['name'] == '전체') continue;
           newCategoryMap.putIfAbsent(it['name'], () => it['code']);
         }
 
@@ -104,16 +101,13 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
     } catch (e) {
       debugPrint('네트워크 에러: $e');
     }
-
-    if (!mounted) return;
-
-    setState(() => isLoading = false);
   }
 
   Future<void> fetchCelebrities() async {
     if (!mounted) return;
 
     setState(() => isLoading = true);
+    final requestId = ++_requestId;
     final tag = categoryMap[selectedCategory];
 
     try {
@@ -138,7 +132,7 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
           items = [];
         }
 
-        if (!mounted) return;
+        if (!mounted || requestId != _requestId) return;
 
         setState(() {
           celebrities = items;
@@ -150,7 +144,7 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
       debugPrint('네트워크 에러: $e');
     }
 
-    if (!mounted) return;
+    if (!mounted || requestId != _requestId) return;
 
     setState(() => isLoading = false);
   }
@@ -160,7 +154,14 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
       selectedCategory = category;
       isDropdownOpen = false;
     });
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
     fetchCelebrities();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -273,19 +274,51 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
                     ? const Center(child: CircularProgressIndicator())
                     : celebrities.isEmpty
                     ? const Center(child: Text('표시할 인물 정보가 없습니다.'))
-                    : GridView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 24,
-                              childAspectRatio: 0.48,
-                            ),
-                        itemCount: celebrities.length,
-                        itemBuilder: (context, index) {
-                          return _CelebrityCard(celeb: celebrities[index]);
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          final cardWidth = (constraints.maxWidth - 56) / 3;
+                          final scaler = MediaQuery.textScalerOf(context);
+                          var tagHeight = scaler.scale(12) * 1.3;
+                          for (final celeb in celebrities) {
+                            for (final tag
+                                in (celeb['job_tags'] as List? ?? []).take(2)) {
+                              final painter = TextPainter(
+                                text: TextSpan(
+                                  text: tag.toString(),
+                                  style: JobTag.textStyle,
+                                ),
+                                textScaler: scaler,
+                                textDirection: Directionality.of(context),
+                                maxLines: 2,
+                              )..layout(maxWidth: cardWidth - 16);
+                              if (painter.height > tagHeight) {
+                                tagHeight = painter.height;
+                              }
+                              painter.dispose();
+                            }
+                          }
+                          final cardHeight =
+                              cardWidth * 4 / 3 +
+                              6 +
+                              scaler.scale(14) * 1.3 +
+                              4 +
+                              2 * (tagHeight + 8) +
+                              4;
+                          return GridView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 24,
+                                  mainAxisExtent: cardHeight.ceilToDouble() + 1,
+                                ),
+                            itemCount: celebrities.length,
+                            itemBuilder: (context, index) {
+                              return _CelebrityCard(celeb: celebrities[index]);
+                            },
+                          );
                         },
                       ),
               ),
@@ -299,6 +332,7 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
               left: 0,
               right: 0,
               child: Container(
+                key: const ValueKey('celebrities-category-menu'),
                 width: double.infinity,
                 constraints: const BoxConstraints(maxHeight: 400),
                 decoration: BoxDecoration(
@@ -402,36 +436,6 @@ class _CelebrityCard extends StatelessWidget {
 
   const _CelebrityCard({required this.celeb});
 
-  Color _getJobColor(String job) {
-    const Map<String, int> jobColorMap = {
-      '가수': 0xFF0881F9,
-      '배우': 0xFF0F09B2,
-      '기업가': 0xFF9747FF,
-      '학자': 0xFF1BA430,
-      '스포츠선수': 0xFF7C98FD,
-      '아이돌': 0xFFFF95C0,
-      '유튜버': 0xFF0DA7FA,
-      '아나운서': 0xFFF89B05,
-      '개그맨': 0xFF179B7C,
-      '작가': 0xFF6A8CC7,
-      '영화감독': 0xFF8FBA21,
-      '교수': 0xFF350AC3,
-      '요리사': 0xFFB98F82,
-      '뮤지컬배우': 0xFFE8C252,
-      '강사': 0xFF6D524D,
-      '프로파일러': 0xFF295E55,
-      '문학평론가': 0xFFF84E00,
-      '과학관장': 0xFF064D93,
-      '번역가': 0xFFCF33D2,
-      '작사가': 0xFFF28789,
-      '생물학자': 0xFFC0ACEC,
-      '정치인': 0xFF7C8A98,
-    };
-
-    final hexValue = jobColorMap[job];
-    return hexValue != null ? Color(hexValue) : Colors.grey;
-  }
-
   @override
   Widget build(BuildContext context) {
     final List tags = celeb['job_tags'] ?? [];
@@ -469,51 +473,25 @@ class _CelebrityCard extends StatelessWidget {
 
           Text(
             celeb['name']?.toString() ?? '이름 없음',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              height: 1.3,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
 
-          // 3. 태그 영역 (FittedBox를 활용해 남은 공간 안에서 자동 스케일 다운)
-          Expanded(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 4,
-                  runSpacing: 4,
-                  children: tags.take(2).map<Widget>((tag) {
-                    final color = _getJobColor(tag);
-
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          tag,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 4,
+            runSpacing: 4,
+            children: tags
+                .take(2)
+                .map<Widget>((tag) => JobTag(tag.toString()))
+                .toList(),
           ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
+import '../../widgets/common/job_tag.dart';
 
 class CelebrityDetailPage extends StatefulWidget {
   final int celebrityId;
@@ -140,28 +141,12 @@ class _CelebrityDetailPageState extends State<CelebrityDetailPage> {
 
             /// ================= 직업 태그 =================
             Wrap(
+              alignment: WrapAlignment.center,
               spacing: 8,
+              runSpacing: 6,
               children: (celebrity!['job_tags'] as List)
                   .take(2)
-                  .map<Widget>((tag) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    tag,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                    ),
-                  ),
-                );
-              }).toList(),
+                  .map<Widget>((tag) => JobTag(tag.toString())).toList(),
             ),
 
             const SizedBox(height: 16),
