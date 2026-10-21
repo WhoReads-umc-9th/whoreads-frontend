@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
@@ -20,6 +21,12 @@ class TopicsPage extends StatefulWidget {
 
 class _TopicsPageState extends State<TopicsPage> {
   final ScrollController _scrollController = ScrollController();
+
+  final _categoryLink = LayerLink();
+  final _bodyKey = GlobalKey();
+  final _categoryKey = GlobalKey();
+  final _bannersKey = GlobalKey();
+  double _dropdownMaxHeight = 300;
 
   String selectedCategory = '전체';
   bool isDropdownOpen = false;
@@ -286,6 +293,22 @@ class _TopicsPageState extends State<TopicsPage> {
   // 카테고리 선택
   // =========================================================
 
+  void _toggleCategories() {
+    if (!isDropdownOpen) {
+      final body = _bodyKey.currentContext?.findRenderObject() as RenderBox?;
+      final category =
+          _categoryKey.currentContext?.findRenderObject() as RenderBox?;
+      if (body != null && category != null) {
+        final bottom = body.localToGlobal(Offset(0, body.size.height)).dy;
+        final anchor = category
+            .localToGlobal(Offset(0, category.size.height))
+            .dy;
+        _dropdownMaxHeight = (bottom - anchor - 8).clamp(0, 300).toDouble();
+      }
+    }
+    setState(() => isDropdownOpen = !isDropdownOpen);
+  }
+
   Future<void> onCategorySelected(String category) async {
     if (!mounted) {
       return;
@@ -296,6 +319,16 @@ class _TopicsPageState extends State<TopicsPage> {
       isDropdownOpen = false;
 
       _updateSelectedBooks();
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final banners =
+          _bannersKey.currentContext?.findRenderObject() as RenderBox?;
+      final offset = banners?.size.height ?? 0;
+      _scrollController.jumpTo(
+        math.min(offset, _scrollController.position.maxScrollExtent),
+      );
     });
 
     // 현재 가지고 있는 책 중 선택 장르가
@@ -342,8 +375,9 @@ class _TopicsPageState extends State<TopicsPage> {
                   orElse: () => <String, dynamic>{},
                 )
               : <String, dynamic>{};
-          final List<dynamic> themeBooks =
-              topic['books'] is List ? topic['books'] as List<dynamic> : [];
+          final List<dynamic> themeBooks = topic['books'] is List
+              ? topic['books'] as List<dynamic>
+              : [];
 
           actualCount = (topic['book_count'] as num?)?.toInt() ?? 0;
 
@@ -482,392 +516,440 @@ class _TopicsPageState extends State<TopicsPage> {
         ],
       ),
 
-      body: SizedBox(
-        height: double.infinity,
-
-        child: Stack(
-          children: [
-            SingleChildScrollView(
-              controller: _scrollController,
-
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-
-                children: [
-                  const SizedBox(height: 16),
-
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-
-                    child: Text(
-                      "이런 주제 어때요?",
-
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // =================================================
-                  // 배너
-                  // =================================================
-                  SizedBox(
-                    height: 150,
-
-                    child: isBannersLoading && banners.isEmpty
-                        ? const Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFFFF6A00),
-                              ),
-                            ),
-                          )
-                        : PageView(
-                            controller: PageController(viewportFraction: 0.7),
-
-                            padEnds: false,
-
-                            children: banners.map((banner) {
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-
-                                    MaterialPageRoute(
-                                      builder: (_) => TopicBannerPage(
-                                        theme: banner['theme'],
-                                        title: banner['title'],
-                                        description: banner['description'],
-                                      ),
-                                    ),
-                                  );
-                                },
-
-                                child: Padding(
-                                  padding: const EdgeInsets.only(left: 12),
-
-                                  child: _TopicBannerCard(banner: banner),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // =================================================
-                  // 카테고리
-                  // =================================================
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final headerHeight = math.max(
+            64.0,
+            MediaQuery.textScalerOf(context).scale(14) * 1.4 + 40,
+          );
+          return Stack(
+            key: _bodyKey,
+            children: [
+              CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      key: _bannersKey,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
+                        const SizedBox(height: 16),
 
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFB9566),
-
-                            borderRadius: BorderRadius.circular(50),
-                          ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
 
                           child: Text(
-                            selectedCategory,
+                            "이런 주제 어때요?",
 
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              color: Colors.black,
                             ),
                           ),
                         ),
 
-                        GestureDetector(
-                          onTap: () {
-                            setState(() => isDropdownOpen = !isDropdownOpen);
-                          },
+                        const SizedBox(height: 12),
 
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
+                        // =================================================
+                        // 배너
+                        // =================================================
+                        SizedBox(
+                          height: 150,
 
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3F4F6),
+                          child: isBannersLoading && banners.isEmpty
+                              ? const Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
 
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-
-                            child: Row(
-                              children: [
-                                Text(
-                                  isDropdownOpen ? '접기' : '카테고리',
-
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w500,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFFFF6A00),
+                                    ),
                                   ),
+                                )
+                              : PageView(
+                                  controller: PageController(
+                                    viewportFraction: 0.7,
+                                  ),
+
+                                  padEnds: false,
+
+                                  children: banners.map((banner) {
+                                    return GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+
+                                          MaterialPageRoute(
+                                            builder: (_) => TopicBannerPage(
+                                              theme: banner['theme'],
+                                              title: banner['title'],
+                                              description:
+                                                  banner['description'],
+                                            ),
+                                          ),
+                                        );
+                                      },
+
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 12,
+                                        ),
+
+                                        child: _TopicBannerCard(banner: banner),
+                                      ),
+                                    );
+                                  }).toList(),
                                 ),
-
-                                const SizedBox(width: 4),
-
-                                Icon(
-                                  isDropdownOpen
-                                      ? Icons.keyboard_arrow_up
-                                      : Icons.keyboard_arrow_down,
-
-                                  size: 18,
-                                  color: Colors.black54,
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
+
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 16),
-
-                  // =================================================
-                  // 도서
-                  // =================================================
-                  if (_booksError != null)
-                    Column(
-                      children: [
-                        Text(_booksError!, textAlign: TextAlign.center),
-                        TextButton(
-                          onPressed: _initializeBooks,
-                          child: const Text('다시 시도'),
-                        ),
-                      ],
-                    )
-                  else if (isBooksLoading && selectBooks.isEmpty)
-                    const SizedBox(
-                      height: 200,
-
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFFFF6A00),
-                        ),
-                      ),
-                    )
-                  else if (selectBooks.isEmpty && !hasNext)
-                    const SizedBox(
-                      height: 200,
-
-                      child: Center(
-                        child: Text(
-                          '표시할 도서 정보가 없습니다.',
-
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-
-                      child: GridView.builder(
-                        physics: const NeverScrollableScrollPhysics(),
-
-                        shrinkWrap: true,
-
-                        addAutomaticKeepAlives: false,
-
-                        addRepaintBoundaries: false,
-
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 24,
-                              childAspectRatio: 0.48,
-                            ),
-
-                        itemCount: selectBooks.length,
-
-                        itemBuilder: (context, index) {
-                          final dynamic book = selectBooks[index];
-
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-
-                                MaterialPageRoute(
-                                  builder: (_) => BookDetailPage(
-                                    bookId: book['id'] ?? book['book_id'],
-                                  ),
-                                ),
-                              );
-                            },
-
-                            child: _TopicBookCard(book: book),
-                          );
-                        },
-                      ),
-                    ),
-
-                  // =================================================
-                  // 추가 페이지 로딩
-                  // =================================================
-                  if (isLoadingMore)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-
-                      child: Center(
-                        child: SizedBox(
-                          width: 24,
-                          height: 24,
-
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Color(0xFFFF6A00),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
-
-            // =====================================================
-            // 카테고리 드롭다운
-            // =====================================================
-            if (isDropdownOpen)
-              Positioned.fill(
-                child: Stack(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        setState(() => isDropdownOpen = false);
-                      },
-
-                      child: Container(color: Colors.transparent),
-                    ),
-
-                    Positioned(
-                      top: 270,
-                      left: 0,
-                      right: 0,
-
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-
-                        constraints: const BoxConstraints(maxHeight: 300),
-
-                        decoration: BoxDecoration(
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _CategoryHeader(
+                      height: headerHeight,
+                      child: CompositedTransformTarget(
+                        key: _categoryKey,
+                        link: _categoryLink,
+                        child: ColoredBox(
+                          key: const ValueKey('topics-category-bar'),
                           color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
 
-                          borderRadius: BorderRadius.circular(16),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
 
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
 
-                              blurRadius: 10,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFB9566),
 
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
+                                      borderRadius: BorderRadius.circular(50),
+                                    ),
 
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(16),
+                                    child: Text(
+                                      selectedCategory,
 
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final itemWidth =
-                                  (constraints.maxWidth - (8 * 3)) / 4;
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
 
-                              return Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-
-                                children: categoryKeys.map((category) {
-                                  final isSelected =
-                                      category == selectedCategory;
-
-                                  return GestureDetector(
+                                  GestureDetector(
                                     onTap: () {
-                                      onCategorySelected(category);
+                                      _toggleCategories();
                                     },
 
                                     child: Container(
-                                      width: itemWidth,
-
                                       padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
                                         vertical: 6,
                                       ),
 
-                                      alignment: Alignment.center,
-
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        color: const Color(0xFFF3F4F6),
 
-                                        borderRadius: BorderRadius.circular(8),
-
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? const Color(0xFFFB9566)
-                                              : const Color(0xFFE5E7EB),
-
-                                          width: 1,
-                                        ),
+                                        borderRadius: BorderRadius.circular(50),
                                       ),
 
-                                      child: Text(
-                                        category,
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            isDropdownOpen ? '접기' : '카테고리',
 
-                                        style: TextStyle(
-                                          fontSize: 12,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.black87,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
 
-                                          color: isSelected
-                                              ? const Color(0xFFFB9566)
-                                              : Colors.black87,
+                                          const SizedBox(width: 4),
 
-                                          fontWeight: isSelected
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                        ),
+                                          Icon(
+                                            isDropdownOpen
+                                                ? Icons.keyboard_arrow_up
+                                                : Icons.keyboard_arrow_down,
 
-                                        maxLines: 1,
-
-                                        overflow: TextOverflow.ellipsis,
+                                            size: 18,
+                                            color: Colors.black54,
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  );
-                                }).toList(),
-                              );
-                            },
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: math.max(
+                          0,
+                          constraints.maxHeight - headerHeight,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+
+                          // =================================================
+                          // 도서
+                          // =================================================
+                          if (_booksError != null)
+                            Column(
+                              children: [
+                                Text(_booksError!, textAlign: TextAlign.center),
+                                TextButton(
+                                  onPressed: _initializeBooks,
+                                  child: const Text('다시 시도'),
+                                ),
+                              ],
+                            )
+                          else if (isBooksLoading && selectBooks.isEmpty)
+                            const SizedBox(
+                              height: 200,
+
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFFF6A00),
+                                ),
+                              ),
+                            )
+                          else if (selectBooks.isEmpty && !hasNext)
+                            const SizedBox(
+                              height: 200,
+
+                              child: Center(
+                                child: Text(
+                                  '표시할 도서 정보가 없습니다.',
+
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                            )
+                          else
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+
+                              child: GridView.builder(
+                                physics: const NeverScrollableScrollPhysics(),
+
+                                shrinkWrap: true,
+
+                                addAutomaticKeepAlives: false,
+
+                                addRepaintBoundaries: false,
+
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 24,
+                                      childAspectRatio: 0.48,
+                                    ),
+
+                                itemCount: selectBooks.length,
+
+                                itemBuilder: (context, index) {
+                                  final dynamic book = selectBooks[index];
+
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+
+                                        MaterialPageRoute(
+                                          builder: (_) => BookDetailPage(
+                                            bookId:
+                                                book['id'] ?? book['book_id'],
+                                          ),
+                                        ),
+                                      );
+                                    },
+
+                                    child: _TopicBookCard(book: book),
+                                  );
+                                },
+                              ),
+                            ),
+
+                          // =================================================
+                          // 추가 페이지 로딩
+                          // =================================================
+                          if (isLoadingMore)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24),
+
+                              child: Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFFFF6A00),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-          ],
-        ),
+              if (isDropdownOpen)
+                Positioned.fill(
+                  child: Stack(
+                    children: [
+                      GestureDetector(
+                        onTap: () => setState(() => isDropdownOpen = false),
+                        child: Container(color: Colors.transparent),
+                      ),
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: CompositedTransformFollower(
+                          link: _categoryLink,
+                          showWhenUnlinked: false,
+                          targetAnchor: Alignment.bottomLeft,
+                          followerAnchor: Alignment.topLeft,
+                          child: Container(
+                            key: const ValueKey('topics-category-menu'),
+                            margin: const EdgeInsets.symmetric(horizontal: 16),
+
+                            constraints: BoxConstraints(
+                              maxHeight: _dropdownMaxHeight,
+                            ),
+
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+
+                              borderRadius: BorderRadius.circular(16),
+
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+
+                                  blurRadius: 10,
+
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.all(16),
+
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final itemWidth =
+                                      (constraints.maxWidth - (8 * 3)) / 4;
+
+                                  return Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+
+                                    children: categoryKeys.map((category) {
+                                      final isSelected =
+                                          category == selectedCategory;
+
+                                      return GestureDetector(
+                                        onTap: () {
+                                          onCategorySelected(category);
+                                        },
+
+                                        child: Container(
+                                          width: itemWidth,
+
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 6,
+                                          ),
+
+                                          alignment: Alignment.center,
+
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? const Color(0xFFFB9566)
+                                                  : const Color(0xFFE5E7EB),
+
+                                              width: 1,
+                                            ),
+                                          ),
+
+                                          child: Text(
+                                            category,
+
+                                            style: TextStyle(
+                                              fontSize: 12,
+
+                                              color: isSelected
+                                                  ? const Color(0xFFFB9566)
+                                                  : Colors.black87,
+
+                                              fontWeight: isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                            ),
+
+                                            maxLines: 1,
+
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
       ),
 
       // =========================================================
@@ -1207,4 +1289,27 @@ class _TopicBookCard extends StatelessWidget {
       ],
     );
   }
+}
+
+class _CategoryHeader extends SliverPersistentHeaderDelegate {
+  _CategoryHeader({required this.height, required this.child});
+
+  final double height;
+  final Widget child;
+
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => SizedBox.expand(child: child);
+
+  @override
+  bool shouldRebuild(covariant _CategoryHeader oldDelegate) =>
+      oldDelegate.height != height || oldDelegate.child != child;
 }
