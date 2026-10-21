@@ -399,11 +399,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  selectedDomain ?? '선택',
-                                  style: TextStyle(
-                                    color: selectedDomain == null ? Colors.grey : Colors.black,
-                                    fontSize: 14,
+                                Expanded(
+                                  child: Text(
+                                    selectedDomain ?? '선택',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: selectedDomain == null ? Colors.grey : Colors.black,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
                                 const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.grey),

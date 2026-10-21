@@ -240,7 +240,7 @@ class _FindAccountPageState extends State<FindAccountPage> {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: isVerified ? _buildResult() : _buildForm(),
       ),

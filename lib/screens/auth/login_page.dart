@@ -379,6 +379,7 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 28),
 
               Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Wrap(
                     alignment: WrapAlignment.center,
@@ -388,6 +389,7 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       const Text(
                         '비밀번호를 잊으셨나요?',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
                           color: Color(0xFF9E9E9E),
@@ -398,6 +400,7 @@ class _LoginPageState extends State<LoginPage> {
                         onTap: _onTapResetPassword,
                         child: const Text(
                           '비밀번호 재설정',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,
                             color: Color(0xFF4B5563),
@@ -417,6 +420,7 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       const Text(
                         '계정이 기억나지 않나요?',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
                           color: Color(0xFF9E9E9E),
@@ -431,6 +435,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         child: const Text(
                           '계정 찾기',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13,
                             color: Color(0xFF4B5563),
