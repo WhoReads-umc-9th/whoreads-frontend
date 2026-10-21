@@ -45,6 +45,19 @@ CI용 배포 인증서와 프로파일은 기존 개발 인증서를 해지하�
 프로파일 만료 또는 인증서 갱신 시 해당 Secret을 교체한다. 앱 `.env`에는 BASE_URL만 포함한다.
 업로드 API 키는 prepare/publish 작업에만, 서명 자료는 build 작업에만, 웹훅은 notify 작업에만 전달한다.
 
+### 다른 노트북에서 최초 서명 설정을 돕는 경우
+
+Apple Developer에 로그인한 Mac을 사용할 수 없다면 App Store Connect에서 임시 관리자 팀 API 키를 만들고,
+같은 GitHub 저장소의 `IOS_SETUP_KEY_ID`와 `IOS_SETUP_PRIVATE_KEY`에 각각 키 ID와 `.p8` PEM 전체를 등록한다.
+기존 `ASC_*` Developer 키는 교체하지 않는다. 임시 관리자 키는 모든 앱에 대한 권한을 가지므로 최초 설정 후 해지한다.
+
+`Initialize WhoReads iOS Signing`은 수동 main 실행만 허용한다. release Mac에서 생성한 CSR을 입력받아
+그 공개 키에 연결된 배포 인증서와 WhoReads App Store 프로파일만 생성하거나 재사용한다.
+기존 인증서·프로파일을 삭제하지 않는다. 결과는 CSR 소유자만 복호화할 수 있게 암호화하고 1일 보관한다.
+이 작업은 빌드 업로드나 정식 출시를 수행하지 않는다. release Mac에서 결과를 검증한 다음 일반 배포용
+`IOS_DISTRIBUTION_CERTIFICATE_*`와 `IOS_PROVISIONING_PROFILE_BASE64`를 등록하고, 두 임시 Setup Secrets를 삭제한다.
+Apple의 임시 관리자 API 키도 발급한 사용자가 해지한 뒤 일반 TestFlight 워크플로를 실행한다.
+
 ## 버전과 재실행
 
 Apple에 올라간 iOS 버전을 조회해 표시 버전의 patch와 build 번호를 함께 증가시킨다.
