@@ -415,7 +415,12 @@ Device: $deviceModel
                     const SizedBox(height: 16),
                     dnaResult.isEmpty
                         ? const Text('진행한 독서 DNA 테스트가 없습니다.', style: TextStyle(color: Colors.grey, fontSize: 14))
-                        : RichText(
+                        : FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: RichText(
+                      maxLines: 1,
+                      softWrap: false,
                       text: TextSpan(
                         style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
                         children: [
@@ -426,6 +431,7 @@ Device: $deviceModel
                           ),
                           const TextSpan(text: ' 독서하는 사람입니다'),
                         ],
+                      ),
                       ),
                     ),
                   ],
