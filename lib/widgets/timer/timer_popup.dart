@@ -33,11 +33,13 @@ class TimerPopup extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       backgroundColor: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -45,6 +47,7 @@ class TimerPopup extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF1C1B1F),
                 height: 1.4,
+              ),
               ),
             ),
 
@@ -123,7 +126,9 @@ class TimerPopup extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     elevation: 0,
                   ),
-                  child: Text(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
                     rightButtonText,
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
