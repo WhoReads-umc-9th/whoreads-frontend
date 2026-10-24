@@ -4,6 +4,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:whoreads/screens/notification_screen.dart';
 import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/network/api_client.dart';
+import '../../core/router/tab_page_route.dart';
 import '../../widgets/common/job_tag.dart';
 import '../my_library/my_library_page.dart';
 import '../users/profile.dart';
@@ -411,12 +412,12 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
           } else if (index == 1) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const MyLibraryPage()),
+              TabPageRoute(builder: (context) => const MyLibraryPage()),
             );
           } else if (index == 2) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const TopicsPage()),
+              TabPageRoute(builder: (context) => const TopicsPage()),
             );
           }
         },

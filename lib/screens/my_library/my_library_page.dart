@@ -7,6 +7,7 @@ import 'package:whoreads/screens/timer/timer_default_screen.dart';
 import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/auth/token_storage.dart';
 import '../../core/network/api_client.dart';
+import '../../core/router/tab_page_route.dart';
 import '../celebrities/celebrities_page.dart';
 import '../dna_test/dnaTestDialog.dart';
 import '../dna_test/dna_test_page.dart';
@@ -254,14 +255,14 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
             if (index == 0) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
+                TabPageRoute(
                   builder: (context) => const CelebritiesPage(),
                 ),
               );
             } else if (index == 2) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const TopicsPage()),
+                TabPageRoute(builder: (context) => const TopicsPage()),
               );
             }
           },

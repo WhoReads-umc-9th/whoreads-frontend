@@ -6,6 +6,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:whoreads/screens/topics/topic_banner_page.dart';
 
 import '../../core/network/api_client.dart';
+import '../../core/router/tab_page_route.dart';
 import '../books/BookDetailPage.dart';
 import '../celebrities/celebrities_page.dart';
 import '../my_library/my_library_page.dart';
@@ -967,13 +968,13 @@ class _TopicsPageState extends State<TopicsPage> {
             Navigator.pushReplacement(
               context,
 
-              MaterialPageRoute(builder: (context) => const CelebritiesPage()),
+              TabPageRoute(builder: (context) => const CelebritiesPage()),
             );
           } else if (index == 1) {
             Navigator.pushReplacement(
               context,
 
-              MaterialPageRoute(builder: (context) => const MyLibraryPage()),
+              TabPageRoute(builder: (context) => const MyLibraryPage()),
             );
           }
         },
