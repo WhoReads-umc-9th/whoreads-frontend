@@ -1,0 +1,44 @@
+name: Initialize WhoReads iOS Signing
+
+on:
+  workflow_dispatch:
+    inputs:
+      csr:
+        description: CSR generated on the release Mac; never pass a private key
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: whoreads-ios-signing-setup
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - name: Initialize the WhoReads distribution certificate and profile once
+        env:
+          IOS_SETUP_KEY_ID: ${{ secrets.IOS_SETUP_KEY_ID }}
+          IOS_SETUP_PRIVATE_KEY: ${{ secrets.IOS_SETUP_PRIVATE_KEY }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          IOS_SETUP_CSR: ${{ inputs.csr }}
+        run: bundle exec ruby scripts/ios_signing_setup.rb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-ios-signing-setup
+          path: .release/ios-signing-setup/encrypted.json
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error

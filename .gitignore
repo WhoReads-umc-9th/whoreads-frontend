@@ -16,6 +16,9 @@
 *.keystore
 *.p12
 *.pfx
+*.p8
+*.mobileprovision
+*.certSigningRequest
 key.properties
 **/*service-account*.json
 .swiftpm/
