@@ -215,6 +215,7 @@ Device: $deviceModel
       barrierDismissible: false,
       builder: (dialogContext) => TimerPopup(
         title: '정말 탈퇴하시겠어요?',
+        withdrawalConfirm: true,
         description: '탈퇴 시 계정 정보 및 기록이 모두 삭제되며,\n복구할 수 없습니다.',
         leftButtonText: '취소',
         rightButtonText: '탈퇴하기',
