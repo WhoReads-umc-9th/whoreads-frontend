@@ -228,6 +228,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
         child: TimerViewWidget(
           timeText: _service.formatTime(_service.currentSeconds),
           percentage: progress,
+          timeColor: _service.isStopping ? const Color(0xFF999999) : Colors.black,
         ),
       );
     }
