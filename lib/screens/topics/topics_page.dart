@@ -323,7 +323,7 @@ class _TopicsPageState extends State<TopicsPage> {
       final String theme = meta['theme'];
 
       List<String> previewImages = [];
-      int actualCount = meta['defaultCount'];
+      const int actualCount = 20;
 
       try {
         final response = await ApiClient.dio.get(
@@ -344,8 +344,6 @@ class _TopicsPageState extends State<TopicsPage> {
               : <String, dynamic>{};
           final List<dynamic> themeBooks =
               topic['books'] is List ? topic['books'] as List<dynamic> : [];
-
-          actualCount = (topic['book_count'] as num?)?.toInt() ?? 0;
 
           for (var b in themeBooks) {
             if (b is Map &&
