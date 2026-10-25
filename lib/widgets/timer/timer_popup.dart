@@ -49,7 +49,7 @@ class TimerPopup extends StatelessWidget {
                 maxLines: 1,
                 softWrap: false,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: withdrawalConfirm ? 20 : 16,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF1C1B1F),
@@ -72,7 +72,7 @@ class TimerPopup extends StatelessWidget {
               Text(
                 description!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: withdrawalConfirm ? 15 : 13,
                   color: Color(0xFF79747E),
                   height: 1.4,
