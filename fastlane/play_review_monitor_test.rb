@@ -65,11 +65,11 @@ class PlayReviewMonitorTest < Minitest::Test
   end
 
   def test_discord_waits_for_confirmation_and_disables_mentions
-    response = { "id" => "123456789", "content" => "[WhoReads] - android 비공개 테스트 심사완료" }
+    response = { "id" => "123456789", "content" => MONITOR::MESSAGE }
     request = lambda do |method, url, **options|
       assert_equal "post", method
       assert url.end_with?("?wait=true")
-      assert_equal "[WhoReads] - android 비공개 테스트 심사완료", options.fetch(:body).fetch("content")
+      assert_equal "[WhoReads] - Android 비공개 테스트 배포 완료", options.fetch(:body).fetch("content")
       assert_equal({ "parse" => [] }, options.fetch(:body).fetch("allowed_mentions"))
       response
     end
@@ -87,10 +87,10 @@ class PlayReviewMonitorTest < Minitest::Test
     assert_equal 1, @store.saves
   end
 
-  def test_review_approval_notifies_before_manual_publication
-    assert_equal :sent, run_monitor([release(10, APPROVED)])
-    assert_equal 1, @webhook.calls
-    assert_equal "sent", @store.state["notifications"]["10"]["delivery"]
+  def test_review_approval_waits_for_publication
+    assert_equal :waiting, run_monitor([release(10, APPROVED)])
+    assert_equal 0, @webhook.calls
+    assert_nil @store.state["notifications"]["10"]
   end
 
   def test_already_published_current_release_can_notify_on_first_check
@@ -98,11 +98,11 @@ class PlayReviewMonitorTest < Minitest::Test
     assert_equal "123456789", @store.state["notifications"]["10"]["message_id"]
   end
 
-  def test_publication_and_repeated_checks_do_not_repeat_approval_notification
+  def test_publication_and_repeated_checks_notify_only_once
     run_monitor([release(10, APPROVED)])
     3.times { run_monitor([release(10, PUBLISHED)]) }
     assert_equal 1, @webhook.calls
-    assert_equal 2, @store.saves
+    assert_equal 3, @store.saves
   end
 
   def test_historical_approved_release_cannot_hide_new_release_in_review
@@ -133,13 +133,13 @@ class PlayReviewMonitorTest < Minitest::Test
 
   def test_state_must_be_persisted_before_discord_can_send
     @store.fail_save = true
-    assert_raises(RuntimeError) { run_monitor([release(10, APPROVED)]) }
+    assert_raises(RuntimeError) { run_monitor([release(10, PUBLISHED)]) }
     assert_equal 0, @webhook.calls
   end
 
   def test_ambiguous_delivery_is_not_automatically_repeated
     @webhook.fail_send = true
-    assert_raises(IOError) { run_monitor([release(10, APPROVED)]) }
+    assert_raises(IOError) { run_monitor([release(10, PUBLISHED)]) }
     @webhook.fail_send = false
     assert_raises(RuntimeError) { run_monitor([release(10, PUBLISHED)]) }
     assert_equal 1, @webhook.calls
@@ -150,6 +150,13 @@ class PlayReviewMonitorTest < Minitest::Test
     other = release(10, PUBLISHED).merge("track" => "production")
     assert_raises(RuntimeError) { run_monitor([other]) }
     assert_equal 0, @webhook.calls
+  end
+
+  def test_historical_release_does_not_notify_when_monitoring_starts
+    run_monitor([release(8, PUBLISHED)], minimum_version_code: 9)
+    assert_equal 0, @webhook.calls
+    assert_equal 0, @store.saves
+    assert_equal :sent, run_monitor([release(9, PUBLISHED)], minimum_version_code: 9)
   end
 
   def test_empty_and_inactive_releases_do_not_send

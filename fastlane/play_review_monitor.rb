@@ -6,9 +6,8 @@ require "uri"
 require_relative "play_release"
 
 module WhoReadsReviewMonitor
-  MESSAGE = "[WhoReads] - android 비공개 테스트 심사완료".freeze
-  APPROVED = %w[
-    RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED
+  MESSAGE = "[WhoReads] - Android 비공개 테스트 배포 완료".freeze
+  PUBLISHED = %w[
     RELEASE_LIFECYCLE_STATE_PUBLISHED
   ].freeze
   STATE_BRANCH = "codex/play-review-notifications".freeze
@@ -130,7 +129,7 @@ module WhoReadsReviewMonitor
     end
   end
 
-  def self.run(releases:, store:, discord:, check_only: false)
+  def self.run(releases:, store:, discord:, check_only: false, minimum_version_code: 0)
     candidates = releases.filter_map do |release|
       raise "Unexpected Play track in review response" unless release["track"] == WhoReadsRelease::TRACK
 
@@ -144,6 +143,7 @@ module WhoReadsReviewMonitor
     return report("No active Alpha release was returned; no notification sent") unless latest
 
     code, codes, release = latest
+    return report("Ignoring historical versionCode #{code}; waiting for #{minimum_version_code}") if code < minimum_version_code
     lifecycle = release.fetch("releaseLifecycleState")
     report("Alpha versionCode #{code}: #{lifecycle}")
     return report("Check only: no notification sent or recorded") if check_only
@@ -153,14 +153,14 @@ module WhoReadsReviewMonitor
     return report("Ignoring older versionCode #{code}; monitoring #{seen_code}") if code < seen_code
 
     state["latest_version_code"] = code
-    unless APPROVED.include?(lifecycle)
+    unless PUBLISHED.include?(lifecycle)
       store.save(state) if code > seen_code
       return :waiting
     end
     key = code.to_s
     prior = state.fetch("notifications")[key]
     if prior
-      return report("Review completion for versionCode #{code} was already notified") if prior["delivery"] == "sent"
+      return report("Publication for versionCode #{code} was already notified") if prior["delivery"] == "sent"
 
       raise "Delivery for versionCode #{code} needs reconciliation; refusing a duplicate send"
     end
@@ -193,7 +193,7 @@ if $PROGRAM_NAME == __FILE__
     WhoReadsReviewMonitor.run(releases: WhoReadsReviewMonitor.releases,
       store: WhoReadsReviewMonitor::GitHubState.new(repository: ENV.fetch("GITHUB_REPOSITORY"), token: ENV.fetch("GH_TOKEN")),
       discord: check_only ? nil : WhoReadsReviewMonitor::Discord.new(ENV.fetch("DISCORD_WEBHOOK_URL")),
-      check_only: check_only)
+      check_only: check_only, minimum_version_code: Integer(ENV.fetch("MINIMUM_VERSION_CODE", "0")))
   rescue StandardError => error
     # API response bodies and exception URLs can contain credentials.
     warn "Play review monitor failed (#{error.class})."

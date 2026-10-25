@@ -39,6 +39,9 @@ jobs:
         run: bundle exec ruby fastlane/play_review_monitor_test.rb
       - name: Check Alpha review and notify Discord once
         env:
+          # Current submitted version when publication-only notifications began.
+          # Exclude older releases if the newest submission is temporarily absent.
+          MINIMUM_VERSION_CODE: '9'
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           GH_TOKEN: ${{ github.token }}
