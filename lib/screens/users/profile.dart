@@ -214,10 +214,10 @@ Device: $deviceModel
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => TimerPopup(
-        title: '정말 회원 탈퇴를 진행하시겠습니까?',
-        description: '탈퇴 시 계정 정보 및 기록이 모두 삭제되며\n복구할 수 없습니다.',
-        leftButtonText: '계속 사용하기',
-        rightButtonText: '네 탈퇴할게요',
+        title: '정말 탈퇴하시겠어요?',
+        description: '탈퇴 시 계정 정보 및 기록이 모두 삭제되며,\n복구할 수 없습니다.',
+        leftButtonText: '취소',
+        rightButtonText: '탈퇴하기',
         singleButton: false,
         onLeftPressed: () => Navigator.maybePop(dialogContext),
         onRightPressed: () async {
