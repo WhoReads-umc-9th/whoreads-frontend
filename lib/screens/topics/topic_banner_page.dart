@@ -23,54 +23,25 @@ class TopicBannerPage extends StatefulWidget {
 
 class _TopicBannerPageState extends State<TopicBannerPage> {
   static const int pageSize = 20;
-  final ScrollController _scrollController = ScrollController();
   bool isLoading = false;
-  bool isLoadingMore = false;
-  bool hasNext = true;
-  int currentPage = 0;
   List<dynamic> books = [];
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     _fetchTopicBooks();
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (!_scrollController.hasClients || isLoading || isLoadingMore || !hasNext) {
-      return;
-    }
-    if (_scrollController.position.extentAfter < 300) {
-      _fetchTopicBooks();
-    }
-  }
-
   Future<void> _fetchTopicBooks() async {
-    if (widget.theme == null || widget.theme!.isEmpty ||
-        isLoading || isLoadingMore || !hasNext) {
+    if (widget.theme == null || widget.theme!.isEmpty || isLoading) {
       return;
     }
 
-    final firstPage = currentPage == 0;
-    setState(() {
-      if (firstPage) {
-        isLoading = true;
-      } else {
-        isLoadingMore = true;
-      }
-    });
-
+    setState(() => isLoading = true);
     try {
       final response = await ApiClient.dio.get(
         '/topics/${widget.theme}/books',
-        queryParameters: {'page': currentPage, 'size': pageSize},
+        queryParameters: {'page': 0, 'size': pageSize},
       );
 
       if (response.statusCode == 200) {
@@ -85,19 +56,14 @@ class _TopicBannerPageState extends State<TopicBannerPage> {
 
         if (!mounted) return;
         setState(() {
-          books.addAll(fetchedBooks);
-          currentPage++;
-          hasNext = fetchedBooks.length == pageSize;
+          books = fetchedBooks.take(pageSize).toList();
         });
       }
     } catch (e) {
       debugPrint('주제 상세 도서 조회 오류: $e');
     } finally {
       if (mounted) {
-        setState(() {
-          isLoading = false;
-          isLoadingMore = false;
-        });
+        setState(() => isLoading = false);
       }
     }
   }
@@ -165,19 +131,15 @@ class _TopicBannerPageState extends State<TopicBannerPage> {
                 ),
               )
                   : GridView.builder(
-                controller: _scrollController,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 24,
                   childAspectRatio: 0.55,
                 ),
-                itemCount: books.length + (isLoadingMore ? 1 : 0),
+                itemCount: books.length,
                 
                 itemBuilder: (context, index) {
-                  if (index == books.length) {
-                    return const Center(child: CircularProgressIndicator(color: Color(0xFFFF6A00)));
-                  }
                   final book = books[index];
                   final genre = book['genre'] ?? '기타';
                   final title = book['title'] ?? '제목 없음';
