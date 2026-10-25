@@ -214,10 +214,11 @@ Device: $deviceModel
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => TimerPopup(
-        title: '정말 회원 탈퇴를 진행하시겠습니까?',
-        description: '탈퇴 시 계정 정보 및 기록이 모두 삭제되며\n복구할 수 없습니다.',
-        leftButtonText: '계속 사용하기',
-        rightButtonText: '네 탈퇴할게요',
+        title: '정말 탈퇴하시겠어요?',
+        withdrawalConfirm: true,
+        description: '탈퇴 시 계정 정보 및 기록이 모두 삭제되며, 복구할 수 없습니다.',
+        leftButtonText: '취소',
+        rightButtonText: '탈퇴하기',
         singleButton: false,
         onLeftPressed: () => Navigator.maybePop(dialogContext),
         onRightPressed: () async {
@@ -415,7 +416,12 @@ Device: $deviceModel
                     const SizedBox(height: 16),
                     dnaResult.isEmpty
                         ? const Text('진행한 독서 DNA 테스트가 없습니다.', style: TextStyle(color: Colors.grey, fontSize: 14))
-                        : RichText(
+                        : FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: RichText(
+                      maxLines: 1,
+                      softWrap: false,
                       text: TextSpan(
                         style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
                         children: [
@@ -426,6 +432,7 @@ Device: $deviceModel
                           ),
                           const TextSpan(text: ' 독서하는 사람입니다'),
                         ],
+                      ),
                       ),
                     ),
                   ],

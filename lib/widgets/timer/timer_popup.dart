@@ -13,6 +13,7 @@ class TimerPopup extends StatelessWidget {
   final VoidCallback? onRightPressed;
 
   final bool singleButton;
+  final bool withdrawalConfirm;
 
   const TimerPopup({
     super.key,
@@ -25,26 +26,35 @@ class TimerPopup extends StatelessWidget {
     this.rightButtonText = '',
     this.onRightPressed,
     this.singleButton = false,
+    this.withdrawalConfirm = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       backgroundColor: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: withdrawalConfirm ? 24 : 16,
+          vertical: withdrawalConfirm ? 28 : 24,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1C1B1F),
-                height: 1.4,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                title,
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: withdrawalConfirm ? 20 : 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1C1B1F),
+                  height: 1.4,
+                ),
               ),
             ),
 
@@ -62,8 +72,8 @@ class TimerPopup extends StatelessWidget {
               Text(
                 description!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
+                style: TextStyle(
+                  fontSize: withdrawalConfirm ? 15 : 13,
                   color: Color(0xFF79747E),
                   height: 1.4,
                 ),
@@ -109,7 +119,7 @@ class TimerPopup extends StatelessWidget {
               ),
             ],
 
-            const SizedBox(height: 24),
+            SizedBox(height: withdrawalConfirm ? 32 : 24),
 
             if (singleButton)
               SizedBox(
@@ -123,9 +133,12 @@ class TimerPopup extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     elevation: 0,
                   ),
-                  child: Text(
-                    rightButtonText,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      rightButtonText,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               )
@@ -134,7 +147,7 @@ class TimerPopup extends StatelessWidget {
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: 48,
+                      height: withdrawalConfirm ? 56 : 48,
                       child: OutlinedButton(
                         onPressed: onLeftPressed,
                         style: OutlinedButton.styleFrom(
@@ -142,9 +155,13 @@ class TimerPopup extends StatelessWidget {
                           foregroundColor: const Color(0xFF1C1B1F),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: Text(
-                          leftButtonText,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            leftButtonText,
+                            maxLines: 1,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                     ),
@@ -152,7 +169,7 @@ class TimerPopup extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: SizedBox(
-                      height: 48,
+                      height: withdrawalConfirm ? 56 : 48,
                       child: ElevatedButton(
                         onPressed: onRightPressed,
                         style: ElevatedButton.styleFrom(
@@ -161,9 +178,13 @@ class TimerPopup extends StatelessWidget {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           elevation: 0,
                         ),
-                        child: Text(
-                          rightButtonText,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            rightButtonText,
+                            maxLines: 1,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
                     ),
