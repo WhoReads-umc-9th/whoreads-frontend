@@ -40,14 +40,16 @@ class TimerPopup extends StatelessWidget {
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1C1B1F),
-                height: 1.4,
-              ),
+                title,
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1C1B1F),
+                  height: 1.4,
+                ),
               ),
             ),
 
@@ -129,8 +131,9 @@ class TimerPopup extends StatelessWidget {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                    rightButtonText,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      rightButtonText,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               )
