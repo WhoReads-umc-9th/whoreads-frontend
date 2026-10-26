@@ -75,14 +75,19 @@ class NotificationWidget extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        notificationTypeToString[type] ?? '알림',
-                        style: const TextStyle(
-                          color: Color(0xFF999999),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
+                      Flexible(
+                        child: Text(
+                          notificationTypeToString[type] ?? '알림',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF999999),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         time,
                         style: const TextStyle(
@@ -97,6 +102,7 @@ class NotificationWidget extends StatelessWidget {
 
                   Text(
                     body,
+                    softWrap: true,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
