@@ -159,9 +159,6 @@ class FcmService {
     if (id != null && id.isNotEmpty) {
       try {
         await _notificationService.markAsRead(id);
-        if (data['type'] == 'ROUTINE') {
-          await _notificationService.removeNotification(id);
-        }
       } catch (_) {
         debugPrint('알림 읽음 처리 실패');
       }
