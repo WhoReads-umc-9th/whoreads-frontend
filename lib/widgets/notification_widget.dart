@@ -4,6 +4,7 @@ import 'package:flutter_svg/svg.dart';
 enum NotificationType {
   follow("FOLLOW"),
   routine("ROUTINE"),
+  completedTimer("COMPLETED_TIMER"),
   none("NONE");
 
   final String value;
@@ -20,6 +21,7 @@ enum NotificationType {
 Map<NotificationType, String> notificationTypeToString = {
   NotificationType.follow: '서재 업데이트',
   NotificationType.routine: '독서 루틴 알림',
+  NotificationType.completedTimer: '독서 타이머 완료',
   NotificationType.none: '알림',
 };
 
