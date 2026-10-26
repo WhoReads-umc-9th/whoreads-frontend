@@ -172,11 +172,6 @@ class _NotificationPageState extends State<NotificationPage> {
               arguments: destination.arguments,
             );
           }
-          if (item['type'] == 'ROUTINE') {
-            await _notificationService.removeNotification(
-              item['id'].toString(),
-            );
-          }
           if (mounted) setState(() {});
         } catch (_) {
           if (mounted) {
