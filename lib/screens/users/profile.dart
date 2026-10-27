@@ -8,7 +8,9 @@ import 'package:device_info_plus/device_info_plus.dart';
 
 import 'package:whoreads/screens/routine_setting.dart';
 import 'package:whoreads/services/auth_service.dart';
-import 'package:whoreads/widgets/timer/timer_popup.dart';
+import 'package:whoreads/widgets/common/common_popup.dart';
+import 'package:whoreads/widgets/common/profile_avatar_sheet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/network/api_client.dart';
 import '../../services/notification_setting.dart';
 import '../celebrities/celebrities_book_page.dart';
@@ -31,6 +33,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final AuthService _authService = AuthService();
   final NotificationSettingService _notificationSettingService = NotificationSettingService();
   bool isLoading = true;
+  int _avatarIndex = 0;
+  String _avatarGender = 'FEMALE';
 
   Map<String, dynamic> userInfo = {};
   List<dynamic> follows = [];
@@ -48,6 +52,37 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _fetchAllData();
+    _loadAvatar();
+  }
+
+  Future<void> _loadAvatar() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _avatarIndex = (prefs.getInt('profile_avatar_index') ?? 0).clamp(0, 5);
+      _avatarGender = prefs.getString('profile_avatar_gender') ?? 'FEMALE';
+    });
+  }
+
+  Future<void> _selectAvatar() async {
+    final gender = userInfo['gender']?.toString().toUpperCase() == 'MALE' ? 'MALE' : 'FEMALE';
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ProfileAvatarSheet(
+        gender: gender,
+        initialIndex: _avatarGender == gender ? _avatarIndex : 0,
+      ),
+    );
+    if (selected == null || !mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('profile_avatar_index', selected);
+    await prefs.setString('profile_avatar_gender', gender);
+    if (mounted) setState(() {
+      _avatarIndex = selected;
+      _avatarGender = gender;
+    });
   }
 
   Future<void> _openDnaResult() async {
@@ -195,7 +230,7 @@ Device: $deviceModel
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => TimerPopup(
+      builder: (dialogContext) => CommonPopup(
         title: '알림',
         description: '기본 메일앱 사용이 불가하여\n앱에서 바로 메일을 전송할 수 없습니다.\n\n아래 명시된 이메일로 연락주시면\n빠른 시일내에 답변드리도록 하겠습니다.\n\n감사합니다:)',
         highlights: [
@@ -213,7 +248,7 @@ Device: $deviceModel
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => TimerPopup(
+      builder: (dialogContext) => CommonPopup(
         title: '정말 탈퇴하시겠어요?',
         withdrawalConfirm: true,
         description: '탈퇴 시 계정 정보 및 기록이 모두 삭제되며, 복구할 수 없습니다.',
@@ -230,7 +265,7 @@ Device: $deviceModel
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (noticeContext) => TimerPopup(
+                builder: (noticeContext) => CommonPopup(
                   title: '회원 탈퇴 완료',
                   description: '회원 탈퇴 접수가 완료되었습니다.\n7일 이내에 재로그인하시면 탈퇴를 취소할 수 있습니다.',
                   rightButtonText: '확인',
@@ -291,15 +326,32 @@ Device: $deviceModel
             Center(
               child: Column(
                 children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey[300]!, width: 1),
+                  GestureDetector(
+                    onTap: _selectAvatar,
+                    child: SizedBox(
+                      width: 128,
+                      height: 128,
+                      child: Stack(
+                        children: [
+                          ClipOval(
+                            child: ProfileAvatar.image(_avatarGender, _avatarIndex, size: 128),
+                          ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE2E2E6),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.edit, size: 19, color: Color(0xFF505057)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.menu_book, size: 40, color: Color(0xFFFF6A00)),
                   ),
                   const SizedBox(height: 12),
                   Text(
