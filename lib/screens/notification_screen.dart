@@ -154,7 +154,10 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget _buildNotificationItem(dynamic item) {
     return NotificationWidget(
       type: NotificationType.fromString(item['type']),
-      body: '${item['title'] ?? ''}${item['body'] ?? ''}',
+      body: [item['title'], item['body']]
+          .where((value) => value != null && value.toString().trim().isNotEmpty)
+          .map((value) => value.toString())
+          .join('\n'),
       time: item['time'] ?? '',
       isRead: item['is_read'] ?? false,
       onTap: () async {
