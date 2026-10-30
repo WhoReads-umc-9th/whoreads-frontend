@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/network/api_client.dart';
+import '../../core/router/tab_page_route.dart';
 import '../celebrities/celebrities_book_page.dart';
+import '../celebrities/celebrities_page.dart';
 
 class FollowListPage extends StatefulWidget {
   const FollowListPage({super.key});
@@ -132,8 +134,54 @@ class _FollowListPageState extends State<FollowListPage> {
       body: isLoading
           ? Center(child: CircularProgressIndicator(color: primaryOrange))
           : follows.isEmpty
-              ? const Center(
-                  child: Text('팔로우한 유명인이 없습니다.', style: TextStyle(color: Colors.grey, fontSize: 14)),
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          '팔로우한 유명인이 없어요\n관심 있는 유명인을 찾아보고 팔로우해 보세요.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pushAndRemoveUntil(
+                            context,
+                            TabPageRoute(
+                              builder: (_) => const CelebritiesPage(),
+                            ),
+                            (route) => false,
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF9666),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            '유명인 둘러보기',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
