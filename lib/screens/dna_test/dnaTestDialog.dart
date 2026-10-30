@@ -65,21 +65,10 @@ class DnaTestDialog extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // 중앙 SVG 이미지 2개 겹치기
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                // 1. 밑에 깔리는 이미지
-                SvgPicture.asset(
-                  'assets/images/dna_test1.svg',
-                  height: 180,
-                ),
-                // 2. 그 위에 덮어지는 이미지
-                SvgPicture.asset(
-                  'assets/images/dna_test2.svg',
-                  height: 180,
-                ),
-              ],
+            SvgPicture.asset(
+              'assets/images/dna_test_BG.svg',
+              height: 180,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 30),
 
