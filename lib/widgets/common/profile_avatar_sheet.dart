@@ -73,18 +73,17 @@ class _ProfileAvatarSheetState extends State<ProfileAvatarSheet> {
                   child: Container(
                     width: 76,
                     height: 76,
-                    decoration: BoxDecoration(
+                    foregroundDecoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: selectedIndex == index
                             ? const Color(0xFFFF5722)
-                            : Colors.transparent,
+                            : const Color(0xFFF2F4F6),
                         width: 1.5,
                       ),
                     ),
-                    padding: const EdgeInsets.all(4),
                     child: ClipOval(
-                      child: ProfileAvatar.image(widget.gender, index, size: 68),
+                      child: ProfileAvatar.image(widget.gender, index, size: 76),
                     ),
                   ),
                 ),
