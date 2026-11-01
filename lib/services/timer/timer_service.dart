@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -322,7 +323,13 @@ class TimerService with ChangeNotifier {
     try {
       if (sessionId == -1) return;
       try {
-        await _apiService.recoverTimer(sessionId);
+        final remainingMinutes = await _apiService.recoverTimer(sessionId);
+        if (remainingMinutes <= 0) {
+          await _clearAll();
+          return;
+        }
+        _currentSeconds = remainingMinutes * 60;
+        elapsedSeconds = (_totalSettingSeconds - _currentSeconds).clamp(0, _totalSettingSeconds);
         _isRunning = true;
         _isStopping = false;
 
@@ -437,6 +444,13 @@ class TimerService with ChangeNotifier {
         _startLocalTimer();
         _startHeartbeat();
         notifyListeners();
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 409) {
+          await _clearAll();
+          _lastError = '일시정지한 세션이 종료되었습니다. 새 타이머를 시작해주세요.';
+        } else {
+          _reportFailure();
+        }
       } catch (e) {
         _reportFailure();
       }
@@ -489,6 +503,17 @@ class TimerService with ChangeNotifier {
       if (!_isRunning || sessionId == -1) return;
       try {
         await _apiService.heartbeat(sessionId);
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 409) {
+          _stopHeartbeat();
+          _stopLocalTimer();
+          _isRunning = false;
+          _isStopping = true;
+          notifyListeners();
+          await checkRecoveryState();
+        } else {
+          debugPrint('TimerService heartbeat 실패: $e');
+        }
       } catch (e) {
         debugPrint('TimerService heartbeat 실패: $e');
       }
