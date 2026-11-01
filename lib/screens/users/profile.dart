@@ -10,7 +10,6 @@ import 'package:whoreads/screens/routine_setting.dart';
 import 'package:whoreads/services/auth_service.dart';
 import 'package:whoreads/widgets/common/common_popup.dart';
 import 'package:whoreads/widgets/common/profile_avatar_sheet.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/network/api_client.dart';
 import '../../services/notification_setting.dart';
 import '../celebrities/celebrities_book_page.dart';
@@ -52,37 +51,48 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _fetchAllData();
-    _loadAvatar();
-  }
-
-  Future<void> _loadAvatar() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      _avatarIndex = (prefs.getInt('profile_avatar_index') ?? 0).clamp(0, 5);
-      _avatarGender = prefs.getString('profile_avatar_gender') ?? 'FEMALE';
-    });
   }
 
   Future<void> _selectAvatar() async {
-    final gender = userInfo['gender']?.toString().toUpperCase() == 'MALE' ? 'MALE' : 'FEMALE';
+    final gender = userInfo['gender']?.toString().toUpperCase() == 'MALE'
+        ? 'MALE'
+        : 'FEMALE';
     final selected = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ProfileAvatarSheet(
         gender: gender,
-        initialIndex: _avatarGender == gender ? _avatarIndex : 0,
+        initialIndex: _avatarIndex,
       ),
     );
-    if (selected == null || !mounted) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('profile_avatar_index', selected);
-    await prefs.setString('profile_avatar_gender', gender);
-    if (mounted) setState(() {
-      _avatarIndex = selected;
-      _avatarGender = gender;
-    });
+    if (selected == null || !mounted || selected == _avatarIndex) return;
+
+    try {
+      final response = await ApiClient.checked(
+        ApiClient.dio.patch(
+          '/members/me/profile-image',
+          data: {'profile_img_id': selected},
+        ),
+      );
+      final result = response.data is Map ? response.data['result'] : null;
+      final savedIndex = result is Map ? result['profile_img_id'] : null;
+      if (savedIndex is! int || savedIndex < 0 || savedIndex > 5) {
+        throw const FormatException('프로필 이미지 변경 응답이 올바르지 않습니다.');
+      }
+      if (!mounted) return;
+      setState(() {
+        _avatarIndex = savedIndex;
+        _avatarGender = gender;
+        userInfo['profile_img_id'] = savedIndex;
+      });
+    } catch (e) {
+      debugPrint('Profile image update error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('프로필 이미지를 변경하지 못했습니다. 다시 시도해주세요.')),
+      );
+    }
   }
 
   Future<void> _openDnaResult() async {
@@ -129,6 +139,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (results[0].statusCode == 200) {
         userInfo = AntiquityUserInfo(results[0].data['result']);
+        final serverIndex = userInfo['profile_img_id'];
+        _avatarIndex = serverIndex is int && serverIndex >= 0 && serverIndex <= 5
+            ? serverIndex
+            : 0;
+        _avatarGender = userInfo['gender']?.toString().toUpperCase() == 'MALE'
+            ? 'MALE'
+            : 'FEMALE';
       }
       if (results[1].statusCode == 200) {
         follows = results[1].data['result'] ?? [];
