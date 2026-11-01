@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// 이미지 파일은 assets/images/profile_female_1.png ~ 6.png,
-/// assets/images/profile_male_1.png ~ 6.png 위치에 추가합니다.
+/// 이미지 파일은 assets/images/profile/profile_female_1.png ~ 6.png,
+/// assets/images/profile/profile_male_1.png ~ 6.png 위치에 추가합니다.
 class ProfileAvatar {
   static String assetPath(String gender, int index) {
     final prefix = gender == 'MALE' ? 'male' : 'female';
-    return 'assets/images/profile_${prefix}_${index + 1}.png';
+    return 'assets/images/profile/profile_${prefix}_${index + 1}.png';
   }
 
   static Widget image(String gender, int index, {double size = 100}) {
