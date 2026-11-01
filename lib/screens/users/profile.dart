@@ -351,7 +351,10 @@ Device: $deviceModel
                       child: Stack(
                         children: [
                           ClipOval(
-                            child: ProfileAvatar.image(_avatarGender, _avatarIndex, size: 128),
+                            child: Transform.scale(
+                              scale: 1.2,
+                              child: ProfileAvatar.image(_avatarGender, _avatarIndex, size: 128),
+                            ),
                           ),
                           Positioned(
                             right: 0,

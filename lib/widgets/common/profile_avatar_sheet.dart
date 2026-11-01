@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class ProfileAvatar {
   static String assetPath(String gender, int index) {
     final prefix = gender == 'MALE' ? 'male' : 'female';
-    return 'assets/images/profile/profile_${prefix}_${index + 1}.png';
+    return 'assets/images/profile/profile_${prefix}_$index.png';
   }
 
   static Widget image(String gender, int index, {double size = 100}) {
@@ -82,8 +82,12 @@ class _ProfileAvatarSheetState extends State<ProfileAvatarSheet> {
                         width: 1.5,
                       ),
                     ),
+                    padding: const EdgeInsets.all(4),
                     child: ClipOval(
-                      child: ProfileAvatar.image(widget.gender, index, size: 76),
+                      child: Transform.scale(
+                        scale: 1.3,
+                        child: ProfileAvatar.image(widget.gender, index, size: 68),
+                      ),
                     ),
                   ),
                 ),
