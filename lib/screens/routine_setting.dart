@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:whoreads/services/notification_setting.dart';
-import 'package:whoreads/widgets/timer/timer_popup.dart';
+import 'package:whoreads/widgets/common/common_popup.dart';
 
 class RoutineSettingPage extends StatefulWidget {
   final Map<String, dynamic>? routine;
@@ -139,7 +139,7 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => TimerPopup(
+      builder: (context) => CommonPopup(
         title: '독서 루틴 알림이 생성되지 않았습니다.\n정말 나가시겠습니까?',
         leftButtonText: '취소',
         rightButtonText: '확인',
@@ -157,7 +157,7 @@ class _RoutineSettingPageState extends State<RoutineSettingPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => TimerPopup(
+      builder: (context) => CommonPopup(
         title: '독서 루틴 알림을 삭제하시겠습니까?',
         leftButtonText: '취소',
         rightButtonText: '확인',

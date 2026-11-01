@@ -4,7 +4,7 @@ import 'package:whoreads/screens/my_library/my_library_page.dart';
 import 'package:whoreads/services/timer/timer_service.dart';
 import 'package:whoreads/widgets/timer/time_picker.dart';
 import 'package:whoreads/widgets/timer/timer_view.dart';
-import 'package:whoreads/widgets/timer/timer_popup.dart';
+import 'package:whoreads/widgets/common/common_popup.dart';
 import 'timer_statics_screen.dart';
 
 class TimerPage extends StatefulWidget {
@@ -151,7 +151,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => TimerPopup(
+      builder: (context) => CommonPopup(
         title: title,
         description: description,
         highlights: highlights,

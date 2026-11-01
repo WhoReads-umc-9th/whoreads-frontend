@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class TimerPopup extends StatelessWidget {
+class CommonPopup extends StatelessWidget {
   final String title;
   final String? subtitle;
   final List<HighlightText>? highlights;
@@ -15,7 +15,7 @@ class TimerPopup extends StatelessWidget {
   final bool singleButton;
   final bool withdrawalConfirm;
 
-  const TimerPopup({
+  const CommonPopup({
     super.key,
     required this.title,
     this.subtitle,
@@ -34,7 +34,8 @@ class TimerPopup extends StatelessWidget {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       backgroundColor: Colors.white,
-      child: Padding(
+      child: SingleChildScrollView(
+        child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: withdrawalConfirm ? 24 : 16,
           vertical: withdrawalConfirm ? 28 : 24,
@@ -192,6 +193,7 @@ class TimerPopup extends StatelessWidget {
                 ],
               ),
           ],
+        ),
         ),
       ),
     );
