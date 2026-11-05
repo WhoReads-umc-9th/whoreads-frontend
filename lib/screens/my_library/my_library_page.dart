@@ -220,18 +220,21 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
                 ],
               ),
             ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _LibraryTabHeaderDelegate(
-                child: const TabBar(
-                  labelColor: Colors.black,
-                  indicatorColor: Color(0xFFFF6A00),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  tabs: [
-                    Tab(text: '담아둠'),
-                    Tab(text: '읽는 중'),
-                    Tab(text: '다 읽음'),
-                  ],
+            SliverOverlapAbsorber(
+              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+              sliver: SliverPersistentHeader(
+                pinned: true,
+                delegate: _LibraryTabHeaderDelegate(
+                  child: const TabBar(
+                    labelColor: Colors.black,
+                    indicatorColor: Color(0xFFFF6A00),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    tabs: [
+                      Tab(text: '담아둠'),
+                      Tab(text: '읽는 중'),
+                      Tab(text: '다 읽음'),
+                    ],
+                  ),
                 ),
               ),
             ),
