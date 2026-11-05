@@ -54,12 +54,14 @@
       "sent_at": "2026-11-01T09:08:21Z"
     },
     "16": {
-      "delivery": "sending",
+      "delivery": "sent",
       "version_codes": [
         16
       ],
       "lifecycle": "RELEASE_LIFECYCLE_STATE_PUBLISHED",
-      "claimed_at": "2026-11-05T17:58:28Z"
+      "claimed_at": "2026-11-05T17:58:28Z",
+      "message_id": "1567961320396038246",
+      "sent_at": "2026-11-05T17:58:30Z"
     }
   },
   "latest_version_code": 16
