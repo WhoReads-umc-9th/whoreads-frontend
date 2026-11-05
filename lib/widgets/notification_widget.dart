@@ -4,6 +4,7 @@ import 'package:flutter_svg/svg.dart';
 enum NotificationType {
   follow("FOLLOW"),
   routine("ROUTINE"),
+  completedTimer("COMPLETED_TIMER"),
   none("NONE");
 
   final String value;
@@ -20,6 +21,7 @@ enum NotificationType {
 Map<NotificationType, String> notificationTypeToString = {
   NotificationType.follow: '서재 업데이트',
   NotificationType.routine: '독서 루틴 알림',
+  NotificationType.completedTimer: '독서 타이머 완료',
   NotificationType.none: '알림',
 };
 
@@ -73,14 +75,19 @@ class NotificationWidget extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        notificationTypeToString[type] ?? '알림',
-                        style: const TextStyle(
-                          color: Color(0xFF999999),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
+                      Flexible(
+                        child: Text(
+                          notificationTypeToString[type] ?? '알림',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF999999),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         time,
                         style: const TextStyle(
@@ -95,6 +102,7 @@ class NotificationWidget extends StatelessWidget {
 
                   Text(
                     body,
+                    softWrap: true,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

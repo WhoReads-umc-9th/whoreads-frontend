@@ -63,13 +63,21 @@ class _DnaResultPageState extends State<DnaResultPage> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              headline,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFFF6A00),
+            SizedBox(
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  headline,
+                  maxLines: 1,
+                  softWrap: false,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFFF6A00),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 8),

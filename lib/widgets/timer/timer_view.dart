@@ -5,8 +5,14 @@ import 'package:flutter/material.dart';
 class TimerViewWidget extends StatelessWidget {
   final String timeText;
   final double percentage;
+  final Color timeColor;
 
-  const TimerViewWidget({super.key, required this.timeText, required this.percentage});
+  const TimerViewWidget({
+    super.key,
+    required this.timeText,
+    required this.percentage,
+    this.timeColor = Colors.black,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +24,7 @@ class TimerViewWidget extends StatelessWidget {
       child: SizedBox(
         width: 280, height: 280,
         child: Center(
-          child: Text(timeText, style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w400)),
+          child: Text(timeText, style: TextStyle(fontSize: 64, fontWeight: FontWeight.w400, color: timeColor)),
         ),
       ),
     );

@@ -28,6 +28,23 @@ class FcmService {
   static bool _initialized = false;
   static bool _navigationReady = false;
   static Map<String, dynamic>? _pendingData;
+  // 동일한 FCM 메시지가 짧은 시간 안에 재전달될 때 로컬 알림 중복 표시 방지.
+  static final Map<String, DateTime> _recentForegroundMessages = {};
+  static const Duration _foregroundDeduplicationWindow = Duration(seconds: 5);
+
+  static bool _isDuplicateForegroundMessage(RemoteMessage message) {
+    final now = DateTime.now();
+    _recentForegroundMessages.removeWhere(
+      (_, receivedAt) =>
+          now.difference(receivedAt) > _foregroundDeduplicationWindow,
+    );
+    final key = message.messageId ??
+        '${message.sentTime?.millisecondsSinceEpoch ?? ''}:${message.notification?.title}:${message.notification?.body}:${jsonEncode(message.data)}';
+    if (_recentForegroundMessages.containsKey(key)) return true;
+    _recentForegroundMessages[key] = now;
+    return false;
+  }
+
 
   static const _channel = AndroidNotificationChannel(
     'high_importance_channel',
@@ -142,9 +159,6 @@ class FcmService {
     if (id != null && id.isNotEmpty) {
       try {
         await _notificationService.markAsRead(id);
-        if (data['type'] == 'ROUTINE') {
-          await _notificationService.removeNotification(id);
-        }
       } catch (_) {
         debugPrint('알림 읽음 처리 실패');
       }
@@ -196,6 +210,10 @@ class FcmService {
     FirebaseMessaging.onMessage.listen((message) async {
       final notification = message.notification;
       if (notification == null) return;
+      if (_isDuplicateForegroundMessage(message)) {
+        debugPrint('중복 FCM 포그라운드 메시지 표시 생략: ${message.messageId}');
+        return;
+      }
       try {
         await _localNotifications.show(
           id: notification.hashCode,

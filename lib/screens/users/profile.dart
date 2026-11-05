@@ -8,7 +8,8 @@ import 'package:device_info_plus/device_info_plus.dart';
 
 import 'package:whoreads/screens/routine_setting.dart';
 import 'package:whoreads/services/auth_service.dart';
-import 'package:whoreads/widgets/timer/timer_popup.dart';
+import 'package:whoreads/widgets/common/common_popup.dart';
+import 'package:whoreads/widgets/common/profile_avatar_sheet.dart';
 import '../../core/network/api_client.dart';
 import '../../services/notification_setting.dart';
 import '../celebrities/celebrities_book_page.dart';
@@ -31,6 +32,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final AuthService _authService = AuthService();
   final NotificationSettingService _notificationSettingService = NotificationSettingService();
   bool isLoading = true;
+  int _avatarIndex = 0;
+  String _avatarGender = 'FEMALE';
 
   Map<String, dynamic> userInfo = {};
   List<dynamic> follows = [];
@@ -48,6 +51,48 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _fetchAllData();
+  }
+
+  Future<void> _selectAvatar() async {
+    final gender = userInfo['gender']?.toString().toUpperCase() == 'MALE'
+        ? 'MALE'
+        : 'FEMALE';
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ProfileAvatarSheet(
+        gender: gender,
+        initialIndex: _avatarIndex,
+      ),
+    );
+    if (selected == null || !mounted || selected == _avatarIndex) return;
+
+    try {
+      final response = await ApiClient.checked(
+        ApiClient.dio.patch(
+          '/members/me/profile-image',
+          data: {'profile_img_id': selected},
+        ),
+      );
+      final result = response.data is Map ? response.data['result'] : null;
+      final savedIndex = result is Map ? result['profile_img_id'] : null;
+      if (savedIndex is! int || savedIndex < 0 || savedIndex > 5) {
+        throw const FormatException('프로필 이미지 변경 응답이 올바르지 않습니다.');
+      }
+      if (!mounted) return;
+      setState(() {
+        _avatarIndex = savedIndex;
+        _avatarGender = gender;
+        userInfo['profile_img_id'] = savedIndex;
+      });
+    } catch (e) {
+      debugPrint('Profile image update error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('프로필 이미지를 변경하지 못했습니다. 다시 시도해주세요.')),
+      );
+    }
   }
 
   Future<void> _openDnaResult() async {
@@ -94,6 +139,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (results[0].statusCode == 200) {
         userInfo = AntiquityUserInfo(results[0].data['result']);
+        final serverIndex = userInfo['profile_img_id'];
+        _avatarIndex = serverIndex is int && serverIndex >= 0 && serverIndex <= 5
+            ? serverIndex
+            : 0;
+        _avatarGender = userInfo['gender']?.toString().toUpperCase() == 'MALE'
+            ? 'MALE'
+            : 'FEMALE';
       }
       if (results[1].statusCode == 200) {
         follows = results[1].data['result'] ?? [];
@@ -195,7 +247,7 @@ Device: $deviceModel
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => TimerPopup(
+      builder: (dialogContext) => CommonPopup(
         title: '알림',
         description: '기본 메일앱 사용이 불가하여\n앱에서 바로 메일을 전송할 수 없습니다.\n\n아래 명시된 이메일로 연락주시면\n빠른 시일내에 답변드리도록 하겠습니다.\n\n감사합니다:)',
         highlights: [
@@ -213,11 +265,12 @@ Device: $deviceModel
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => TimerPopup(
-        title: '정말 회원 탈퇴를 진행하시겠습니까?',
-        description: '탈퇴 시 계정 정보 및 기록이 모두 삭제되며\n복구할 수 없습니다.',
-        leftButtonText: '계속 사용하기',
-        rightButtonText: '네 탈퇴할게요',
+      builder: (dialogContext) => CommonPopup(
+        title: '정말 탈퇴하시겠어요?',
+        withdrawalConfirm: true,
+        description: '탈퇴 시 계정 정보 및 기록이 모두 삭제되며, 복구할 수 없습니다.',
+        leftButtonText: '취소',
+        rightButtonText: '탈퇴하기',
         singleButton: false,
         onLeftPressed: () => Navigator.maybePop(dialogContext),
         onRightPressed: () async {
@@ -229,7 +282,7 @@ Device: $deviceModel
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (noticeContext) => TimerPopup(
+                builder: (noticeContext) => CommonPopup(
                   title: '회원 탈퇴 완료',
                   description: '회원 탈퇴 접수가 완료되었습니다.\n7일 이내에 재로그인하시면 탈퇴를 취소할 수 있습니다.',
                   rightButtonText: '확인',
@@ -290,15 +343,35 @@ Device: $deviceModel
             Center(
               child: Column(
                 children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey[300]!, width: 1),
+                  GestureDetector(
+                    onTap: _selectAvatar,
+                    child: SizedBox(
+                      width: 128,
+                      height: 128,
+                      child: Stack(
+                        children: [
+                          ClipOval(
+                            child: Transform.scale(
+                              scale: 1.2,
+                              child: ProfileAvatar.image(_avatarGender, _avatarIndex, size: 128),
+                            ),
+                          ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE2E2E6),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.edit, size: 19, color: Color(0xFF505057)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.menu_book, size: 40, color: Color(0xFFFF6A00)),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -415,7 +488,12 @@ Device: $deviceModel
                     const SizedBox(height: 16),
                     dnaResult.isEmpty
                         ? const Text('진행한 독서 DNA 테스트가 없습니다.', style: TextStyle(color: Colors.grey, fontSize: 14))
-                        : RichText(
+                        : FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: RichText(
+                      maxLines: 1,
+                      softWrap: false,
                       text: TextSpan(
                         style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
                         children: [
@@ -426,6 +504,7 @@ Device: $deviceModel
                           ),
                           const TextSpan(text: ' 독서하는 사람입니다'),
                         ],
+                      ),
                       ),
                     ),
                   ],

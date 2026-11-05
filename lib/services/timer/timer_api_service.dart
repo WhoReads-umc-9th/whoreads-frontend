@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:dio/dio.dart';
 import 'package:whoreads/core/network/api_client.dart';
 import '../../models/reading_session_model.dart';
 
@@ -30,6 +31,10 @@ class TimerApiService {
       }
       debugPrint('getActiveSession 성공: $data');
       return ActiveReadingSession.fromJson(data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      debugPrint('getActiveSession 실패: $e');
+      rethrow;
     } catch (e) {
       debugPrint('getActiveSession 실패: $e');
       rethrow;
@@ -70,11 +75,12 @@ class TimerApiService {
     }
   }
 
-  Future<void> recoverTimer(int sessionId) async {
+  Future<int> recoverTimer(int sessionId) async {
     try {
-      await ApiClient.checked(
-        ApiClient.dio.get('/reading-sessions/$sessionId/recover/'),
+      final response = await ApiClient.checked(
+        ApiClient.dio.post('/reading-sessions/$sessionId/recover'),
       );
+      return (response.data['result']['remaining_minutes'] as num).toInt();
     } catch (e) {
       debugPrint('recoverTimer 실패: $e');
       rethrow;

@@ -192,58 +192,56 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
         ),
 
         /// ===== Body =====
-        body: Column(
-          children: [
-            /// 🌟 DNA 결과가 없을 때만(!hasDnaResult) 독서 DNA 카드를 렌더링
-            if (!hasDnaResult) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    debugPrint("DNA Card Clicked!");
-                    _showDnaTestDialog();
-                  },
-                  child: const AbsorbPointer(child: DnaCard()),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            /// 독서 기록 요약 카드 (nickname 적용)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ReadingSummaryCard(
-                username: nickname ?? '사용자',
-                accessToken: accessToken!,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            /// TabBar
-            const TabBar(
-              labelColor: Colors.black,
-              indicatorColor: Color(0xFFFF6A00),
-              indicatorSize: TabBarIndicatorSize.tab,
-              tabs: [
-                Tab(text: '담아둠'),
-                Tab(text: '읽는 중'),
-                Tab(text: '다 읽음'),
-              ],
-            ),
-
-            /// TabBarView
-            Expanded(
-              child: TabBarView(
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(
+              child: Column(
                 children: [
-                  SavedTab(),
-                  ReadingTab(books: const []),
-                  FinishedTab(books: const []),
+                  if (!hasDnaResult) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _showDnaTestDialog,
+                        child: const AbsorbPointer(child: DnaCard()),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ReadingSummaryCard(
+                      username: nickname ?? '사용자',
+                      accessToken: accessToken!,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _LibraryTabHeaderDelegate(
+                child: const TabBar(
+                  labelColor: Colors.black,
+                  indicatorColor: Color(0xFFFF6A00),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  tabs: [
+                    Tab(text: '담아둠'),
+                    Tab(text: '읽는 중'),
+                    Tab(text: '다 읽음'),
+                  ],
+                ),
+              ),
+            ),
           ],
+          body: const TabBarView(
+            children: [
+              SavedTab(),
+              ReadingTab(books: []),
+              FinishedTab(books: []),
+            ],
+          ),
         ),
 
         /// ===== BottomNavigationBar =====
@@ -266,4 +264,28 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
       ),
     );
   }
+}
+
+class _LibraryTabHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar child;
+
+  const _LibraryTabHeaderDelegate({required this.child});
+
+  @override
+  double get minExtent => child.preferredSize.height;
+
+  @override
+  double get maxExtent => child.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(
+      color: Colors.white,
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _LibraryTabHeaderDelegate oldDelegate) =>
+      oldDelegate.child != child;
 }
