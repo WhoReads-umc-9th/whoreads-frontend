@@ -4,6 +4,11 @@ import 'package:whoreads/core/network/api_client.dart';
 import '../../models/reading_session_model.dart';
 
 class TimerApiService {
+  // Must match the cadence used by TimerService's heartbeat scheduler.
+  static const int heartbeatIntervalMinutes = 1;
+  static const int suspendAfterMinutes = 5;
+  static const int completeAfterMinutes = 120;
+
   Future<void> setReadingSessionTime({required int totalMinutes}) async {
     try {
       final response = await ApiClient.checked(
@@ -44,7 +49,14 @@ class TimerApiService {
   Future<int> startTimer({required int totalMinutes}) async {
     try {
       final response = await ApiClient.checked(
-        ApiClient.dio.post('/reading-sessions/start'),
+        ApiClient.dio.post(
+          '/reading-sessions/start',
+          data: {
+            'heartbeat_interval_minutes': heartbeatIntervalMinutes,
+            'suspend_after_minutes': suspendAfterMinutes,
+            'complete_after_minutes': completeAfterMinutes,
+          },
+        ),
       );
       return response.data['result']['session_id'];
     } catch (e) {
