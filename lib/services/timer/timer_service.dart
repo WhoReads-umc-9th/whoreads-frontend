@@ -499,7 +499,9 @@ class TimerService with ChangeNotifier {
 
   void _startHeartbeat() {
     _stopHeartbeat();
-    _heartbeatTimer = Timer.periodic(const Duration(minutes: 1), (_) async {
+    _heartbeatTimer = Timer.periodic(
+      const Duration(minutes: TimerApiService.heartbeatIntervalMinutes),
+      (_) async {
       if (!_isRunning || sessionId == -1) return;
       try {
         await _apiService.heartbeat(sessionId);
