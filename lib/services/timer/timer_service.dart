@@ -482,6 +482,30 @@ class TimerService with ChangeNotifier {
     }
   }
 
+  /// Discard the local countdown without invoking the completion API.
+  /// The backend currently has no endpoint to discard a reading session.
+  Future<void> cancelWithoutRecording() async {
+    if (_isBusy || _completionInFlight) return;
+    _isBusy = true;
+    _lastError = null;
+    notifyListeners();
+    try {
+      _stopLocalTimer();
+      _stopHeartbeat();
+      // Pause the server session so it does not remain IN_PROGRESS and
+      // block the next start. This does not call the completion endpoint.
+      if (sessionId >= 0 && !_completionRecorded && _isRunning) {
+        await _apiService.pauseTimer(sessionId);
+      }
+      await _clearAll();
+    } catch (e) {
+      _reportFailure();
+    } finally {
+      _isBusy = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> cancelTimer() async {
     await completeTimer();
   }
@@ -499,7 +523,9 @@ class TimerService with ChangeNotifier {
 
   void _startHeartbeat() {
     _stopHeartbeat();
-    _heartbeatTimer = Timer.periodic(const Duration(minutes: 1), (_) async {
+    _heartbeatTimer = Timer.periodic(
+      const Duration(minutes: TimerApiService.heartbeatIntervalMinutes),
+      (_) async {
       if (!_isRunning || sessionId == -1) return;
       try {
         await _apiService.heartbeat(sessionId);

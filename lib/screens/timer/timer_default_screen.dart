@@ -235,6 +235,35 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
     return SizedBox(height: 280, child: child);
   }
 
+  Future<void> _showCancelConfirmation() async {
+    if (_service.isBusy || _isPopupShowing) return;
+    setState(() => _isPopupShowing = true);
+
+    try {
+      final recordTime = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => CommonPopup(
+          title: '지금까지 독서한 시간을 기록할까요?',
+          description: '확인을 누르면 시간이 저장되고,\n취소를 누르면 시간이 저장되지 않아요',
+          leftButtonText: '취소',
+          rightButtonText: '확인',
+          onLeftPressed: () => Navigator.of(dialogContext).pop(false),
+          onRightPressed: () => Navigator.of(dialogContext).pop(true),
+        ),
+      );
+
+      if (!mounted || recordTime == null) return;
+      if (recordTime) {
+        await _service.resetTimer();
+      } else {
+        await _service.cancelWithoutRecording();
+      }
+    } finally {
+      if (mounted) setState(() => _isPopupShowing = false);
+    }
+  }
+
   Widget _buildControlButtons() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -245,9 +274,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
             label: '취소',
             color: const Color(0xFFEFF1F3),
             textColor: Colors.black,
-            onTap: () async {
-              await _service.resetTimer();
-            },
+            onTap: _showCancelConfirmation,
           ),
           _buildActionButton(),
         ],
