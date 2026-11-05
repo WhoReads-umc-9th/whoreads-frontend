@@ -5,6 +5,8 @@ import 'package:whoreads/screens/notification_screen.dart';
 import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/network/api_client.dart';
 import '../../core/router/tab_page_route.dart';
+import '../../widgets/common/bottom_nav.dart';
+import '../../widgets/common/custom_app_bar.dart';
 import '../../widgets/common/job_tag.dart';
 import '../my_library/my_library_page.dart';
 import '../users/profile.dart';
@@ -169,10 +171,7 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
-        elevation: 0,
+      appBar: WhoReadsAppBar(
         title: SvgPicture.asset('assets/images/logo.svg', height: 18),
         actions: [
           IconButton(
@@ -275,52 +274,28 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
                     ? const Center(child: CircularProgressIndicator())
                     : celebrities.isEmpty
                     ? const Center(child: Text('표시할 인물 정보가 없습니다.'))
-                    : LayoutBuilder(
-                        builder: (context, constraints) {
-                          final cardWidth = (constraints.maxWidth - 56) / 3;
-                          final scaler = MediaQuery.textScalerOf(context);
-                          var tagHeight = scaler.scale(12) * 1.3;
-                          for (final celeb in celebrities) {
-                            for (final tag
-                                in (celeb['job_tags'] as List? ?? []).take(2)) {
-                              final painter = TextPainter(
-                                text: TextSpan(
-                                  text: tag.toString(),
-                                  style: JobTag.textStyle,
-                                ),
-                                textScaler: scaler,
-                                textDirection: Directionality.of(context),
-                                maxLines: 2,
-                              )..layout(maxWidth: cardWidth - 16);
-                              if (painter.height > tagHeight) {
-                                tagHeight = painter.height;
-                              }
-                              painter.dispose();
-                            }
-                          }
-                          final cardHeight =
-                              cardWidth * 4 / 3 +
-                              6 +
-                              scaler.scale(14) * 1.3 +
-                              4 +
-                              2 * (tagHeight + 8) +
-                              4;
-                          return GridView.builder(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.all(16),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 24,
-                                  mainAxisExtent: cardHeight.ceilToDouble() + 1,
-                                ),
-                            itemCount: celebrities.length,
-                            itemBuilder: (context, index) {
-                              return _CelebrityCard(celeb: celebrities[index]);
-                            },
-                          );
-                        },
+                    // Let each row grow with the rendered tags, including
+                    // Korean font fallback and accessibility text sizes.
+                    : ListView.separated(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: (celebrities.length + 2) ~/ 3,
+                        separatorBuilder: (_, _) => const SizedBox(height: 24),
+                        itemBuilder: (context, row) => Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            for (var column = 0; column < 3; column++) ...[
+                              if (column > 0) const SizedBox(width: 12),
+                              Expanded(
+                                child: row * 3 + column < celebrities.length
+                                    ? _CelebrityCard(
+                                        celeb: celebrities[row * 3 + column],
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
               ),
             ],
@@ -403,10 +378,8 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
       ),
 
       /// ================= Bottom Tab =================
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: WhoReadsBottomNav(
         currentIndex: 0,
-        selectedItemColor: const Color(0xFFF84E00),
-        unselectedItemColor: Colors.grey,
         onTap: (index) {
           if (index == 0) {
           } else if (index == 1) {
@@ -421,11 +394,6 @@ class _CelebritiesPageState extends State<CelebritiesPage> {
             );
           }
         },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: '인물'),
-          BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: '내 서재'),
-          BottomNavigationBarItem(icon: Icon(Icons.topic), label: '주제'),
-        ],
       ),
     );
   }
@@ -452,6 +420,7 @@ class _CelebrityCard extends StatelessWidget {
         );
       },
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           AspectRatio(

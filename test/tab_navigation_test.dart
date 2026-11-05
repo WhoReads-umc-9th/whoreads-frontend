@@ -110,7 +110,7 @@ void main() {
       await tester.pumpAndSettle();
 
       const pages = [CelebritiesPage, MyLibraryPage, TopicsPage];
-      const icons = [Icons.people, Icons.menu_book, Icons.topic];
+      const labels = ['인물', '내 서재', '주제'];
       for (final index in [1, 2, 0, 2, 1, 0]) {
         final previous = tester.state(
           find.byType(
@@ -122,7 +122,7 @@ void main() {
         await tester.tap(
           find.descendant(
             of: find.byType(BottomNavigationBar),
-            matching: find.byIcon(icons[index]),
+            matching: find.text(labels[index]),
           ),
         );
         await tester.pump();
@@ -150,7 +150,7 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(BottomNavigationBar),
-          matching: find.byIcon(Icons.people),
+          matching: find.text('인물'),
         ),
       );
       await tester.pumpAndSettle();

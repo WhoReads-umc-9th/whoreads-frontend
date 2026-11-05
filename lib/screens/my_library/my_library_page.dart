@@ -8,6 +8,8 @@ import 'package:whoreads/screens/topics/topics_page.dart';
 import '../../core/auth/token_storage.dart';
 import '../../core/network/api_client.dart';
 import '../../core/router/tab_page_route.dart';
+import '../../widgets/common/bottom_nav.dart';
+import '../../widgets/common/custom_app_bar.dart';
 import '../celebrities/celebrities_page.dart';
 import '../dna_test/dnaTestDialog.dart';
 import '../dna_test/dna_test_page.dart';
@@ -56,9 +58,9 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
     );
     if (!mounted) return;
     if (result != null) {
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => DnaResultPage(result: result)),
-      );
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => DnaResultPage(result: result)));
     }
     if (mounted) await _checkDnaResult();
   }
@@ -153,10 +155,7 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
         backgroundColor: Colors.white,
 
         /// ===== AppBar =====
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Colors.white,
-          elevation: 0,
+        appBar: WhoReadsAppBar(
           title: SvgPicture.asset('assets/images/logo.svg', height: 18),
           actions: [
             IconButton(
@@ -248,16 +247,13 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
         ),
 
         /// ===== BottomNavigationBar =====
-        bottomNavigationBar: BottomNavigationBar(
+        bottomNavigationBar: WhoReadsBottomNav(
           currentIndex: 1,
-          selectedItemColor: const Color(0xFFF84E00),
           onTap: (index) {
             if (index == 0) {
               Navigator.pushReplacement(
                 context,
-                TabPageRoute(
-                  builder: (context) => const CelebritiesPage(),
-                ),
+                TabPageRoute(builder: (context) => const CelebritiesPage()),
               );
             } else if (index == 2) {
               Navigator.pushReplacement(
@@ -266,11 +262,6 @@ class _MyLibraryPageState extends State<MyLibraryPage> {
               );
             }
           },
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.people), label: '인물'),
-            BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: '내 서재'),
-            BottomNavigationBarItem(icon: Icon(Icons.topic), label: '주제'),
-          ],
         ),
       ),
     );

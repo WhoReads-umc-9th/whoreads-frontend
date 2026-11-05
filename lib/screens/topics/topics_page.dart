@@ -7,6 +7,8 @@ import 'package:whoreads/screens/topics/topic_banner_page.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/router/tab_page_route.dart';
+import '../../widgets/common/bottom_nav.dart';
+import '../../widgets/common/custom_app_bar.dart';
 import '../books/BookDetailPage.dart';
 import '../celebrities/celebrities_page.dart';
 import '../my_library/my_library_page.dart';
@@ -482,12 +484,7 @@ class _TopicsPageState extends State<TopicsPage> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-
+      appBar: WhoReadsAppBar(
         title: SvgPicture.asset('assets/images/logo.svg', height: 18),
 
         actions: [
@@ -956,12 +953,8 @@ class _TopicsPageState extends State<TopicsPage> {
       // =========================================================
       // Bottom Navigation
       // =========================================================
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: WhoReadsBottomNav(
         currentIndex: 2,
-
-        selectedItemColor: const Color(0xFFF84E00),
-
-        unselectedItemColor: Colors.grey,
 
         onTap: (index) {
           if (index == 0) {
@@ -978,14 +971,6 @@ class _TopicsPageState extends State<TopicsPage> {
             );
           }
         },
-
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: '인물'),
-
-          BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: '내 서재'),
-
-          BottomNavigationBarItem(icon: Icon(Icons.topic), label: '주제'),
-        ],
       ),
     );
   }
