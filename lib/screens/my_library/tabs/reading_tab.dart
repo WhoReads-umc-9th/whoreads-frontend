@@ -86,9 +86,14 @@ class _ReadingTabState extends State<ReadingTab> {
       return const Center(child: Text("읽는 중인 책이 없습니다."));
     }
 
-    return ListView.builder(
-      itemCount: books.length + (_hasMore ? 1 : 0),
-      itemBuilder: (_, index) {
+    return CustomScrollView(
+      key: const PageStorageKey<String>('library-reading-scroll'),
+      slivers: [
+        SliverOverlapInjector(
+          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate((context, index) {
         if (index == books.length) {
           return TextButton(
             onPressed: () {
@@ -112,7 +117,9 @@ class _ReadingTabState extends State<ReadingTab> {
             _load();
           },
         );
-      },
+          }, childCount: books.length + (_hasMore ? 1 : 0)),
+        ),
+      ],
     );
   }
 }

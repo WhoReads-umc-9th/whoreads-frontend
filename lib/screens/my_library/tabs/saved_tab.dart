@@ -139,9 +139,14 @@ class _SavedTabState extends State<SavedTab> {
       );
     }
 
-    return ListView.builder(
-      itemCount: books.length + (_hasMore ? 1 : 0),
-      itemBuilder: (_, index) {
+    return CustomScrollView(
+      key: const PageStorageKey<String>('library-saved-scroll'),
+      slivers: [
+        SliverOverlapInjector(
+          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate((context, index) {
         if (index == books.length) {
           return TextButton(
             onPressed: () {
@@ -165,7 +170,9 @@ class _SavedTabState extends State<SavedTab> {
             _load();
           },
         );
-      },
+          }, childCount: books.length + (_hasMore ? 1 : 0)),
+        ),
+      ],
     );
   }
 }
