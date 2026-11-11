@@ -1,9 +1,17 @@
-name: WhoReads iOS TestFlight
+name: WhoReads iOS Release
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      audience:
+        description: Distribution audience for this build
+        type: choice
+        default: app-store
+        options:
+          - app-store
+          - internal
 
 permissions:
   contents: read
@@ -14,6 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  IOS_RELEASE_AUDIENCE: ${{ inputs.audience || 'app-store' }}
   FASTLANE_SKIP_UPDATE_CHECK: "true"
   FASTLANE_HIDE_CHANGELOG: "true"
   FASTLANE_OPT_OUT_USAGE: "true"
@@ -34,7 +43,7 @@ jobs:
         with:
           ruby-version: '3.4'
           bundler-cache: true
-      - name: Verify TestFlight safeguards
+      - name: Verify release safeguards
         run: bundle exec ruby fastlane/testflight_release_test.rb
       - name: Restore this run's immutable version plan
         env:
@@ -45,7 +54,7 @@ jobs:
           if [ "$count" -gt 0 ]; then
             gh run download "$GITHUB_RUN_ID" --name ios-release-plan --dir .release
           fi
-      - name: Plan the next internal TestFlight version
+      - name: Plan the next release version
         id: plan
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -104,7 +113,7 @@ jobs:
           IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
         run: python3 scripts/ios_release.py install
-      - name: Build archive and export internal-only TestFlight IPA
+      - name: Build archive and export the planned IPA
         env:
           IOS_VERSION_NAME: ${{ needs.prepare.outputs.version_name }}
           IOS_BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
@@ -159,7 +168,7 @@ jobs:
           fi
       - name: Recheck key-free IPA and deployed Kakao authorization
         run: python3 scripts/release_config.py verify-server .release/ios-artifacts/whoreads.ipa
-      - name: Upload and verify availability for internal testing
+      - name: Upload and verify the build with Apple
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}

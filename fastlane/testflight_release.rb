@@ -18,6 +18,17 @@ module WhoReadsTestFlight
   PLAN = ".release/ios-plan.json".freeze
   RESULT = ".release/ios-result.json".freeze
   MESSAGE = "[WhoReads] - ios TestFlight 완료".freeze
+  STORE_MESSAGE = "[WhoReads] - ios App Store 빌드 업로드 완료".freeze
+  AUDIENCES = { "internal" => "INTERNAL_ONLY", "app-store" => "APP_STORE_ELIGIBLE" }.freeze
+
+  # App Store distribution needs an export without testFlightInternalTestingOnly.
+  # The audience is fixed once per run in the plan artifact so a rerun cannot
+  # change what an already uploaded build was authorized for.
+  def self.audience
+    value = ENV.fetch("IOS_RELEASE_AUDIENCE", "internal")
+    raise "Unknown release audience" unless AUDIENCES.key?(value)
+    value
+  end
 
   def self.guard_main!
     raise "Only main can deploy to TestFlight" unless ENV["GITHUB_REF"] == "refs/heads/main"
@@ -38,6 +49,7 @@ module WhoReadsTestFlight
     end
     version_parts(plan.fetch("version_name"))
     raise "Invalid build number" unless /\A[1-9]\d*\z/.match?(plan.fetch("build_number").to_s)
+    raise "Unknown planned release audience" unless AUDIENCES.key?(plan["audience"].to_s)
     plan
   end
 
@@ -46,17 +58,22 @@ module WhoReadsTestFlight
     version.split(".").map(&:to_i)
   end
 
+  # pubspec wins when it names a higher version, or when its build number is
+  # already at or above the next free one, which is how a release pins the exact
+  # version string that App Store Connect expects.
   def self.next_version(pubspec_version, builds)
     current, number = pubspec_version.split("+", 2)
     current_parts = version_parts(current)
+    pinned = Integer(number || "1", 10)
     highest = builds.map { |build| version_parts(build.fetch("app_version")) }.max
-    if highest.nil? || (current_parts <=> highest) == 1
+    numbers = builds.map { |build| Integer(build.fetch("build_number"), 10) }
+    following = (numbers.max || 0) + 1
+    if highest.nil? || (current_parts <=> highest) == 1 || pinned >= following
       version = current
     else
       version = [highest[0], highest[1], highest[2] + 1].join(".")
     end
-    numbers = builds.map { |build| Integer(build.fetch("build_number"), 10) }
-    [version, [Integer(number || "1", 10), (numbers.max || 0) + 1].max.to_s]
+    [version, [pinned, following].max.to_s]
   end
 
   class Apple
@@ -125,15 +142,19 @@ module WhoReadsTestFlight
       end
     end
 
-    def ready?(build)
+    def ready?(build, audience = "internal")
+      expected = AUDIENCES.fetch(audience)
       raise "Apple rejected or expired the build" if build["expired"] || %w[FAILED INVALID].include?(build["processing_state"])
       return false unless build["processing_state"] == "VALID"
-      raise "The uploaded build is not restricted to internal TestFlight" unless build["audience"] == "INTERNAL_ONLY"
+      raise "Apple reports audience #{build['audience']} instead of #{expected}" unless build["audience"] == expected
       details = get("/v1/builds/#{build.fetch('id')}/buildBetaDetail").dig("data", "attributes")
       state = details.fetch("internalBuildState")
       if %w[PROCESSING_EXCEPTION MISSING_EXPORT_COMPLIANCE EXPIRED].include?(state)
         raise "TestFlight needs attention: #{state}"
       end
+      # An App Store eligible build is attachable to a version once Apple
+      # validates it; only the internal-only flow waits for the beta group link.
+      return true unless audience == "internal"
       return false unless state == "IN_BETA_TESTING"
       list("/v1/betaGroups/#{GROUP_ID}/builds", "limit" => "200").any? { |item| item["id"] == build["id"] }
     end
@@ -147,7 +168,8 @@ module WhoReadsTestFlight
     name, number = next_version(version, apple.builds)
     result = { "schema" => 1, "app_id" => APP_ID, "bundle_id" => BUNDLE_ID,
       "team_id" => TEAM_ID, "group_id" => GROUP_ID, "commit" => ENV.fetch("GITHUB_SHA"),
-      "run_id" => ENV.fetch("GITHUB_RUN_ID"), "version_name" => name, "build_number" => number }
+      "run_id" => ENV.fetch("GITHUB_RUN_ID"), "version_name" => name, "build_number" => number,
+      "audience" => audience }
     write_json(PLAN, result)
     result
   end
@@ -157,8 +179,8 @@ module WhoReadsTestFlight
     apple.validate_app!
     manifest = JSON.parse(File.read(".release/ios-artifacts/manifest.json"))
     unless manifest["commit"] == plan["commit"] && manifest["version_name"] == plan["version_name"] &&
-        manifest["build_number"] == plan["build_number"] && manifest["internal_only"] == true
-      raise "Artifact manifest does not match the planned internal build"
+        manifest["build_number"] == plan["build_number"] && manifest["audience"] == plan["audience"]
+      raise "Artifact manifest does not match the planned build"
     end
     ipa = ".release/ios-artifacts/whoreads.ipa"
     raise "IPA checksum mismatch" unless Digest::SHA256.file(ipa).hexdigest == manifest.fetch("sha256")
@@ -190,14 +212,14 @@ module WhoReadsTestFlight
     end
     loop do
       build = apple.builds.find { |b| b["app_version"] == plan["version_name"] && b["build_number"] == plan["build_number"] }
-      if build && apple.ready?(build)
+      if build && apple.ready?(build, plan.fetch("audience"))
         result = plan.merge("sha256" => manifest["sha256"], "upload_started" => true, "ready" => true, "build_id" => build.fetch("id"), "verified_at" => Time.now.utc.iso8601)
         write_json(RESULT, result)
-        puts "TestFlight internal testing ready: #{plan['version_name']} (#{plan['build_number']})"
+        puts "Apple confirmed #{plan['audience']} build #{plan['version_name']} (#{plan['build_number']})"
         return result
       end
-      raise "Apple processing did not finish before the timeout; upload is not testing-ready" if Process.clock_gettime(Process::CLOCK_MONOTONIC) - started >= timeout
-      puts "Waiting for the exact build to become available in the existing internal group"
+      raise "Apple processing did not finish before the timeout; the build is not confirmed" if Process.clock_gettime(Process::CLOCK_MONOTONIC) - started >= timeout
+      puts "Waiting for Apple to finish processing the exact planned build"
       sleeper.call(30)
     end
   end
@@ -211,7 +233,8 @@ module WhoReadsTestFlight
     success = status == "success" && result["ready"] == true &&
       result["commit"] == ENV.fetch("GITHUB_SHA") && result["run_id"] == ENV.fetch("GITHUB_RUN_ID")
     raise "Refusing a completion notification without verified TestFlight readiness" if status == "success" && !success
-    message = success ? MESSAGE : "[WhoReads] - ios TestFlight 실패 또는 확인 필요"
+    confirmed = result["audience"] == "app-store" ? STORE_MESSAGE : MESSAGE
+    message = success ? confirmed : "[WhoReads] - ios 배포 실패 또는 확인 필요"
     run_url = "https://github.com/#{ENV.fetch('GITHUB_REPOSITORY')}/actions/runs/#{ENV.fetch('GITHUB_RUN_ID')}"
     description = result["version_name"] ? "#{result['version_name']} (#{result['build_number']})\n#{run_url}" : run_url
     body = { "content" => message, "allowed_mentions" => { "parse" => [] },
@@ -236,7 +259,7 @@ if $PROGRAM_NAME == __FILE__
       if ENV["GITHUB_OUTPUT"]
         File.open(ENV["GITHUB_OUTPUT"], "a") { |f| f.puts("version_name=#{plan['version_name']}\nbuild_number=#{plan['build_number']}") }
       end
-      puts "Planned WhoReads #{plan['version_name']} (#{plan['build_number']}) for internal TestFlight only"
+      puts "Planned WhoReads #{plan['version_name']} (#{plan['build_number']}) for #{plan['audience']} distribution"
     when "publish" then WhoReadsTestFlight.publish
     when "notify" then WhoReadsTestFlight.notify(status: ENV.fetch("IOS_PUBLISH_RESULT"))
     else raise "Unknown TestFlight command"

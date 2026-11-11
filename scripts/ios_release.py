@@ -19,6 +19,7 @@ import release_config
 APP_ID = "6820093454"
 BUNDLE_ID = "com.example.whoreads"
 TEAM_ID = "H78DY23Q9M"
+AUDIENCES = ("internal", "app-store")
 STATE = Path(".release/ios-signing-state.json")
 
 
@@ -49,13 +50,15 @@ def plan():
     if (data.get("app_id") != APP_ID or data.get("bundle_id") != BUNDLE_ID
             or data.get("team_id") != TEAM_ID or data.get("commit") != os.environ["GITHUB_SHA"]
             or data.get("run_id") != os.environ["GITHUB_RUN_ID"]
+            or data.get("audience") not in AUDIENCES
             or os.environ["GITHUB_REF"] != "refs/heads/main"):
         raise ValueError("Artifact plan does not match the current main workflow")
     return data
 
 
 def install():
-    plan()
+    data = plan()
+    internal_only = data["audience"] == "internal"
     directory = Path(os.environ["RUNNER_TEMP"]) / "whoreads-ios-signing"
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     certificate = directory / "distribution.p12"
@@ -92,17 +95,18 @@ def install():
               "signingStyle": "manual", "signingCertificate": "Apple Distribution",
               "provisioningProfiles": {BUNDLE_ID: profile["Name"]},
               "manageAppVersionAndBuildNumber": False, "stripSwiftSymbols": True,
-              "uploadSymbols": True, "testFlightInternalTestingOnly": True}
+              "uploadSymbols": True, "testFlightInternalTestingOnly": internal_only}
     Path(".release/ios-export.plist").write_bytes(plistlib.dumps(export))
-    # This Korean internal beta uses exempt standard encryption. Reassess before
-    # expanding distribution to France or adding non-exempt encryption.
+    # The app only uses exempt standard encryption (HTTPS), so this stays False.
+    # App Store availability that includes France needs the French declaration
+    # answered in App Store Connect; revisit before adding non-exempt encryption.
     plist = Path("ios/Runner/Info.plist")
     info = plistlib.loads(plist.read_bytes())
     info["ITSAppUsesNonExemptEncryption"] = False
     plist.write_bytes(plistlib.dumps(info))
     certificate.unlink()
     provision.unlink()
-    print("WhoReads signing inputs validated and installed in an ephemeral keychain")
+    print(f"WhoReads signing installed in an ephemeral keychain for {data['audience']} export")
 
 
 def verify_ipa(path, data):
@@ -127,15 +131,17 @@ def manifest():
         raise ValueError("Expected exactly one signed IPA")
     verify_ipa(paths[0], data)
     export = plistlib.loads(Path(".release/ios-export.plist").read_bytes())
-    if export.get("testFlightInternalTestingOnly") is not True or export.get("destination") != "export":
-        raise ValueError("Only internal TestFlight export is authorized")
+    internal_only = data["audience"] == "internal"
+    if (export.get("testFlightInternalTestingOnly") is not internal_only
+            or export.get("method") != "app-store-connect" or export.get("destination") != "export"):
+        raise ValueError("Export options do not match the planned release audience")
     destination = Path(".release/ios-artifacts")
     destination.mkdir(parents=True, exist_ok=True)
     ipa = destination / "whoreads.ipa"
     shutil.copyfile(paths[0], ipa)
-    receipt = dict(data, sha256=hashlib.sha256(ipa.read_bytes()).hexdigest(), internal_only=True)
+    receipt = dict(data, sha256=hashlib.sha256(ipa.read_bytes()).hexdigest(), internal_only=internal_only)
     (destination / "manifest.json").write_text(json.dumps(receipt, indent=2) + "\n")
-    print(f"Audited WhoReads {data['version_name']} ({data['build_number']}) for internal TestFlight only")
+    print(f"Audited WhoReads {data['version_name']} ({data['build_number']}) for {data['audience']} distribution")
 
 
 def cleanup():
