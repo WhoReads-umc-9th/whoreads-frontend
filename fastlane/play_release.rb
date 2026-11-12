@@ -95,8 +95,16 @@ module WhoReadsRelease
       next if track.track == "internal" || !releases.empty?
 
       availability = api.get_edit_countryavailability(PACKAGE, edit_id, track.track)
-      unless (availability.countries || []).empty?
-        raise "Non-Alpha track #{track.track} has country settings without a release; " \
+      # A track synced with production mirrors the live production countries and
+      # carries no pending change of its own. Only a track that was desynced and
+      # given its own selection holds an unsubmitted country draft.
+      next if availability.sync_with_production
+
+      selected = (availability.countries || []).map(&:country_code)
+      selected += ["rest of world"] if availability.rest_of_world
+      unless selected.empty?
+        raise "Non-Alpha track #{track.track} has a country selection not synced " \
+          "with production (#{selected.join(', ')}); " \
           "clear unrelated Console changes before deploying"
       end
     end

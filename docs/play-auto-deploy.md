@@ -41,7 +41,8 @@ flowchart TD
 - 같은 실행에서 생성한 AAB/APK의 SHA256, APK 패키지/버전 및 커밋을 기록하고 제출 전에 다시 확인한다. Play가 반환한 AAB versionCode/SHA256도 비교한다.
 - 동시 실행을 직렬화하고, 제출 시 main에 새 커밋이 있으면 이전 빌드를 차단한다. Alpha만 수정하며 다른 트랙은 같은 API edit 안에서 변경되지 않았는지 확인한다.
 - 자동 배포 대상은 Alpha뿐이다. Play API commit은 Console의 보류 변경도 함께 심사에 제출할 수 있으므로, prepare 및 publish에서 Alpha 외 트랙에 **미제출 릴리스 초안**이 있으면 업로드를 차단한다. `completed`, `inProgress`, `halted`처럼 이미 출시되거나 심사에 올라간 릴리스는 기존 상태로 보고 통과시킨다. 프로덕션이 출시된 뒤에도 Alpha 자동 배포가 계속 동작하는 이유다.
-- 릴리스가 없는 트랙은 국가 설정만 있어도 미제출 초안으로 보고 차단한다. 공개 테스트 국가만 지정한 초안이 이 경우다. 이미 릴리스가 있는 트랙의 국가 설정은 Play API가 출시된 국가와 초안을 구분해 주지 않으므로 검사하지 않고, 대신 publish가 같은 edit 안에서 다른 트랙이 변경되지 않았는지 전후로 대조한다.
+- 릴리스가 없는 트랙은 국가 설정도 검사한다. 프로덕션과 **동기화를 끊고** 직접 국가나 기타 지역을 지정한 트랙만 미제출 초안으로 보고 차단한다(`sync_with_production`이 false). 2026-10-15에 공개 테스트의 KR 초안이 심사에 함께 제출된 사고가 이 경우였다.
+- 프로덕션과 동기화된 트랙은 통과시킨다. 동기화된 트랙은 프로덕션이 출시되면 그 국가를 그대로 보고하므로, 국가 목록만으로는 초안과 구분되지 않는다. 이미 릴리스가 있는 트랙의 국가 설정도 같은 이유로 검사하지 않는다. 대신 publish가 같은 edit 안에서 다른 트랙이 변경되지 않았는지 전후로 대조한다.
 - 프로덕션 출시와 승격은 자동화하지 않는다. 배포용 서비스 계정에는 프로덕션 출시 권한을 부여하지 않으며, 승격은 Play Console에서 수동으로 처리한다.
 - 이미 같은 커밋/버전이 Alpha에 기록됐으면 업로드하지 않는다. 업로드·제출이 애매하게 실패하면 자동 재시도하지 않는다. Play Console의 실제 상태부터 확인한다.
 - `ERROR_IF_IN_REVIEW`로 기존 심사를 취소하지 않는다. 거절 시 미제출 상태로 조용히 바꾸는 fallback도 없다.
@@ -53,7 +54,7 @@ Play API 제출 성공은 **Google 심사 승인 또는 테스터 제공 완료*
 
 Actions Variable `PLAY_AUTO_DEPLOY=false`로 다음 실행부터 업로드를 중지한다. 진행 중 제출은 취소하지 않는다.
 인증 오류는 서비스 계정의 앱 접근 권한과 API 활성화를 확인하고, versionCode 중복은 Play의 초안·업로드 상태를 먼저 확인한다.
-`has unsubmitted releases` 또는 `has country settings without a release`로 prepare가 실패하면 Play Console의 해당 트랙에 저장만 된 초안이 남아 있다는 뜻이다. 그 초안을 제출하거나 삭제한 뒤 워크플로를 다시 실행한다.
+`has unsubmitted releases` 또는 `has a country selection not synced with production`으로 prepare가 실패하면 Play Console의 해당 트랙에 저장만 된 초안이 남아 있다는 뜻이다. 그 초안을 제출하거나 삭제하거나, 국가/지역 탭에서 프로덕션과 다시 동기화한 뒤 워크플로를 재실행한다.
 심사 중이라 제출이 막히면 심사 완료 후 최신 main의 워크플로를 실행한다.
 
 ## Discord 배포 완료 알림

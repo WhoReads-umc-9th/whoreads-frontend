@@ -8,13 +8,15 @@ class PlayReleaseTest < Minitest::Test
   SHA = "a" * 40
 
   class FakePlay
-    attr_accessor :tracks, :uploaded_sha, :commit_error, :track_countries
+    attr_accessor :tracks, :uploaded_sha, :commit_error, :track_countries, :track_synced, :track_rest_of_world
     attr_reader :uploads, :commits, :deletes
 
     def initialize(checksum)
       @tracks = [API::Track.new(track: "alpha", releases: [API::TrackRelease.new(version_codes: [3], status: "completed")]),
                  API::Track.new(track: "beta", releases: [])]
       @track_countries = Hash.new { [] }
+      @track_synced = Hash.new { false }
+      @track_rest_of_world = Hash.new { false }
       @uploaded_sha = checksum
       @uploads, @commits, @deletes = 0, [], 0
     end
@@ -28,6 +30,7 @@ class PlayReleaseTest < Minitest::Test
 
     def get_edit_countryavailability(_package, _edit, track)
       API::TrackCountryAvailability.new(
+        sync_with_production: track_synced[track], rest_of_world: track_rest_of_world[track],
         countries: track_countries[track].map { |code| API::TrackTargetedCountry.new(country_code: code) })
     end
 
@@ -159,10 +162,28 @@ class PlayReleaseTest < Minitest::Test
     assert_empty @api.commits
   end
 
-  def test_existing_open_testing_country_draft_blocks_upload
+  def test_a_desynced_open_testing_country_draft_blocks_upload
     @api.track_countries["beta"] = ["KR"]
     error = assert_raises(RuntimeError) { WhoReadsRelease.publish(api: @api) }
-    assert_match(/country settings/, error.message)
+    assert_match(/country selection not synced with production \(KR\)/, error.message)
+    assert_equal 0, @api.uploads
+    assert_empty @api.commits
+  end
+
+  def test_open_testing_countries_synced_with_production_do_not_block_upload
+    # Once production is live, a track synced with it reports production's
+    # countries without holding any pending change of its own.
+    @api.track_countries["beta"] = ["KR"]
+    @api.track_synced["beta"] = true
+    capture_io { WhoReadsRelease.publish(api: @api) }
+    assert_equal 1, @api.uploads
+    assert_equal [{ changes_not_sent_for_review: false, changes_in_review_behavior: "ERROR_IF_IN_REVIEW" }], @api.commits
+  end
+
+  def test_a_desynced_rest_of_world_draft_blocks_upload
+    @api.track_rest_of_world["beta"] = true
+    error = assert_raises(RuntimeError) { WhoReadsRelease.publish(api: @api) }
+    assert_match(/rest of world/, error.message)
     assert_equal 0, @api.uploads
     assert_empty @api.commits
   end
@@ -199,6 +220,7 @@ class PlayReleaseTest < Minitest::Test
                 API::Track.new(track: "production",
                   releases: [API::TrackRelease.new(version_codes: [4], status: status)])]
       @api.track_countries["production"] = ["KR"]
+      @api.track_synced["production"] = false
       WhoReadsRelease.assert_closed_test_scope!(@api, "temporary-edit", tracks)
     end
   end
