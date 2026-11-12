@@ -9,6 +9,9 @@ module WhoReadsRelease
   TRACK = "alpha".freeze
   ROOT = File.expand_path("..", __dir__).freeze
   MAX_VERSION_CODE = 2_100_000_000
+  # Statuses Play reports for a release that is already submitted or live.
+  # Anything else on another track is an unsubmitted Console draft.
+  LIVE_STATUSES = %w[completed inProgress halted].freeze
 
   def self.next_version(version, used_codes)
     match = /\A(\d+)\.(\d+)\.(\d+)\+(\d+)\z/.match(version)
@@ -75,17 +78,26 @@ module WhoReadsRelease
 
   def self.assert_closed_test_scope!(api, edit_id, tracks)
     # Play commit can submit pre-existing Console changes as well as this edit.
-    # This app currently uses Alpha only. Reject other releases or country drafts
-    # before uploading, even when our code never explicitly updates those tracks.
+    # Releases already submitted or live on another track, such as the published
+    # production track, are existing state and must not block an Alpha upload.
+    # An unsubmitted draft would be sent for review by our commit, so reject it
+    # even though our code never explicitly updates those tracks.
     tracks.reject { |track| track.track == TRACK }.each do |track|
-      unless (track.releases || []).empty?
-        raise "Non-Alpha track #{track.track} has releases; closed-test-only deployment is blocked"
+      releases = track.releases || []
+      drafts = releases.reject { |release| LIVE_STATUSES.include?(release.status) }
+      unless drafts.empty?
+        raise "Non-Alpha track #{track.track} has unsubmitted releases " \
+          "(#{drafts.map { |release| release.status.inspect }.uniq.join(', ')}); " \
+          "clear unrelated Console changes before deploying"
       end
-      next if track.track == "internal"
+      # A live track reports its published countries, which the API does not
+      # separate from a draft, so only an unreleased track is checked here.
+      next if track.track == "internal" || !releases.empty?
 
       availability = api.get_edit_countryavailability(PACKAGE, edit_id, track.track)
       unless (availability.countries || []).empty?
-        raise "Non-Alpha track #{track.track} has country settings; clear unrelated Console changes before deploying"
+        raise "Non-Alpha track #{track.track} has country settings without a release; " \
+          "clear unrelated Console changes before deploying"
       end
     end
   end

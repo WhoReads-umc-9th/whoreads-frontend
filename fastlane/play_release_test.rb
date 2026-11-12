@@ -8,13 +8,13 @@ class PlayReleaseTest < Minitest::Test
   SHA = "a" * 40
 
   class FakePlay
-    attr_accessor :tracks, :uploaded_sha, :commit_error, :non_alpha_countries
+    attr_accessor :tracks, :uploaded_sha, :commit_error, :track_countries
     attr_reader :uploads, :commits, :deletes
 
     def initialize(checksum)
       @tracks = [API::Track.new(track: "alpha", releases: [API::TrackRelease.new(version_codes: [3], status: "completed")]),
                  API::Track.new(track: "beta", releases: [])]
-      @non_alpha_countries = []
+      @track_countries = Hash.new { [] }
       @uploaded_sha = checksum
       @uploads, @commits, @deletes = 0, [], 0
     end
@@ -26,8 +26,9 @@ class PlayReleaseTest < Minitest::Test
     def list_edit_apks(*) = API::ApksListResponse.new(apks: [])
     def validate_edit(*) = nil
 
-    def get_edit_countryavailability(*)
-      API::TrackCountryAvailability.new(countries: non_alpha_countries.map { |code| API::TrackTargetedCountry.new(country_code: code) })
+    def get_edit_countryavailability(_package, _edit, track)
+      API::TrackCountryAvailability.new(
+        countries: track_countries[track].map { |code| API::TrackTargetedCountry.new(country_code: code) })
     end
 
     def upload_edit_bundle(*)
@@ -159,19 +160,47 @@ class PlayReleaseTest < Minitest::Test
   end
 
   def test_existing_open_testing_country_draft_blocks_upload
-    @api.non_alpha_countries = ["KR"]
+    @api.track_countries["beta"] = ["KR"]
     error = assert_raises(RuntimeError) { WhoReadsRelease.publish(api: @api) }
     assert_match(/country settings/, error.message)
     assert_equal 0, @api.uploads
     assert_empty @api.commits
   end
 
-  def test_a_release_on_another_track_blocks_upload
+  def test_an_unsubmitted_draft_on_another_track_blocks_upload
     @api.tracks.last.releases = [API::TrackRelease.new(version_codes: [4], status: "draft")]
     error = assert_raises(RuntimeError) { WhoReadsRelease.publish(api: @api) }
-    assert_match(/Non-Alpha track beta/, error.message)
+    assert_match(/Non-Alpha track beta has unsubmitted releases/, error.message)
     assert_equal 0, @api.uploads
     assert_empty @api.commits
+  end
+
+  def test_an_unsubmitted_production_draft_blocks_upload
+    @api.tracks << API::Track.new(track: "production",
+      releases: [API::TrackRelease.new(version_codes: [4], status: "draft")])
+    error = assert_raises(RuntimeError) { WhoReadsRelease.publish(api: @api) }
+    assert_match(/Non-Alpha track production has unsubmitted releases/, error.message)
+    assert_equal 0, @api.uploads
+    assert_empty @api.commits
+  end
+
+  def test_a_published_production_release_does_not_block_the_alpha_upload
+    @api.tracks << API::Track.new(track: "production",
+      releases: [API::TrackRelease.new(version_codes: [4], status: "completed")])
+    @api.track_countries["production"] = ["KR"]
+    capture_io { WhoReadsRelease.publish(api: @api) }
+    assert_equal 1, @api.uploads
+    assert_equal [{ changes_not_sent_for_review: false, changes_in_review_behavior: "ERROR_IF_IN_REVIEW" }], @api.commits
+  end
+
+  def test_every_live_release_status_on_another_track_is_allowed
+    WhoReadsRelease::LIVE_STATUSES.each do |status|
+      tracks = [API::Track.new(track: "alpha", releases: []),
+                API::Track.new(track: "production",
+                  releases: [API::TrackRelease.new(version_codes: [4], status: status)])]
+      @api.track_countries["production"] = ["KR"]
+      WhoReadsRelease.assert_closed_test_scope!(@api, "temporary-edit", tracks)
+    end
   end
 
   def test_the_locked_client_supports_review_protection
