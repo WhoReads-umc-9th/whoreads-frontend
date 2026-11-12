@@ -30,6 +30,7 @@ flowchart TD
 5. Play 게시 개요에서 무관한 보류 변경이 없는지 확인한 뒤, Actions Variable `PLAY_AUTO_DEPLOY`를 `true`로 설정한다. **나중을 위해 저장**은 API commit에서 제외되는 보장이 없다. 기존 초안을 기록한 뒤 원래 설정으로 복구하거나, 필요한 변경은 별도로 처리한다.
 
 기존 `BASE_URL`, `GOOGLE_SERVICES_JSON` 및 Android 업로드 서명 Secrets도 필요하다.
+Flutter는 워크플로에 `3.47.9`로 고정한다. `channel: stable`만 두면 새 stable이 나올 때 서명 릴리스 빌드가 바뀌거나 깨진다. 실제로 stable이 3.50.0으로 올라가며 Gradle 9.3.1 이상을 요구해 빌드가 실패했다. 버전을 올릴 때는 `android/gradle/wrapper/gradle-wrapper.properties`의 Gradle도 함께 올리고 서명 빌드를 확인한다.
 `PLAY_AUTO_DEPLOY`가 비어 있거나 `false`이면 빌드만 수행하고 제출은 건너뛴다고 요약에 표시한다.
 활성화된 상태에서 인증 또는 검증이 실패하면 배포가 실패하며, 이전 성공 AAB로 대체하지 않는다.
 

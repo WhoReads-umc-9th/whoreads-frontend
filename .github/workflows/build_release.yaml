@@ -68,10 +68,14 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      # Pinned so a new stable release cannot change or break a signed release
+      # build. 3.47.9 produced the last verified AAB; moving up needs the Gradle
+      # wrapper raised to 9.3.1 first.
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          flutter-version: '3.47.9'
+          channel: stable
           cache: true
 
       # FCM 구글 서비스 JSON 파일 생성
